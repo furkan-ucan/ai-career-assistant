@@ -1,0 +1,28 @@
+# Sanal Ortam
+/kariyer-asistani-env/
+
+# Hassas Bilgiler
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Veri ve Loglar
+data/
+*.csv
+*.log
+logs/
+
+# IDE / OS spesifik dosyalar
+.vscode/
+.idea/
+.DS_Store
+
+# Memory Bank MCP (ayrı repo)
+memory-bank-mcp/
+memory-bank/
+
+# Temporary files
+*.tmp
+*.temp

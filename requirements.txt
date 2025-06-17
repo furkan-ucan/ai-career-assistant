@@ -1,0 +1,15 @@
+# Veri Toplama Katmanı
+python-jobspy==1.1.80
+
+# AI / Zeka Katmanı  
+google-generativeai==0.8.3
+chromadb==1.0.12
+
+# Veri İşleme ve Yardımcılar
+pandas==2.2.2
+numpy==1.26.3
+python-dotenv==1.0.1
+
+# Geliştirme (Opsiyonel)
+black==23.12.0
+flake8==6.1.0
