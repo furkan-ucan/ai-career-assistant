@@ -1,7 +1,7 @@
 # Veri Toplama Katmanı
 python-jobspy==1.1.80
 
-# AI / Zeka Katmanı  
+# AI / Zeka Katmanı
 google-generativeai==0.8.3
 chromadb==1.0.12
 

@@ -22,7 +22,7 @@ Akıllı Kariyer Asistanı, geleneksel iş arama sürecini devrim niteliğinde d
 ## 🚀 Hızlı Başlangıç
 
 ### Ön Koşullar
-- Python 3.11+ 
+- Python 3.11+
 - Google Gemini API Key ([Ücretsiz alın](https://aistudio.google.com/app/apikey))
 - 8GB+ RAM (ChromaDB için)
 
@@ -83,7 +83,7 @@ python main.py
    🔗 https://tr.indeed.com/viewjob?jk=...
 
 2. Full Stack Developer - Pratik İnsan Kaynakları
-   📍 İstanbul, T34, TR  
+   📍 İstanbul, T34, TR
    📊 Uygunluk: %63.8
    🔗 https://tr.indeed.com/viewjob?jk=...
 ```
@@ -149,7 +149,7 @@ kariyer-asistani/
 - 📱 Responsive tasarım
 - ✅ İlan işaretleme sistemi
 
-### Faz 4: Otomasyon (Gelecek Hafta)  
+### Faz 4: Otomasyon (Gelecek Hafta)
 - ⏰ Zamanlanmış otomatik çalışma
 - 📱 Telegram bot bildirimleri
 - 🔄 Çoklu platform desteği (LinkedIn, Glassdoor)
@@ -164,10 +164,10 @@ kariyer-asistani/
 
 ## 📞 İletişim
 
-**Furkan Uçan**  
-📧 furkan.ucann@yandex.com  
-💼 [LinkedIn](https://linkedin.com/in/furkan-ucan)  
-🐙 [GitHub](https://github.com/furkan-ucan)  
+**Furkan Uçan**
+📧 furkan.ucann@yandex.com
+💼 [LinkedIn](https://linkedin.com/in/furkan-ucan)
+🐙 [GitHub](https://github.com/furkan-ucan)
 
 ---
 

@@ -20,7 +20,7 @@ class EmbeddingService:
             raise ValueError("Gemini API key geçerli değil! .env dosyasını kontrol edin.")
 
         genai.configure(api_key=api_key)
-        self.model = 'models/embedding-001'
+        self.model = 'models/text-embedding-004'
         print("✅ Gemini API bağlantısı kuruldu")
 
     def create_embedding(self, text: str, retry_count: int = 3) -> Optional[List[float]]:
