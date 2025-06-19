@@ -3,6 +3,10 @@ Filtreleme Modülü
 Junior/entry-level pozisyonlar için akıllı filtreleme işlemleri
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 def filter_junior_suitable_jobs(jobs_list, debug=False):
     """
     Junior/Entry-level pozisyonlar için uygun olmayan ilanları filtreler
@@ -58,41 +62,39 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         responsibility_rejected = any(resp in description for resp in responsibility_blacklist)
 
         # 4. Rol dışı kontrol
-        out_of_scope_rejected = any(word in title for word in out_of_scope_blacklist)
-
-        # Filtreleme kararı
+        out_of_scope_rejected = any(word in title for word in out_of_scope_blacklist)        # Filtreleme kararı
         if title_rejected:
             filter_stats['title'] += 1
             if debug:
-                print(f"🔥 Filtrelendi (başlık): {job.get('title', 'N/A')}")
+                logger.debug(f"🔥 Filtrelendi (başlık): {job.get('title', 'N/A')}")
         elif experience_rejected:
             filter_stats['experience'] += 1
             if debug:
-                print(f"🔥 Filtrelendi (deneyim): {job.get('title', 'N/A')}")
+                logger.debug(f"🔥 Filtrelendi (deneyim): {job.get('title', 'N/A')}")
         elif responsibility_rejected:
             filter_stats['responsibility'] += 1
             if debug:
-                print(f"🔥 Filtrelendi (sorumluluk): {job.get('title', 'N/A')}")
+                logger.debug(f"🔥 Filtrelendi (sorumluluk): {job.get('title', 'N/A')}")
         elif out_of_scope_rejected:
             filter_stats['out_of_scope'] += 1
             if debug:
-                print(f"🔥 Filtrelendi (rol dışı): {job.get('title', 'N/A')}")
+                logger.debug(f"🔥 Filtrelendi (rol dışı): {job.get('title', 'N/A')}")
         else:
             # Geçti - listeye ekle
             filtered_jobs.append(job)
             filter_stats['passed'] += 1
             if debug:
-                print(f"✅ Geçti: {job.get('title', 'N/A')}")
+                logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")
 
     # Filtreleme istatistikleri
     total_processed = len(jobs_list)
-    print(f"\n📊 Filtreleme İstatistikleri:")
-    print(f"   Toplam işlenen: {total_processed}")
-    print(f"   🔥 Başlık filtresi: {filter_stats['title']}")
-    print(f"   🔥 Deneyim filtresi: {filter_stats['experience']}")
-    print(f"   🔥 Sorumluluk filtresi: {filter_stats['responsibility']}")
-    print(f"   🔥 Rol dışı filtresi: {filter_stats['out_of_scope']}")
-    print(f"   ✅ Geçen: {filter_stats['passed']}")
-    print(f"   📈 Başarı oranı: %{(filter_stats['passed']/total_processed)*100:.1f}")
+    logger.info(f"\n📊 Filtreleme İstatistikleri:")
+    logger.info(f"   Toplam işlenen: {total_processed}")
+    logger.info(f"   🔥 Başlık filtresi: {filter_stats['title']}")
+    logger.info(f"   🔥 Deneyim filtresi: {filter_stats['experience']}")
+    logger.info(f"   🔥 Sorumluluk filtresi: {filter_stats['responsibility']}")
+    logger.info(f"   🔥 Rol dışı filtresi: {filter_stats['out_of_scope']}")
+    logger.info(f"   ✅ Geçen: {filter_stats['passed']}")
+    logger.info(f"   📈 Başarı oranı: %{(filter_stats['passed']/total_processed)*100:.1f}")
 
     return filtered_jobs

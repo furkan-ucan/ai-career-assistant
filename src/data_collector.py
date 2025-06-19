@@ -6,8 +6,11 @@ birden fazla platformdan CV'ye uygun iş ilanlarını toplar.
 
 from jobspy import scrape_jobs
 import pandas as pd
+import logging
 from datetime import datetime
 import os
+
+logger = logging.getLogger(__name__)
 
 # --- VARSAYILAN AYARLAR ---
 VARSAYILAN_LOKASYON = "Turkey"
@@ -34,17 +37,17 @@ def collect_job_data(
     Returns:
         pandas.DataFrame: Birleştirilmiş iş ilanları veya None (hata durumunda)
     """
-    print(f"\n🔍 JobSpy Gelişmiş Arama Başlatılıyor...")
-    print(f"📍 Lokasyon: {location}")
-    print(f"🎯 Hedef: {max_results_per_site} ilan/site")
-    print(f"⏰ Tarih filtresi: Son {hours_old} saat (JobSpy native)")
-    print(f"🔍 Arama terimi: '{search_term}'")
-    print("⏳ Bu işlem birkaç dakika sürebilir...")
+    logger.info(f"\n🔍 JobSpy Gelişmiş Arama Başlatılıyor...")
+    logger.info(f"📍 Lokasyon: {location}")
+    logger.info(f"🎯 Hedef: {max_results_per_site} ilan/site")
+    logger.info(f"⏰ Tarih filtresi: Son {hours_old} saat (JobSpy native)")
+    logger.info(f"🔍 Arama terimi: '{search_term}'")
+    logger.info("⏳ Bu işlem birkaç dakika sürebilir...")
 
     all_jobs_list = []
 
     for site in site_names:
-        print(f"\n--- Site '{site}' için arama yapılıyor ---")
+        logger.info(f"\n--- Site '{site}' için arama yapılıyor ---")
         try:
             # JobSpy'ın gelişmiş parametreleri
             scrape_params = {
@@ -53,43 +56,35 @@ def collect_job_data(
                 'location': location,
                 'results_wanted': max_results_per_site,
                 'hours_old': hours_old  # Native tarih filtresi
-            }
-
-            # Site-specific optimizations
+            }            # Site-specific optimizations
             if site == "indeed":
                 scrape_params['country_indeed'] = "Turkey"
-                print("   🎯 Indeed: Türkiye özel ayarları aktif")
+                logger.info("   🎯 Indeed: Türkiye özel ayarları aktif")
 
             elif site == "linkedin":
                 scrape_params['linkedin_fetch_description'] = True  # Detaylı LinkedIn verisi
-                print("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")
-
-            # JobSpy ile veri çek
+                logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")            # JobSpy ile veri çek
             jobs_from_site = scrape_jobs(**scrape_params)
 
             if jobs_from_site is not None and not jobs_from_site.empty:
-                print(f"✅ '{site}' sitesinden {len(jobs_from_site)} ilan toplandı.")
+                logger.info(f"✅ '{site}' sitesinden {len(jobs_from_site)} ilan toplandı.")
                 jobs_from_site['source_site'] = site  # Hangi siteden geldiğini işaretle
                 all_jobs_list.append(jobs_from_site)
             else:
-                print(f"ℹ️ '{site}' sitesinden bu arama terimi için ilan bulunamadı.")
+                logger.info(f"ℹ️ '{site}' sitesinden bu arama terimi için ilan bulunamadı.")
 
         except Exception as e:
-            print(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}")
-            continue  # Bir sitede hata olursa diğerlerine devam et
-
-    if not all_jobs_list:
-        print("❌ Hiçbir siteden ilan bulunamadı!")
+            logger.error(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True)
+            continue  # Bir sitede hata olursa diğerlerine devam et    if not all_jobs_list:
+        logger.error("❌ Hiçbir siteden ilan bulunamadı!")
         return None
 
     # Tüm sitelerden gelen DataFrame'leri birleştir
     combined_df = pd.concat(all_jobs_list, ignore_index=True)
 
     # Zaman damgası ekle
-    combined_df['collected_at'] = datetime.now()
-
-    # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
-    print(f"\n🔄 Deduplication başlatılıyor...")
+    combined_df['collected_at'] = datetime.now()    # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
+    logger.info(f"\n🔄 Deduplication başlatılıyor...")
     initial_count = len(combined_df)
 
     if 'description' in combined_df.columns:
@@ -112,10 +107,10 @@ def collect_job_data(
     final_count = len(combined_df)
     removed_count = initial_count - final_count
 
-    print(f"✨ Deduplication tamamlandı:")
-    print(f"   📊 Başlangıç: {initial_count} ilan")
-    print(f"   🗑️ Çıkarılan tekrar: {removed_count} ilan")
-    print(f"   ✅ Final: {final_count} benzersiz ilan")
+    logger.info(f"✨ Deduplication tamamlandı:")
+    logger.info(f"   📊 Başlangıç: {initial_count} ilan")
+    logger.info(f"   🗑️ Çıkarılan tekrar: {removed_count} ilan")
+    logger.info(f"   ✅ Final: {final_count} benzersiz ilan")
 
     return combined_df
 
@@ -125,7 +120,7 @@ def save_jobs_to_csv(jobs_df, filename_prefix="jobspy_ilanlar"):
     İş ilanlarını CSV dosyasına kaydeder
     """
     if jobs_df is None or jobs_df.empty:
-        print("❌ Kaydedilecek veri yok!")
+        logger.error("❌ Kaydedilecek veri yok!")
         return None
 
     output_dir = "data"
@@ -135,13 +130,13 @@ def save_jobs_to_csv(jobs_df, filename_prefix="jobspy_ilanlar"):
     csv_path = os.path.join(output_dir, f"{filename_prefix}_{timestamp}.csv")
 
     jobs_df.to_csv(csv_path, index=False, encoding='utf-8')
-    print(f"📁 Dosya kaydedildi: {csv_path}")
+    logger.info(f"📁 Dosya kaydedildi: {csv_path}")
 
     return csv_path
 
 if __name__ == "__main__":
     # Test için basit bir çalıştırma
-    print("🧪 JobSpy Gelişmiş Özellikler Test Ediliyor...")
+    logger.info("🧪 JobSpy Gelişmiş Özellikler Test Ediliyor...")
 
     test_df = collect_job_data(
         search_term="Software Engineer",
@@ -150,8 +145,8 @@ if __name__ == "__main__":
     )
 
     if test_df is not None:
-        print(f"\n✅ Test sonucu: {len(test_df)} ilan bulundu.")
-        print(f"📊 Site dağılımı: {test_df['source_site'].value_counts().to_dict()}")
+        logger.info(f"\n✅ Test sonucu: {len(test_df)} ilan bulundu.")
+        logger.info(f"📊 Site dağılımı: {test_df['source_site'].value_counts().to_dict()}")
         save_jobs_to_csv(test_df, "test_advanced_jobspy")
     else:
-        print("❌ Test başarısız!")
+        logger.error("❌ Test başarısız!")

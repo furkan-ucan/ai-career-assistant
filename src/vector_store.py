@@ -6,10 +6,13 @@ ChromaDB kullanarak iş ilanı vektörlerini saklar ve arama yapar.
 import chromadb
 from chromadb.config import Settings
 import pandas as pd
+import logging
 from typing import List, Dict, Optional, Any
 import os
 import json
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 class VectorStore:
     def __init__(self, persist_directory: str = "data/chromadb"):
@@ -24,7 +27,7 @@ class VectorStore:
         self.collection_name = "job_listings"
         self.collection = None
 
-        print(f"✅ ChromaDB başlatıldı: {persist_directory}")
+        logger.info(f"✅ ChromaDB başlatıldı: {persist_directory}")
 
     def create_collection(self) -> bool:
         """İş ilanları koleksiyonu oluştur"""
@@ -32,19 +35,17 @@ class VectorStore:
             # Mevcut koleksiyonu sil (eğer varsa)
             try:
                 self.client.delete_collection(self.collection_name)
-                print("🗑️ Mevcut koleksiyon silindi")
+                logger.info("🗑️ Mevcut koleksiyon silindi")
             except:
                 pass            # Yeni koleksiyon oluştur (COSINE SIMILARITY ile)
             self.collection = self.client.create_collection(
                 name=self.collection_name,
                 metadata={"description": "İş ilanları vektör koleksiyonu", "hnsw:space": "cosine"}
             )
-
-            print("✅ Yeni koleksiyon oluşturuldu")
+            logger.info("✅ Yeni koleksiyon oluşturuldu")
             return True
-
         except Exception as e:
-            print(f"❌ Koleksiyon oluşturma hatası: {str(e)}")
+            logger.error(f"❌ Koleksiyon oluşturma hatası: {str(e)}", exc_info=True)
             return False
 
     def get_collection(self):
@@ -52,15 +53,15 @@ class VectorStore:
         if not self.collection:
             try:
                 self.collection = self.client.get_collection(self.collection_name)
-                print("✅ Mevcut koleksiyon yüklendi")
+                logger.info("✅ Mevcut koleksiyon yüklendi")
             except:
-                print("⚠️ Koleksiyon bulunamadı, yeni oluşturuluyor...")
+                logger.info("⚠️ Koleksiyon bulunamadı, yeni oluşturuluyor...")
                 self.create_collection()
 
         return self.collection
 
     def add_jobs(self, jobs_df: pd.DataFrame, embeddings: List[Optional[List[float]]]) -> bool:
-        """İş ilanlarını ve embeddings'lerini koleksiyona ekle"""
+        """İş ilanlarını ve embeddings'lerini koleksiyona ekle - Tekrar eklemeyi önler"""
         if not self.get_collection():
             return False
 
@@ -68,13 +69,30 @@ class VectorStore:
         valid_embeddings = []
         valid_ids = []
         valid_metadatas = []
+        skipped_count = 0
 
-        # Geçerli embeddings'leri filtrele
+        # Geçerli embeddings'leri filtrele ve tekrar eklemeyi önle
         for i, (_, job) in enumerate(jobs_df.iterrows()):
             if embeddings[i] is not None:
+                # Benzersiz ID oluştur (job_url tabanlı)
+                job_url = job.get('job_url', f'fallback_id_{i}')
+                unique_id = f"job_{hash(str(job_url))}"
+                
+                # Bu ilan zaten var mı kontrol et
+                try:
+                    existing = self.collection.get(ids=[unique_id])
+                    if existing['ids']:  # Eğer ID mevcutsa
+                        logger.info(f"İlan {unique_id} zaten mevcut, ekleme atlandı: {job.get('title', 'N/A')}")
+                        skipped_count += 1
+                        continue
+                except Exception:
+                    # ID yoksa devam et (normal durum)
+                    pass
+
+                # Yeni ilan - ekle
                 valid_jobs.append(job['description'] if 'description' in job else str(job))
                 valid_embeddings.append(embeddings[i])
-                valid_ids.append(f"job_{i}_{int(datetime.now().timestamp())}")
+                valid_ids.append(unique_id)
 
                 # Metadata hazırla
                 metadata = {
@@ -88,8 +106,8 @@ class VectorStore:
                 valid_metadatas.append(metadata)
 
         if not valid_embeddings:
-            print("❌ Eklenecek geçerli embedding bulunamadı")
-            return False
+            logger.warning("Eklenecek yeni ilan bulunamadı - tüm ilanlar zaten mevcut")
+            return True
 
         try:
             # Batch olarak ekle
@@ -100,11 +118,13 @@ class VectorStore:
                 ids=valid_ids
             )
 
-            print(f"✅ {len(valid_embeddings)} iş ilanı ChromaDB'ye eklendi")
+            logger.info(f"✅ {len(valid_embeddings)} yeni iş ilanı ChromaDB'ye eklendi")
+            if skipped_count > 0:
+                logger.info(f"🔄 {skipped_count} mevcut ilan atlandı")
             return True
 
         except Exception as e:
-            print(f"❌ ChromaDB ekleme hatası: {str(e)}")
+            logger.error(f"ChromaDB ekleme hatası: {str(e)}", exc_info=True)
             return False
 
     def search_similar_jobs(self, cv_embedding: List[float], top_k: int = 15) -> List[Dict[str, Any]]:
@@ -136,12 +156,12 @@ class VectorStore:
                         'description': results['documents'][0][i] if results['documents'][0] else 'N/A'
                     }
                     similar_jobs.append(job_info)
-
-            print(f"✅ {len(similar_jobs)} benzer iş bulundu")
+            
+            logger.info(f"✅ {len(similar_jobs)} benzer iş bulundu")
             return similar_jobs
 
         except Exception as e:
-            print(f"❌ Arama hatası: {str(e)}")
+            logger.error(f"❌ Arama hatası: {str(e)}", exc_info=True)
             return []
 
     def get_collection_stats(self) -> Dict[str, Any]:
@@ -157,11 +177,11 @@ class VectorStore:
                 "persist_directory": self.persist_directory
             }
         except Exception as e:
-            print(f"❌ İstatistik alma hatası: {str(e)}")
+            logger.error(f"❌ İstatistik alma hatası: {str(e)}", exc_info=True)
             return {}
 
 if __name__ == "__main__":
     # Test çalıştırması
     store = VectorStore()
     stats = store.get_collection_stats()
-    print("ChromaDB istatistikleri:", stats)
+    logger.info("ChromaDB istatistikleri:", stats)
