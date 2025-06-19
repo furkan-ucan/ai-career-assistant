@@ -126,7 +126,7 @@ python main.py
 🔹 ADIM 1: Manuel Arama (Indeed'de)
    • Indeed.com'da giriş yapın
    • Filtreler: 'Son 3 gün', 'Türkiye', 'Entry Level/Junior'
-   
+
 🎯 SİSTEM DURUMU: Tarih filtresi AÇIK (≤3 gün)
 ============================================================
 
@@ -295,7 +295,7 @@ sites = ['linkedin']
 ```python
 # Daha katı junior filtreleme için
 junior_keywords = [
-    'junior', 'entry', 'trainee', 'stajyer', 'yeni mezun', 
+    'junior', 'entry', 'trainee', 'stajyer', 'yeni mezun',
     'başlangıç', 'intern', 'graduate', 'associate'
 ]
 
@@ -311,10 +311,10 @@ Manuel doğrulama rehberini kendi rutininize göre ayarlayın:
 def print_manual_validation_guide():
     # Günlük çalışma için
     print("🔹 Bu protokolü her gün çalıştırın")
-    
-    # Haftalık çalışma için  
+
+    # Haftalık çalışma için
     print("🔹 Bu protokolü haftada 2-3 kez çalıştırın")
-    
+
     # Ayar testleri için
     print("🔹 Ayar değiştirdikten sonra mutlaka çalıştırın")
 ```
@@ -562,7 +562,7 @@ Kalite Skoru: %17.8 (8/45 filtre)
 
 ### Veri Akışı
 1. **Toplama:** JobSpy → LinkedIn/Indeed → Ham CSV
-2. **Temizleme:** Deduplication → Tarih filtresi → Temiz CSV  
+2. **Temizleme:** Deduplication → Tarih filtresi → Temiz CSV
 3. **Analiz:** Gemini AI → CV + İlanlar → Embeddings
 4. **Eşleştirme:** ChromaDB → Cosine similarity → Puanlama
 5. **Filtreleme:** Junior filter → Eşik filtresi → Final sonuçlar
@@ -585,7 +585,7 @@ Kalite Skoru: %17.8 (8/45 filtre)
 
 ### Keşfedilen Değerli Pozisyonlar
 1. **Yazılım Uzmanı** (MİA Teknoloji) - %63.9 ✨ [LinkedIn]
-2. **Full Stack Developer** (Pratik İK) - %63.8 ✨ [Indeed]  
+2. **Full Stack Developer** (Pratik İK) - %63.8 ✨ [Indeed]
 3. **Veri Analiz Elemanı** (Rasyonel Kurumsal) - %63.4 ✨ [LinkedIn]
 4. **İş Analizi Yöneticisi** (BNP Paribas) - %60.9 ✨ [Indeed]
 5. **Python Developer** (Tech Startup) - %58.5 ✨ [LinkedIn]
@@ -594,7 +594,7 @@ Kalite Skoru: %17.8 (8/45 filtre)
 ```
 📈 En Başarılı Personalar:
 1. Full_Stack: 35% (3/8 ilan)
-2. Yazilim_Gelistirici: 25% (2/8 ilan)  
+2. Yazilim_Gelistirici: 25% (2/8 ilan)
 3. Python_Developer: 25% (2/8 ilan)
 4. Analist: 15% (1/8 ilan)
 
@@ -643,7 +643,7 @@ kariyer-asistani/
 ### 🎯 Hızlı Başlangıç Kontrol Listesi
 
 - [ ] ✅ Python 3.11+ yüklü
-- [ ] ✅ `git clone` ile projeyi indirdim  
+- [ ] ✅ `git clone` ile projeyi indirdim
 - [ ] ✅ `python -m venv` ile sanal ortam oluşturdum
 - [ ] ✅ `pip install -r requirements.txt` çalıştırdım
 - [ ] ✅ Gemini API key aldım ve `.env` dosyasına ekledim
@@ -668,7 +668,7 @@ kariyer-asistani/
   ```bash
   # Günlük otomatik tarama
   python main.py --schedule daily --time 08:00
-  
+
   # Haftalık rapor
   python main.py --schedule weekly --day monday
   ```
@@ -771,7 +771,7 @@ Bu proje açık kaynaklıdır ve topluluğun katkılarıyla büyür. Her seviyed
 
 #### 🎯 Katkı Alanları
 - **🐛 Bug Reports:** Sorunları bildirin
-- **💡 Feature Requests:** Yeni özellik önerileri  
+- **💡 Feature Requests:** Yeni özellik önerileri
 - **📝 Documentation:** Rehber ve dokümantasyon iyileştirmeleri
 - **🧪 Testing:** Yeni senaryolar ve test case'leri
 - **🌍 Localization:** Farklı dil/ülke desteği
@@ -790,7 +790,7 @@ Bu proje açık kaynaklıdır ve topluluğun katkılarıyla büyür. Her seviyed
    git checkout -b feature/amazing-new-feature
    # veya
    git checkout -b bugfix/fix-linkedin-scraping
-   # veya  
+   # veya
    git checkout -b docs/improve-readme
    ```
 
@@ -806,7 +806,7 @@ Bu proje açık kaynaklıdır ve topluluğun katkılarıyla büyür. Her seviyed
    git add .
    git commit -m "feat: LinkedIn API rate limit handling eklendi"
    # veya
-   git commit -m "fix: CSV encoding sorunu düzeltildi"  
+   git commit -m "fix: CSV encoding sorunu düzeltildi"
    # veya
    git commit -m "docs: Kurulum rehberi güncellendi"
    ```
@@ -840,14 +840,14 @@ Bu projeye katkıda bulunan herkese teşekkürler:
 ## 📞 İletişim ve Destek
 
 ### 👨‍💻 Proje Sahibi
-**Furkan Uçan**  
-📧 **Email:** furkan.ucann@yandex.com  
-💼 **LinkedIn:** [linkedin.com/in/furkan-ucan](https://linkedin.com/in/furkan-ucan)  
-🐙 **GitHub:** [github.com/furkan-ucan](https://github.com/furkan-ucan)  
+**Furkan Uçan**
+📧 **Email:** furkan.ucann@yandex.com
+💼 **LinkedIn:** [linkedin.com/in/furkan-ucan](https://linkedin.com/in/furkan-ucan)
+🐙 **GitHub:** [github.com/furkan-ucan](https://github.com/furkan-ucan)
 
 ### 💬 Topluluk Desteği
 - **🐛 Bug Report:** [GitHub Issues](https://github.com/furkan-ucan/akilli-kariyer-asistani/issues)
-- **💡 Feature Request:** [GitHub Discussions](https://github.com/furkan-ucan/akilli-kariyer-asistani/discussions)  
+- **💡 Feature Request:** [GitHub Discussions](https://github.com/furkan-ucan/akilli-kariyer-asistani/discussions)
 - **❓ Sorular:** README.md'de cevabı yoksa issue açın
 - **🤝 Collaboration:** Birlikte çalışmak için LinkedIn'den iletişime geçin
 
@@ -860,7 +860,7 @@ Bu projeye katkıda bulunan herkese teşekkürler:
 python --version
 pip list | grep -E "(jobspy|chromadb|google-generativeai)"
 
-# Hata detayları  
+# Hata detayları
 python main.py > debug.log 2>&1
 # debug.log dosyasının içeriğini paylaşın
 ```
@@ -883,12 +883,12 @@ python main.py > debug.log 2>&1
 
 ### ⭐ **Star vermeyi unutmayın!** ⭐
 
-Bu proje faydalı olduysa yıldız vererek destekleyebilirsiniz.  
+Bu proje faydalı olduysa yıldız vererek destekleyebilirsiniz.
 Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabilirsiniz.
 
 ### 💝 Teşekkürler
 
-> *"Hayallerinizdeki işi bulmak artık hayallerinizden daha kolay!"*  
+> *"Hayallerinizdeki işi bulmak artık hayallerinizden daha kolay!"*
 > *"AI destekli kariyer planlaması artık herkesin elinde!"*
 
 **🚀 Başarılı bir kariyer yolculuğu dileriz!**
