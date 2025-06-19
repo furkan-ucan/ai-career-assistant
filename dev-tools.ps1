@@ -11,28 +11,28 @@ function Format-Code {
 # Kod kalitesi kontrolü
 function Test-CodeQuality {
     Write-Host "Kod kalitesi kontrolü başlatılıyor..." -ForegroundColor Yellow
-    
+
     Write-Host "📋 isort kontrolü..." -ForegroundColor Cyan
     $isortResult = isort main.py src/ --profile black --check-only
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ isort sorunları bulundu!" -ForegroundColor Red
         return $false
     }
-    
+
     Write-Host "🎨 black kontrolü..." -ForegroundColor Cyan
     $blackResult = black main.py src/ --line-length=120 --check
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Black formatlaması gerekli!" -ForegroundColor Red
         return $false
     }
-    
+
     Write-Host "🔍 flake8 kontrolü..." -ForegroundColor Cyan
     $flakeResult = flake8 main.py src/ --max-line-length=120 --ignore=E203,W503
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Flake8 sorunları bulundu!" -ForegroundColor Red
         return $false
     }
-    
+
     Write-Host "✅ Kod kalitesi kontrolü tamamlandı - Tüm testler başarılı!" -ForegroundColor Green
     return $true
 }
