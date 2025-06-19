@@ -34,12 +34,10 @@ class VectorStore:
                 self.client.delete_collection(self.collection_name)
                 print("🗑️ Mevcut koleksiyon silindi")
             except:
-                pass
-
-            # Yeni koleksiyon oluştur
+                pass            # Yeni koleksiyon oluştur (COSINE SIMILARITY ile)
             self.collection = self.client.create_collection(
                 name=self.collection_name,
-                metadata={"description": "İş ilanları vektör koleksiyonu"}
+                metadata={"description": "İş ilanları vektör koleksiyonu", "hnsw:space": "cosine"}
             )
 
             print("✅ Yeni koleksiyon oluşturuldu")
@@ -119,14 +117,13 @@ class VectorStore:
                 query_embeddings=[cv_embedding],
                 n_results=top_k,
                 include=['metadatas', 'distances', 'documents']
-            )
-
-            # Sonuçları işle
+            )            # Sonuçları işle
             similar_jobs = []
             if results['metadatas'] and results['metadatas'][0]:
                 for i, metadata in enumerate(results['metadatas'][0]):
                     distance = results['distances'][0][i]
-                    similarity_score = round((1 - distance) * 100, 2)  # Mesafe'yi benzerlik skoruna çevir
+                    # Cosine distance'ı cosine similarity'ye çevir
+                    similarity_score = round((1 - distance) * 100, 2)
 
                     job_info = {
                         'title': metadata.get('title', 'N/A'),

@@ -7,6 +7,7 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 import time
+import numpy as np
 from typing import List, Optional
 
 # Environment variables yükle
@@ -85,6 +86,49 @@ class EmbeddingService:
         print(f"✅ {successful_count}/{total} embedding başarıyla oluşturuldu")
 
         return embeddings
+
+    def calculate_similarity(self, text1: str, text2: str) -> float:
+        """
+        İki metin arasındaki anlamsal benzerliği hesaplar (cosine similarity)
+        
+        Args:
+            text1: İlk metin
+            text2: İkinci metin
+            
+        Returns:
+            Benzerlik puanı (0-100 arası)
+        """
+        print("🔄 Embedding'ler oluşturuluyor...")
+        
+        # Her iki metin için embedding oluştur
+        embedding1 = self.create_embedding(text1)
+        embedding2 = self.create_embedding(text2)
+        
+        if embedding1 is None or embedding2 is None:
+            print("❌ Embedding oluşturulamadı!")
+            return 0.0
+        
+        # NumPy array'lere çevir
+        vec1 = np.array(embedding1)
+        vec2 = np.array(embedding2)
+        
+        # Cosine similarity hesapla
+        dot_product = np.dot(vec1, vec2)
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+        
+        cosine_sim = dot_product / (norm1 * norm2)
+        
+        # 0-100 arasına ölçekle
+        similarity_percentage = (cosine_sim + 1) / 2 * 100
+        
+        print(f"✅ Cosine similarity: {cosine_sim:.4f}")
+        print(f"✅ Benzerlik puanı: {similarity_percentage:.2f}%")
+        
+        return similarity_percentage
 
 if __name__ == "__main__":
     # Test çalıştırması

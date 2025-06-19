@@ -1,6 +1,7 @@
 """
-Veri Toplama Modülü - Çoklu Site Desteği ile Akıllı Arama
-JobSpy kullanarak birden fazla platformdan CV'ye uygun iş ilanlarını toplar.
+Veri Toplama Modülü - JobSpy Gelişmiş Özellikler ile Optimize Edilmiş
+JobSpy'ın advanced features (hours_old, gelişmiş search queries, site-specific params) kullanarak
+birden fazla platformdan CV'ye uygun iş ilanlarını toplar.
 """
 
 from jobspy import scrape_jobs
@@ -11,57 +12,59 @@ import os
 # --- VARSAYILAN AYARLAR ---
 VARSAYILAN_LOKASYON = "Turkey"
 VARSAYILAN_MAX_SONUC_PER_SITE = 50  # Her site için ayrı limit
-HEDEFLENEN_SITELER = ["indeed", "linkedin"]  # ÇOK ÖNEMLİ: Önce Indeed (daha stabil), sonra LinkedIn
+HEDEFLENEN_SITELER = ["indeed", "linkedin"]  # ÇOK ÖNEMLİ: LinkedIn öncelikli!
 
 def collect_job_data(
     search_term,
     location=VARSAYILAN_LOKASYON,
     max_results_per_site=VARSAYILAN_MAX_SONUC_PER_SITE,
-    site_names=HEDEFLENEN_SITELER
+    site_names=HEDEFLENEN_SITELER,
+    hours_old=72  # JobSpy native tarih filtresi (varsayılan: 3 gün)
 ):
     """
-    Belirtilen sitelerden ve parametrelerle iş ilanlarını toplar.
+    JobSpy'ın gelişmiş özelliklerini kullanarak optimize edilmiş iş ilanı toplama.
 
     Args:
-        search_term: Arama terimi (zorunlu)
+        search_term: Arama terimi - Indeed için gelişmiş operatörler desteklenir
         location: Arama lokasyonu (varsayılan: Turkey)
         max_results_per_site: Her site için maksimum sonuç sayısı
         site_names: Hedeflenen siteler listesi
+        hours_old: Son X saat içindeki ilanlar (JobSpy native filtre)
 
     Returns:
         pandas.DataFrame: Birleştirilmiş iş ilanları veya None (hata durumunda)
     """
-    print(f"\n🔍 Akıllı İş Arama Başlatılıyor...")
+    print(f"\n🔍 JobSpy Gelişmiş Arama Başlatılıyor...")
     print(f"📍 Lokasyon: {location}")
-    print(f"🎯 Hedef: {max_results_per_site} ilan")
-    print("⏳ Bu işlem birkaç dakika sürebilir (geniş spektrum arama)...")
-
-    print("🎯 Akıllı arama spektrumu:")
-    print("   - Full Stack, React, NestJS, TypeScript")
-    print("   - Veri Analisti, İş Analisti, ERP")
-    print("   - Flutter, Python, GIS, Data Science")
+    print(f"🎯 Hedef: {max_results_per_site} ilan/site")
+    print(f"⏰ Tarih filtresi: Son {hours_old} saat (JobSpy native)")
+    print(f"🔍 Arama terimi: '{search_term}'")
+    print("⏳ Bu işlem birkaç dakika sürebilir...")
 
     all_jobs_list = []
 
     for site in site_names:
         print(f"\n--- Site '{site}' için arama yapılıyor ---")
         try:
-            # Site-specific parameters
+            # JobSpy'ın gelişmiş parametreleri
             scrape_params = {
                 'site_name': site,
                 'search_term': search_term,
                 'location': location,
                 'results_wanted': max_results_per_site,
-                'hours_old': 72  # Son 3 gün için (JobSpy native date filter)
+                'hours_old': hours_old  # Native tarih filtresi
             }
 
             # Site-specific optimizations
             if site == "indeed":
                 scrape_params['country_indeed'] = "Turkey"
+                print("   🎯 Indeed: Türkiye özel ayarları aktif")
+
             elif site == "linkedin":
-                scrape_params['linkedin_fetch_description'] = True  # Daha detaylı LinkedIn verisi
+                scrape_params['linkedin_fetch_description'] = True  # Detaylı LinkedIn verisi
                 print("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")
 
+            # JobSpy ile veri çek
             jobs_from_site = scrape_jobs(**scrape_params)
 
             if jobs_from_site is not None and not jobs_from_site.empty:
@@ -85,20 +88,39 @@ def collect_job_data(
     # Zaman damgası ekle
     combined_df['collected_at'] = datetime.now()
 
-    # Tekrarlanan ilanları temizle (farklı sitelerden aynı ilan gelebilir)
+    # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
+    print(f"\n🔄 Deduplication başlatılıyor...")
+    initial_count = len(combined_df)
+
     if 'description' in combined_df.columns:
+        # Açıklama varsa daha hassas deduplication
         combined_df['description_short'] = combined_df['description'].str[:100]
-        combined_df.drop_duplicates(subset=['title', 'company', 'location', 'description_short'], inplace=True, keep='first')
+        combined_df.drop_duplicates(
+            subset=['title', 'company', 'location', 'description_short'],
+            inplace=True,
+            keep='first'
+        )
         combined_df.drop(columns=['description_short'], inplace=True)
     else:
-        combined_df.drop_duplicates(subset=['title', 'company', 'location'], inplace=True, keep='first')
+        # Temel deduplication
+        combined_df.drop_duplicates(
+            subset=['title', 'company', 'location'],
+            inplace=True,
+            keep='first'
+        )
 
-    print(f"\n✨ Toplamda {len(combined_df)} adet benzersiz ilan (tüm sitelerden) bulundu.")
+    final_count = len(combined_df)
+    removed_count = initial_count - final_count
 
-    return combined_df  # DataFrame döndür
+    print(f"✨ Deduplication tamamlandı:")
+    print(f"   📊 Başlangıç: {initial_count} ilan")
+    print(f"   🗑️ Çıkarılan tekrar: {removed_count} ilan")
+    print(f"   ✅ Final: {final_count} benzersiz ilan")
+
+    return combined_df
 
 # CSV kaydetme fonksiyonu (isteğe bağlı)
-def save_jobs_to_csv(jobs_df, filename_prefix="ham_ilanlar"):
+def save_jobs_to_csv(jobs_df, filename_prefix="jobspy_ilanlar"):
     """
     İş ilanlarını CSV dosyasına kaydeder
     """
@@ -117,27 +139,19 @@ def save_jobs_to_csv(jobs_df, filename_prefix="ham_ilanlar"):
 
     return csv_path
 
-# Eski main.py uyumluluğu için wrapper fonksiyon
-def collect_job_data_legacy(search_term, location=VARSAYILAN_LOKASYON, max_results=20):
-    """
-    Eski main.py uyumluluğu için wrapper. DataFrame yerine CSV path döndürür.
-    """
-    jobs_df = collect_job_data(
-        search_term=search_term,
-        location=location,
-        max_results_per_site=max_results,
-        site_names=["indeed"]  # Eski davranış için sadece Indeed
-    )
-
-    if jobs_df is not None:
-        return save_jobs_to_csv(jobs_df)
-    else:
-        return None
-
 if __name__ == "__main__":
     # Test için basit bir çalıştırma
-    test_df = collect_job_data(search_term="Python Developer", max_results_per_site=10)
+    print("🧪 JobSpy Gelişmiş Özellikler Test Ediliyor...")
+
+    test_df = collect_job_data(
+        search_term="Software Engineer",
+        max_results_per_site=10,
+        hours_old=72
+    )
+
     if test_df is not None:
-        print(f"\nTest sonucu: {len(test_df)} ilan bulundu.")
-        print(f"Siteler: {test_df['source_site'].value_counts().to_dict()}")
-        save_jobs_to_csv(test_df, "test_multi_site")
+        print(f"\n✅ Test sonucu: {len(test_df)} ilan bulundu.")
+        print(f"📊 Site dağılımı: {test_df['source_site'].value_counts().to_dict()}")
+        save_jobs_to_csv(test_df, "test_advanced_jobspy")
+    else:
+        print("❌ Test başarısız!")

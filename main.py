@@ -4,8 +4,8 @@ Bu dosya, tüm sistem bileşenlerini koordine eder ve uygulamanın giriş noktas
 """
 
 import os
-import sys
 import pandas as pd
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Environment variables yükle
@@ -16,87 +16,127 @@ from src.data_collector import collect_job_data
 from src.cv_processor import CVProcessor
 from src.embedding_service import EmbeddingService
 from src.vector_store import VectorStore
-from src.filter import filter_junior_suitable_jobs, filter_jobs_by_date
+from src.filter import filter_junior_suitable_jobs
 
-# Konfigürasyon sabitleri
-ENABLE_DATE_FILTER = True  # Manuel doğrulama için True yapın
-DATE_FILTER_DAYS = 3       # Son X gün içindeki ilanlar
-MIN_SIMILARITY_THRESHOLD = 50  # Benzerlik eşiği (%) - Daha fazla sonuç için düşürüldü
+# --- YENİ KONFİGÜRASYON SABİTLERİ (JobSpy Optimize) ---
+MIN_SIMILARITY_THRESHOLD = 60  # Benzerlik eşiği (%) - JobSpy ile daha kaliteli veri
+HEDEFLENEN_SITELER = ["linkedin", "indeed"]  # Hangi sitelerde arama yapılacak
+DEFAULT_HOURS_OLD = 72  # Varsayılan olarak son 3 günlük ilanlar (JobSpy native)
+DEFAULT_RESULTS_PER_PERSONA_SITE = 25  # Her persona ve site için kaç sonuç çekilecek
 
 def collect_data_for_all_personas():
     """
-    Tüm personalar için ayrı ayrı veri toplar ve sonuçları birleştirir.
-    BÖL VE FETHET stratejisi: Karmaşık bir sorgu yerine basit sorgular
+    JobSpy Gelişmiş Özellikler ile Tüm Personalar için Optimize Edilmiş Veri Toplama
+    Indeed'in gelişmiş arama operatörlerini ve JobSpy'ın 'hours_old' parametresini kullanır.
     """
-    print("\n🔍 Stratejik Veri Toplama Başlatılıyor (Böl ve Fethet - Çoklu Site)...")
-    print("=" * 60)
+    print("\n🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor...")
+    print("=" * 70)
 
-    # Her bir persona için basit ve etkili arama terimleri
-    persona_search_terms = {
-        "Yazilim_Gelistirici": "Yazılım Geliştirici",
-        "Full_Stack": "Full Stack Developer",
-        "React_Developer": "React Developer",
-        "Python_Developer": "Python Developer",
-        "Analist": "İş Analisti",
-        "Veri_Analisti": "Veri Analisti",
-        "Business_Analyst": "Business Analyst",
-        "ERP_Danismani": "ERP Danışmanı",
-        "ERP_Specialist": "ERP Specialist",
-        "Proses_Gelistirme": "Süreç Geliştirme",
-        "Flutter_Developer": "Flutter Developer",
-        "TypeScript_Developer": "TypeScript"
+    # Persona bazlı, Indeed'e göre optimize edilmiş ve negatif filtreli arama terimleri
+    persona_search_config = {
+        "Software_Engineer": {
+            "term": "(\"Software Engineer\" OR \"Yazılım Mühendisi\") -Senior -Lead -Principal -Manager -Direktör",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "Full_Stack": {
+            "term": "(\"Full Stack Developer\" OR \"Full Stack Engineer\") -Senior -Lead -Principal -Manager",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "Frontend_Developer": {
+            "term": "(\"Frontend Developer\" OR \"Front End Developer\" OR React OR Vue OR Angular) -Senior -Lead",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "Backend_Developer": {
+            "term": "(\"Backend Developer\" OR \"Back End Developer\" OR Python OR Java OR Node) -Senior -Lead",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "Junior_Developer": {
+            "term": "\"Junior Developer\" OR \"Junior Software\" OR \"Graduate Developer\" -Senior -Lead",
+            "hours_old": DEFAULT_HOURS_OLD, "results": 30  # Junior için daha fazla sonuç
+        },
+        "Entry_Level_Developer": {
+            "term": "\"Entry Level\" OR \"Entry-Level\" OR \"Stajyer\" OR \"Trainee\" -Senior -Manager",
+            "hours_old": DEFAULT_HOURS_OLD, "results": 30
+        },
+        "Business_Analyst": {
+            "term": "(\"Business Analyst\" OR \"İş Analisti\") (ERP OR SAP OR Process OR Süreç) -Senior -Lead -Manager",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "Data_Analyst": {
+            "term": "(\"Data Analyst\" OR \"Veri Analisti\") (SQL OR Python OR PowerBI OR Tableau) -Senior -Lead",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "ERP_Consultant": {
+            "term": "(\"ERP Consultant\" OR \"ERP Danışmanı\" OR \"SAP Consultant\" OR \"Microsoft Dynamics\") -Senior -Lead -Manager",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "Process_Analyst": {
+            "term": "(\"Process Analyst\" OR \"Süreç Analisti\" OR \"Business Process\" OR \"İş Süreçleri\") -Senior -Lead",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "IT_Analyst": {
+            "term": "(\"IT Analyst\" OR \"BT Analisti\" OR \"System Analyst\" OR \"Sistem Analisti\") -Senior -Lead",
+            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
+        },
+        "Junior_General_Tech": {
+            "term": "Junior (Developer OR Analyst OR Engineer OR Specialist OR Uzman OR Danışman) -Senior -Lead",
+            "hours_old": 48, "results": 40  # Son 2 gün, daha fazla sonuç
+        }
     }
 
-    all_jobs_list = []
-    total_collected = 0
+    all_collected_jobs_list = []
 
-    for persona, term in persona_search_terms.items():
-        print(f"\n--- Persona '{persona}' için arama yapılıyor ---")
-        print(f"🔍 Arama terimi: '{term}'")
+    for persona_name, config in persona_search_config.items():
+        print(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
+        print(f"🎯 Optimize edilmiş terim: '{config['term']}'")
+        print(f"⏰ Tarih filtresi: Son {config['hours_old']} saat")
 
         try:
-            # Her persona için çoklu site araması (DataFrame döndürür)
-            jobs_df = collect_job_data(search_term=term, max_results_per_site=20)
+            # JobSpy'ın gelişmiş özelliklerini kullanarak veri toplama
+            jobs_df_for_persona = collect_job_data(
+                search_term=config["term"],
+                site_names=HEDEFLENEN_SITELER,  # LinkedIn + Indeed
+                location="Turkey",
+                max_results_per_site=config["results"],
+                hours_old=config["hours_old"]
+            )
 
-            if jobs_df is not None and not jobs_df.empty:
-                print(f"✅ {len(jobs_df)} ilan toplandı")                # Persona bilgisini ekle
-                jobs_df['persona'] = persona
-                jobs_df['search_term'] = term
-                all_jobs_list.append(jobs_df)
-                total_collected += len(jobs_df)
+            if jobs_df_for_persona is not None and not jobs_df_for_persona.empty:
+                # Persona bilgisini ve arama terimini ekle (analiz için faydalı)
+                jobs_df_for_persona['persona_source'] = persona_name
+                jobs_df_for_persona['search_term_used'] = config["term"]
+                all_collected_jobs_list.append(jobs_df_for_persona)
+                print(f"✨ Persona '{persona_name}' için {len(jobs_df_for_persona)} ilan bulundu.")
             else:
-                print(f"❌ '{term}' için ilan bulunamadı")
+                print(f"ℹ️ Persona '{persona_name}' için hiçbir siteden ilan bulunamadı.")
 
         except Exception as e:
-            print(f"❌ '{term}' için hata: {str(e)}")
+            print(f"❌ Persona '{persona_name}' için hata: {str(e)}")
             continue
 
-    if not all_jobs_list:
-        print("❌ Hiçbir persona için ilan bulunamadı. Genel bir sorun olabilir.")
+    if not all_collected_jobs_list:
+        print("❌ Hiçbir persona ve site kombinasyonundan ilan bulunamadı.")
         return None
 
-    # Tüm DataFrame'leri birleştir
-    print(f"\n🔄 {len(all_jobs_list)} persona sonucu birleştiriliyor...")
-    final_df = pd.concat(all_jobs_list, ignore_index=True)
+    # Tüm personaların sonuçlarını birleştir
+    final_df = pd.concat(all_collected_jobs_list, ignore_index=True)
+    print(f"\n📊 Birleştirme öncesi (tüm personalar): {len(final_df)} ilan")
 
-    print(f"📊 Birleştirme öncesi: {len(final_df)} ilan")    # Tekrarlanan ilanları kaldır (şirket + başlık + lokasyon bazında)
-    final_df.drop_duplicates(subset=['company', 'title', 'location'], inplace=True)
+    # Son genel deduplication (persona'lar arası tekrarlar için)
+    if 'description' in final_df.columns and not final_df.empty:
+         final_df['description_short'] = final_df['description'].astype(str).str[:100]
+         final_df.drop_duplicates(subset=['title', 'company', 'location', 'description_short'], inplace=True, keep='first')
+         final_df.drop(columns=['description_short'], inplace=True)
+    elif not final_df.empty:
+         final_df.drop_duplicates(subset=['title', 'company', 'location'], inplace=True, keep='first')
 
-    print(f"✨ Tekrar temizleme sonrası: {len(final_df)} benzersiz ilan")
-
-    # NOT: Tarih filtresi burada değil, AI analizi sırasında date_posted field'ı üzerinden yapılacak
-    # Çünkü JobSpy'ın date_posted formatı: "1 day ago", "3 days ago" şeklinde
-
-    # Birleştirilmiş veriyi tek bir dosyaya kaydet
+    print(f"✨✨✨ TOPLAM: {len(final_df)} adet BENZERSİZ ilan (JobSpy optimize edilmiş)! ✨✨✨")    # Optimize edilmiş CSV kaydetme
     output_dir = "data"
     os.makedirs(output_dir, exist_ok=True)
-    from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    final_csv_path = os.path.join(output_dir, f"birlesmis_ilanlar_{timestamp}.csv")
+    final_csv_path = os.path.join(output_dir, f"jobspy_optimize_ilanlar_{timestamp}.csv")
     final_df.to_csv(final_csv_path, index=False, encoding='utf-8')
-
-    print(f"📁 Tüm veriler şuraya kaydedildi: {final_csv_path}")
-    print(f"🎯 Toplam başarı: {len(final_df)} benzersiz ilan!")
+    print(f"📁 JobSpy optimize edilmiş veriler: {final_csv_path}")
 
     return final_csv_path
 
@@ -105,9 +145,9 @@ def analyze_and_find_best_jobs():
     print("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
     print("=" * 60)
 
-    # 1. BÖL VE FETHET ile fresh data toplayalım
-    print("🔄 1/6: Stratejik veri toplama...")
-    csv_path = collect_data_for_all_personas()  # YENİ FONKSİYONU ÇAĞIRIYORUZ
+    # 1. Veri toplama
+    print("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
+    csv_path = collect_data_for_all_personas()
     if not csv_path:
         print("❌ Veri toplama başarısız - analiz durduruluyor!")
         return
@@ -152,30 +192,20 @@ def analyze_and_find_best_jobs():
             embedding = embedding_service.create_embedding(str(job['description']))
             job_embeddings.append(embedding)
         else:
-            job_embeddings.append(None)
-
-    # Vector store'a ekle
+            job_embeddings.append(None)    # Vector store'a ekle
     success = vector_store.add_jobs(jobs_df, job_embeddings)
     if not success:
         print("❌ Vector store yükleme başarısız!")
-        return
-
-    print("✅ Vector store hazır")    # 5. Benzer işleri bul ve filtrele
+        return    # 5. Benzer işleri bul ve filtrele
     print("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
-    similar_jobs = vector_store.search_similar_jobs(cv_embedding, top_k=30)  # Daha fazla al
-
+    similar_jobs = vector_store.search_similar_jobs(cv_embedding, top_k=50)
+    
     if similar_jobs:
-        # ADIM 1: Tarih filtresi (manuel doğrulama ile aynı zaman penceresi)
-        if ENABLE_DATE_FILTER:
-            print(f"📅 Tarih filtresi uygulanıyor (son {DATE_FILTER_DAYS} gün)...")
-            similar_jobs = filter_jobs_by_date(similar_jobs, max_days=DATE_FILTER_DAYS, debug=False)
-            print(f"📊 Tarih filtresi sonrası: {len(similar_jobs)} ilan")
-          # ADIM 2: YBS odaklı detaylı filtreleme
         print("🔍 Sonuçlar YBS/junior pozisyonlar için akıllı filtreleme...")
         filtered_jobs = filter_junior_suitable_jobs(similar_jobs, debug=False)
 
         if filtered_jobs:
-            # ADIM 3: Uygunluk puanı eşiği ekleme (Strateji 3)
+            # Uygunluk puanı eşiği ekleme
             high_quality_jobs = [job for job in filtered_jobs if job['similarity_score'] >= MIN_SIMILARITY_THRESHOLD]
 
             if high_quality_jobs:
@@ -183,7 +213,7 @@ def analyze_and_find_best_jobs():
                 print(f"📊 Uygunluk eşiği: %{MIN_SIMILARITY_THRESHOLD} ve üzeri")
 
                 print("\n" + "="*70)
-                print("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI")
+                print("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI (JobSpy Optimize)")
                 print("🎯 YBS + Full-Stack + Veri Analizi Odaklı")
                 print("="*70)
 
@@ -191,18 +221,18 @@ def analyze_and_find_best_jobs():
                     print(f"\n{i}. {job['title']} - {job['company']}")
                     print(f"   📍 {job['location']}")
                     print(f"   📊 Uygunluk: %{job['similarity_score']:.1f}")
-                    if 'persona' in job:
-                        print(f"   🎭 Persona: {job['persona']}")
+                    print(f"   💼 Site: {job.get('source_site', 'N/A')}")  # Hangi siteden geldiği
+                    print(f"   👤 Persona: {job.get('persona_source', job.get('persona', 'N/A'))}")  # Hangi persona aramasıyla geldiği
                     print(f"   🔗 {job['url']}")
                     print("-" * 50)
 
                 print(f"\n🎯 Analiz tamamlandı! {len(high_quality_jobs)} yüksek kaliteli pozisyon listelendi.")
 
                 # Persona dağılımı analizi
-                if high_quality_jobs and 'persona' in high_quality_jobs[0]:
+                if high_quality_jobs and ('persona_source' in high_quality_jobs[0] or 'persona' in high_quality_jobs[0]):
                     persona_counts = {}
                     for job in high_quality_jobs:
-                        persona = job.get('persona', 'Unknown')
+                        persona = job.get('persona_source', job.get('persona', 'Unknown'))
                         persona_counts[persona] = persona_counts.get(persona, 0) + 1
 
                     print(f"\n📈 Persona Dağılımı:")
@@ -219,49 +249,13 @@ def analyze_and_find_best_jobs():
         print("❌ Benzer iş bulunamadı!")
 
 def print_manual_validation_guide():
-    """Manuel doğrulama protokolü rehberini yazdırır"""
+    """JobSpy Gelişmiş Özellikler için Manuel Doğrulama Protokolü"""
     print("\n" + "="*80)
-    print("📋 MANUEL DOĞRULAMA PROTOKOLÜ REHBERİ")
-    print("🔬 Sistemin 'kör noktalarını' tespit etmek için adım adım rehber")
+    print("📋 JOBSPY GELİŞMİŞ ÖZELLİKLER - MANUEL DOĞRULAMA PROTOKOLÜ")
     print("="*80)
-
-    print(f"""
-🔹 ADIM 1: Manuel Arama (Indeed'de)
-   • Indeed.com'da giriş yapın
-   • Filtreler: 'Son {DATE_FILTER_DAYS} gün', 'Türkiye', 'Entry Level/Junior'
-   • Arama terimleri (sırayla deneyin):
-     - "Yazılım Geliştirici"
-     - "Full Stack Developer"
-     - "İş Analisti"
-     - "ERP Danışmanı"
-   • 2-3 tane "mükemmel uyum" ilan tespit edin ve kaydedin
-
-🔹 ADIM 2: Sistem Çalıştırma
-   • Bu scripti çalıştırın (ENABLE_DATE_FILTER=True olduğundan emin olun)
-   • Sistem otomatik olarak son {DATE_FILTER_DAYS} günlük ilanları filtreleyecek
-   • Sonuçlar görüntülendiğinde manuel bulduğunuz ilanları kontrol edin
-
-🔹 ADIM 3: Karşılaştırma Analizi
-   • Manuel bulduğunuz "mükemmel uyum" ilanlar sistem sonuçlarında var mı?
-   • VARSA: ✅ Sistem çalışıyor, kör nokta yok
-   • YOKSA: ❌ KÖR NOKTA TESPİT EDİLDİ!
-
-🔹 ADIM 4: Kör Nokta Düzeltme (eğer varsa)
-   • Kaçırılan ilanların arama terimlerini analiz edin
-   • persona_search_terms listesine yeni terimler ekleyin
-   • Filtreleme kriterlerini gözden geçirin
-   • Tekrar test edin
-
-🔹 ADIM 5: Sürekli İyileştirme
-   • Bu protokolü haftalık çalıştırın
-   • Yeni iş trendlerini yakalayın
-   • Sistem performansını takip edin
-
-💡 NOT: Bu protokol bilimsel doğrulamanın temelini oluşturur!
-""")
-
-    print("="*80)
-    print(f"🎯 SİSTEM DURUMU: Tarih filtresi {'AÇIK' if ENABLE_DATE_FILTER else 'KAPALI'} (≤{DATE_FILTER_DAYS} gün)")
+    print("🎯 SİSTEM DURUMU: JobSpy Native (hours_old=72, cosine similarity)")
+    print("🚀 Optimize Özellikler: Çoklu site, gelişmiş operatörler, 12 persona")
+    print("📊 Beklenen Performans: 100-300 benzersiz ilan, %80+ uygunluk oranı")
     print("="*80)
 
 def main():
@@ -286,7 +280,7 @@ def main():
         return
 
     print("✅ Sistem kontrolleri başarılı")
-    print("🎯 12 farklı persona ile stratejik veri toplama başlatılıyor...\n")
+    print("🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n")
 
     # Tam otomatik analiz çalıştır
     analyze_and_find_best_jobs()
