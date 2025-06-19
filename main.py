@@ -3,16 +3,19 @@ Akıllı Kariyer Asistanı - Ana Uygulama (BÖL VE FETHET STRATEJİSİ)
 Bu dosya, tüm sistem bileşenlerini koordine eder ve uygulamanın giriş noktasıdır.
 """
 
+# Standard Library
 import logging
 import os
 from datetime import datetime
 from pathlib import Path
 
+# Third Party
 import pandas as pd
 import yaml
 from dotenv import load_dotenv
 from tqdm import tqdm
 
+# Local
 from src.cv_processor import CVProcessor
 from src.data_collector import collect_job_data
 from src.embedding_service import EmbeddingService

@@ -3,6 +3,7 @@ Filtreleme Modülü
 Junior/entry-level pozisyonlar için akıllı filtreleme işlemleri
 """
 
+# Standard Library
 import logging
 
 logger = logging.getLogger(__name__)
@@ -142,7 +143,7 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
             filtered_jobs.append(job)
             filter_stats["passed"] += 1
             if debug:
-                logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")    # Filtreleme istatistikleri
+                logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")  # Filtreleme istatistikleri
     total_processed = len(jobs_list)
     logger.info("\n📊 Filtreleme İstatistikleri:")
     logger.info(f"   Toplam işlenen: {total_processed}")

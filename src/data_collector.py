@@ -6,11 +6,14 @@ JobSpy'ın advanced fea    final_count = len(combined_df)
 birden fazla platformdan CV'ye uygun iş ilanlarını toplar.
 """
 
-from jobspy import scrape_jobs
-import pandas as pd
+# Standard Library
 import logging
 from datetime import datetime
 from pathlib import Path
+
+# Third Party
+import pandas as pd
+from jobspy import scrape_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +41,7 @@ def collect_job_data(
         hours_old: Son X saat içindeki ilanlar (JobSpy native filtre)
 
     Returns:
-        pandas.DataFrame: Birleştirilmiş iş ilanları veya None (hata durumunda)    """
+        pandas.DataFrame: Birleştirilmiş iş ilanları veya None (hata durumunda)"""
     logger.info("\n🔍 JobSpy Gelişmiş Arama Başlatılıyor...")
     logger.info(f"📍 Lokasyon: {location}")
     logger.info(f"🎯 Hedef: {max_results_per_site} ilan/site")
@@ -82,7 +85,7 @@ def collect_job_data(
         return None
 
     # Tüm sitelerden gelen DataFrame'leri birleştir
-    combined_df = pd.concat(all_jobs_list, ignore_index=True)    # Zaman damgası ekle
+    combined_df = pd.concat(all_jobs_list, ignore_index=True)  # Zaman damgası ekle
     combined_df["collected_at"] = datetime.now()  # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
     logger.info("\n🔄 Deduplication başlatılıyor...")
     initial_count = len(combined_df)

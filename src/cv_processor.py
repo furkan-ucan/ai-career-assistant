@@ -3,9 +3,11 @@ CV İşleme Modülü
 Kullanıcının CV'sini okur ve embedding oluşturur.
 """
 
+# Standard Library
 import logging
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
+
 from .embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)

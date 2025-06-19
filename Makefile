@@ -26,14 +26,17 @@ install:
 
 install-dev:
 	pip install -r requirements.txt
-	pip install black flake8 pytest pytest-cov
+	pip install black flake8 pytest pytest-cov isort
 
 # Kod formatları
 format:
+	isort main.py src/ --profile black
 	black main.py src/ --line-length=120
 	@echo "✅ Kod formatlaması tamamlandı"
 
 lint:
+	isort main.py src/ --profile black --check-only
+	black main.py src/ --line-length=120 --check
 	flake8 main.py src/ --max-line-length=120 --ignore=E203,W503
 	@echo "✅ Kod kalitesi kontrolü tamamlandı"
 

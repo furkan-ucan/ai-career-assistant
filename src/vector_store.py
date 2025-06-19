@@ -3,11 +3,13 @@ Vektör Depolama Modülü - Temizlenmiş Versiyon
 ChromaDB kullanarak iş ilanı vektörlerini saklar ve arama yapar.
 """
 
+# Standard Library
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# Third Party
 import chromadb
 import pandas as pd
 
@@ -40,8 +42,7 @@ class VectorStore:
         try:
             # get_or_create_collection kullanarak hem yeni oluşturma hem de mevcut getirme
             self.collection = self.client.get_or_create_collection(
-                name=self.collection_name,
-                metadata={"hnsw:space": "cosine"}  # Cosine similarity kullan
+                name=self.collection_name, metadata={"hnsw:space": "cosine"}  # Cosine similarity kullan
             )
 
             # Mevcut öğe sayısını kontrol et
@@ -88,7 +89,7 @@ class VectorStore:
                     # Bu ID zaten var mı kontrol et
                     try:
                         existing = self.collection.get(ids=[job_id])
-                        if len(existing['ids']) > 0:
+                        if len(existing["ids"]) > 0:
                             continue  # Bu iş ilanı zaten var, atla
                     except Exception:
                         pass  # ID yoksa devam et
@@ -106,7 +107,7 @@ class VectorStore:
                 embeddings=valid_embeddings,
                 documents=[f"{job.get('title', '')} {job.get('description', '')}" for job in valid_jobs],
                 metadatas=valid_jobs,
-                ids=valid_ids
+                ids=valid_ids,
             )
 
             logger.info(f"✅ {len(valid_jobs)} yeni iş ilanı başarıyla eklendi")
@@ -117,10 +118,7 @@ class VectorStore:
             return False
 
     def search_jobs(
-        self,
-        query_embedding: List[float],
-        n_results: int = 10,
-        filter_metadata: Optional[Dict[str, Any]] = None
+        self, query_embedding: List[float], n_results: int = 10, filter_metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, List]:
         """Vektör benzerliği ile iş ilanı ara"""
         if not self.get_collection():
@@ -130,17 +128,15 @@ class VectorStore:
             where_clause = filter_metadata if filter_metadata else {}
 
             results = self.collection.query(
-                query_embeddings=[query_embedding],
-                n_results=n_results,
-                where=where_clause if where_clause else None
+                query_embeddings=[query_embedding], n_results=n_results, where=where_clause if where_clause else None
             )
 
-            if results and results.get('metadatas') and len(results['metadatas']) > 0:
+            if results and results.get("metadatas") and len(results["metadatas"]) > 0:
                 logger.info(f"🔍 {len(results['metadatas'][0])} iş ilanı bulundu")
                 return {
-                    "matches": results['documents'][0] if results.get('documents') else [],
-                    "distances": results['distances'][0] if results.get('distances') else [],
-                    "metadatas": results['metadatas'][0] if results.get('metadatas') else []
+                    "matches": results["documents"][0] if results.get("documents") else [],
+                    "distances": results["distances"][0] if results.get("distances") else [],
+                    "metadatas": results["metadatas"][0] if results.get("metadatas") else [],
                 }
             else:
                 logger.info("ℹ️ Arama kriterlerine uygun iş ilanı bulunamadı")
@@ -160,7 +156,7 @@ class VectorStore:
             return {
                 "total_jobs": total_count,
                 "collection_name": self.collection_name,
-                "last_updated": datetime.now().isoformat()
+                "last_updated": datetime.now().isoformat(),
             }
         except Exception as e:
             logger.error(f"❌ İstatistik alma hatası: {str(e)}", exc_info=True)
@@ -172,8 +168,8 @@ class VectorStore:
             if self.collection:
                 # Tüm öğeleri sil
                 all_items = self.collection.get()
-                if all_items.get('ids'):
-                    self.collection.delete(ids=all_items['ids'])
+                if all_items.get("ids"):
+                    self.collection.delete(ids=all_items["ids"])
                 logger.info("🗑️ Koleksiyon başarıyla temizlendi")
                 return True
             else:

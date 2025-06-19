@@ -3,13 +3,16 @@ Embedding Servisi
 Google Gemini API kullanarak metin embeddings'leri oluşturur.
 """
 
-import google.generativeai as genai
-import os
+# Standard Library
 import logging
-from dotenv import load_dotenv
+import os
 import time
-import numpy as np
 from typing import List, Optional
+
+# Third Party
+import google.generativeai as genai
+import numpy as np
+from dotenv import load_dotenv
 
 # Environment variables yükle
 load_dotenv()
