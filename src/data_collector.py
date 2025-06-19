@@ -8,7 +8,7 @@ from jobspy import scrape_jobs
 import pandas as pd
 import logging
 from datetime import datetime
-import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -123,11 +123,11 @@ def save_jobs_to_csv(jobs_df, filename_prefix="jobspy_ilanlar"):
         logger.error("❌ Kaydedilecek veri yok!")
         return None
 
-    output_dir = "data"
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = Path("data")
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_path = os.path.join(output_dir, f"{filename_prefix}_{timestamp}.csv")
+    csv_path = output_dir / f"{filename_prefix}_{timestamp}.csv"
 
     jobs_df.to_csv(csv_path, index=False, encoding='utf-8')
     logger.info(f"📁 Dosya kaydedildi: {csv_path}")

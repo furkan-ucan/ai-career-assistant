@@ -8,6 +8,9 @@ import pandas as pd
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
+import yaml
+from pathlib import Path
+from tqdm import tqdm
 
 # Environment variables yükle
 load_dotenv()
@@ -27,73 +30,45 @@ from src.embedding_service import EmbeddingService
 from src.vector_store import VectorStore
 from src.filter import filter_junior_suitable_jobs
 
-# --- YENİ KONFİGÜRASYON SABİTLERİ (JobSpy Optimize) ---
-MIN_SIMILARITY_THRESHOLD = 60  # Benzerlik eşiği (%) - JobSpy ile daha kaliteli veri
-HEDEFLENEN_SITELER = ["linkedin", "indeed"]  # Hangi sitelerde arama yapılacak
-DEFAULT_HOURS_OLD = 72  # Varsayılan olarak son 3 günlük ilanlar (JobSpy native)
-DEFAULT_RESULTS_PER_PERSONA_SITE = 25  # Her persona ve site için kaç sonuç çekilecek
+def load_config():
+    """config.yaml dosyasını yükle"""
+    config_path = Path("config.yaml")
+    try:
+        with open(config_path, 'r', encoding='utf-8') as file:
+            config = yaml.safe_load(file)
+        logger.info("✅ config.yaml başarıyla yüklendi")
+        return config
+    except FileNotFoundError:
+        logger.error(f"❌ config.yaml dosyası bulunamadı: {config_path}")
+        raise
+    except yaml.YAMLError as e:
+        logger.error(f"❌ config.yaml dosyası parse edilemedi: {e}")
+        raise
+
+# Konfigürasyonu yükle
+config = load_config()
+
+# Konfigürasyondan ayarları al
+job_settings = config['job_search_settings']
+MIN_SIMILARITY_THRESHOLD = job_settings['min_similarity_threshold']
+HEDEFLENEN_SITELER = job_settings['target_sites']
+DEFAULT_HOURS_OLD = job_settings['default_hours_old']
+DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings['default_results_per_site']
+
+# Persona konfigürasyonları
+persona_search_config = config['persona_search_configs']
 
 def collect_data_for_all_personas():
     """
     JobSpy Gelişmiş Özellikler ile Tüm Personalar için Optimize Edilmiş Veri Toplama
-    Indeed'in gelişmiş arama operatörlerini ve JobSpy'ın 'hours_old' parametresini kullanır.    """
+    Config.yaml'dan persona ayarları alınır.
+    """
     logger.info("🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor...")
     logger.info("=" * 70)
 
-    # Persona bazlı, Indeed'e göre optimize edilmiş ve negatif filtreli arama terimleri
-    persona_search_config = {
-        "Software_Engineer": {
-            "term": "(\"Software Engineer\" OR \"Yazılım Mühendisi\") -Senior -Lead -Principal -Manager -Direktör",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "Full_Stack": {
-            "term": "(\"Full Stack Developer\" OR \"Full Stack Engineer\") -Senior -Lead -Principal -Manager",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "Frontend_Developer": {
-            "term": "(\"Frontend Developer\" OR \"Front End Developer\" OR React OR Vue OR Angular) -Senior -Lead",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "Backend_Developer": {
-            "term": "(\"Backend Developer\" OR \"Back End Developer\" OR Python OR Java OR Node) -Senior -Lead",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "Junior_Developer": {
-            "term": "\"Junior Developer\" OR \"Junior Software\" OR \"Graduate Developer\" -Senior -Lead",
-            "hours_old": DEFAULT_HOURS_OLD, "results": 30  # Junior için daha fazla sonuç
-        },
-        "Entry_Level_Developer": {
-            "term": "\"Entry Level\" OR \"Entry-Level\" OR \"Stajyer\" OR \"Trainee\" -Senior -Manager",
-            "hours_old": DEFAULT_HOURS_OLD, "results": 30
-        },
-        "Business_Analyst": {
-            "term": "(\"Business Analyst\" OR \"İş Analisti\") (ERP OR SAP OR Process OR Süreç) -Senior -Lead -Manager",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "Data_Analyst": {
-            "term": "(\"Data Analyst\" OR \"Veri Analisti\") (SQL OR Python OR PowerBI OR Tableau) -Senior -Lead",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "ERP_Consultant": {
-            "term": "(\"ERP Consultant\" OR \"ERP Danışmanı\" OR \"SAP Consultant\" OR \"Microsoft Dynamics\") -Senior -Lead -Manager",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "Process_Analyst": {
-            "term": "(\"Process Analyst\" OR \"Süreç Analisti\" OR \"Business Process\" OR \"İş Süreçleri\") -Senior -Lead",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "IT_Analyst": {
-            "term": "(\"IT Analyst\" OR \"BT Analisti\" OR \"System Analyst\" OR \"Sistem Analisti\") -Senior -Lead",
-            "hours_old": DEFAULT_HOURS_OLD, "results": DEFAULT_RESULTS_PER_PERSONA_SITE
-        },
-        "Junior_General_Tech": {            "term": "Junior (Developer OR Analyst OR Engineer OR Specialist OR Uzman OR Danışman) -Senior -Lead",
-            "hours_old": 48, "results": 40  # Son 2 gün, daha fazla sonuç
-        }
-    }
-
     all_collected_jobs_list = []
 
-    for persona_name, config in persona_search_config.items():
+    for persona_name, config in tqdm(persona_search_config.items(), desc="Persona Aramaları"):
         logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
         logger.info(f"🎯 Optimize edilmiş terim: '{config['term']}'")
         logger.info(f"⏰ Tarih filtresi: Son {config['hours_old']} saat")
@@ -136,15 +111,15 @@ def collect_data_for_all_personas():
 
     logger.info(f"✨✨✨ TOPLAM: {len(final_df)} adet BENZERSİZ ilan (JobSpy optimize edilmiş)! ✨✨✨")
     
-    # Optimize edilmiş CSV kaydetme
-    output_dir = "data"
-    os.makedirs(output_dir, exist_ok=True)
+    # Optimize edilmiş CSV kaydetme (pathlib ile)
+    output_dir = Path(config['paths']['data_dir'])
+    output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    final_csv_path = os.path.join(output_dir, f"jobspy_optimize_ilanlar_{timestamp}.csv")
+    final_csv_path = output_dir / f"jobspy_optimize_ilanlar_{timestamp}.csv"
     final_df.to_csv(final_csv_path, index=False, encoding='utf-8')
     logger.info(f"📁 JobSpy optimize edilmiş veriler: {final_csv_path}")
 
-    return final_csv_path
+    return str(final_csv_path)
 
 def analyze_and_find_best_jobs():
     """Tam otomatik analiz: Stratejik veri toplama + AI analizi + Sonuçlar"""
@@ -177,26 +152,42 @@ def analyze_and_find_best_jobs():
     vector_store = VectorStore()
 
     # 4. İş ilanlarını vector store'a yükle
-    logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")
+    logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")    # CSV'yi pathlib ile oku
+    try:
+        csv_path_obj = Path(csv_path)
+        jobs_df = pd.read_csv(csv_path_obj)
+        logger.info(f"📊 {len(jobs_df)} iş ilanı yüklendi")
+    except FileNotFoundError:
+        logger.error(f"❌ CSV dosyası bulunamadı: {csv_path}")
+        return
+    except pd.errors.EmptyDataError:
+        logger.error("❌ CSV dosyası boş!")
+        return
+    except Exception as e:
+        logger.error(f"❌ CSV okuma hatası: {e}")
+        return
 
-    # CSV'yi oku
-    jobs_df = pd.read_csv(csv_path)
-    logger.info(f"📊 {len(jobs_df)} iş ilanı yüklendi")    # Koleksiyon oluştur
+    # Koleksiyon oluştur
     if not vector_store.create_collection():
         logger.error("❌ Vector store koleksiyon oluşturma başarısız!")
         return
 
-    # İş ilanları için embeddings oluştur
+    # İş ilanları için embeddings oluştur (tqdm ile)
     embedding_service = EmbeddingService()
 
     logger.info("🔄 5/6: İş ilanları için AI embeddings oluşturuluyor...")
     job_embeddings = []
-    for _, job in jobs_df.iterrows():
+    
+    for _, job in tqdm(jobs_df.iterrows(), total=len(jobs_df), desc="İlan Embeddings"):
         if pd.notna(job.get('description', '')):
-            embedding = embedding_service.create_embedding(str(job['description']))
-            job_embeddings.append(embedding)
+            try:
+                embedding = embedding_service.create_embedding(str(job['description']))
+                job_embeddings.append(embedding)
+            except Exception as e:
+                logger.warning(f"⚠️ Embedding oluşturma hatası: {e}")
+                job_embeddings.append(None)
         else:
-            job_embeddings.append(None)    # Vector store'a ekle    # Vector store'a ekle (deduplication ile)
+            job_embeddings.append(None)# Vector store'a ekle (deduplication ile)
     success = vector_store.add_jobs(jobs_df, job_embeddings)
     if not success:
         logger.error("❌ Vector store yükleme başarısız!")
@@ -276,10 +267,21 @@ def main():
         logger.info("📝 Lütfen .env dosyasında GEMINI_API_KEY değerini ayarlayın.")
         return
 
-    cv_path = "data/cv.txt"
-    if not os.path.exists(cv_path):
-        logger.error(f"❌ HATA: CV dosyası bulunamadı: {cv_path}")
-        logger.info("📝 Lütfen CV'nizi data/cv.txt dosyasına ekleyin.")
+    # pathlib kullanarak CV dosyası kontrol
+    cv_path = Path(config['paths']['cv_file'])
+    try:
+        if not cv_path.exists():
+            logger.error(f"❌ HATA: CV dosyası bulunamadı: {cv_path}")
+            logger.info("📝 Lütfen CV'nizi data/cv.txt dosyasına ekleyin.")
+            return
+        
+        # CV dosyasının okunabilir olduğunu kontrol et
+        if cv_path.stat().st_size == 0:
+            logger.error(f"❌ HATA: CV dosyası boş: {cv_path}")
+            return
+            
+    except (OSError, IOError) as e:
+        logger.error(f"❌ HATA: CV dosyası erişim hatası: {e}")
         return
 
     logger.info("✅ Sistem kontrolleri başarılı")

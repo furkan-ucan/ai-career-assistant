@@ -8,44 +8,48 @@ from chromadb.config import Settings
 import pandas as pd
 import logging
 from typing import List, Dict, Optional, Any
-import os
+from pathlib import Path
 import json
 from datetime import datetime
+import hashlib
 
 logger = logging.getLogger(__name__)
 
 class VectorStore:
-    def __init__(self, persist_directory: str = "data/chromadb"):
+    def __init__(self, persist_directory: str = None):
         """ChromaDB istemcisini başlat"""
-        self.persist_directory = persist_directory
+        if persist_directory is None:
+            self.persist_directory = Path("data") / "chromadb"
+        else:
+            self.persist_directory = Path(persist_directory)
 
         # Persist directory oluştur
-        os.makedirs(persist_directory, exist_ok=True)
-
-        # ChromaDB istemcisi
-        self.client = chromadb.PersistentClient(path=persist_directory)
+        self.persist_directory.mkdir(parents=True, exist_ok=True)        # ChromaDB istemcisi
+        self.client = chromadb.PersistentClient(path=str(self.persist_directory))
         self.collection_name = "job_listings"
         self.collection = None
 
-        logger.info(f"✅ ChromaDB başlatıldı: {persist_directory}")
+        logger.info(f"✅ ChromaDB başlatıldı: {self.persist_directory}")
 
     def create_collection(self) -> bool:
-        """İş ilanları koleksiyonu oluştur"""
+        """İş ilanları koleksiyonu oluştur veya mevcut olanı yükle"""
         try:
-            # Mevcut koleksiyonu sil (eğer varsa)
-            try:
-                self.client.delete_collection(self.collection_name)
-                logger.info("🗑️ Mevcut koleksiyon silindi")
-            except:
-                pass            # Yeni koleksiyon oluştur (COSINE SIMILARITY ile)
-            self.collection = self.client.create_collection(
+            # get_or_create_collection kullanarak mevcut koleksiyonu yükle veya yeni oluştur
+            self.collection = self.client.get_or_create_collection(
                 name=self.collection_name,
                 metadata={"description": "İş ilanları vektör koleksiyonu", "hnsw:space": "cosine"}
             )
-            logger.info("✅ Yeni koleksiyon oluşturuldu")
+            
+            # Koleksiyonda kaç öğe olduğunu kontrol et
+            existing_count = self.collection.count()
+            if existing_count > 0:
+                logger.info(f"✅ Mevcut koleksiyon yüklendi ({existing_count} öğe)")
+            else:
+                logger.info("✅ Yeni koleksiyon oluşturuldu")
+            
             return True
         except Exception as e:
-            logger.error(f"❌ Koleksiyon oluşturma hatası: {str(e)}", exc_info=True)
+            logger.error(f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True)
             return False
 
     def get_collection(self):

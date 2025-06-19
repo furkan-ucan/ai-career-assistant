@@ -3,25 +3,25 @@ CV İşleme Modülü
 Kullanıcının CV'sini okur ve embedding oluşturur.
 """
 
-import os
 import logging
+from pathlib import Path
 from typing import Optional, List
 from .embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
 class CVProcessor:
-    def __init__(self):
+    def __init__(self, cv_path: Optional[str] = None):
         """CV işleyici başlat"""
         self.embedding_service = EmbeddingService()
-        self.cv_path = "data/cv.txt"
+        self.cv_path = Path(cv_path) if cv_path else Path("data") / "cv.txt"
         self.cv_text = None
         self.cv_embedding = None
 
     def load_cv(self) -> bool:
         """CV dosyasını yükle"""
         try:
-            if not os.path.exists(self.cv_path):
+            if not self.cv_path.exists():
                 logger.error(f"❌ CV dosyası bulunamadı: {self.cv_path}")
                 return False
 
@@ -35,6 +35,12 @@ class CVProcessor:
             logger.info(f"✅ CV yüklendi ({len(self.cv_text)} karakter)")
             return True
 
+        except FileNotFoundError:
+            logger.error(f"❌ CV dosyası bulunamadı: {self.cv_path}")
+            return False
+        except IOError as e:
+            logger.error(f"❌ CV dosyası okuma hatası: {e}", exc_info=True)
+            return False
         except Exception as e:
             logger.error(f"❌ CV yükleme hatası: {str(e)}", exc_info=True)
             return False

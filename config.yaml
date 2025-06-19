@@ -1,0 +1,91 @@
+# Akıllı Kariyer Asistanı - Yapılandırma Dosyası
+# Bu dosya projenin ana ayarlarını içerir
+
+# Genel iş arama ayarları
+job_search_settings:
+  target_sites: ["linkedin", "indeed"]  # Hangi sitelerde arama yapılacak
+  default_hours_old: 72  # Varsayılan olarak son kaç saatteki ilanlar (JobSpy native)
+  default_results_per_site: 25  # Her persona ve site için kaç sonuç çekilecek
+  min_similarity_threshold: 60  # Benzerlik eşiği (%) - JobSpy ile daha kaliteli veri
+
+# Persona bazlı arama konfigürasyonları
+# Indeed'e göre optimize edilmiş ve negatif filtreli arama terimleri
+persona_search_configs:
+  Software_Engineer:
+    term: "(\"Software Engineer\" OR \"Yazılım Mühendisi\") -Senior -Lead -Principal -Manager -Direktör"
+    hours_old: 72
+    results: 25
+
+  Full_Stack:
+    term: "(\"Full Stack Developer\" OR \"Full Stack Engineer\") -Senior -Lead -Principal -Manager"
+    hours_old: 72
+    results: 25
+
+  Frontend_Developer:
+    term: "(\"Frontend Developer\" OR \"Front End Developer\" OR React OR Vue OR Angular) -Senior -Lead"
+    hours_old: 72
+    results: 25
+
+  Backend_Developer:
+    term: "(\"Backend Developer\" OR \"Back End Developer\" OR Python OR Java OR Node) -Senior -Lead"
+    hours_old: 72
+    results: 25
+
+  Junior_Developer:
+    term: "\"Junior Developer\" OR \"Junior Software\" OR \"Graduate Developer\" -Senior -Lead"
+    hours_old: 72
+    results: 30  # Junior için daha fazla sonuç
+
+  Entry_Level_Developer:
+    term: "\"Entry Level\" OR \"Entry-Level\" OR \"Stajyer\" OR \"Trainee\" -Senior -Manager"
+    hours_old: 72
+    results: 30
+
+  Business_Analyst:
+    term: "(\"Business Analyst\" OR \"İş Analisti\") (ERP OR SAP OR Process OR Süreç) -Senior -Lead -Manager"
+    hours_old: 72
+    results: 25
+
+  Data_Analyst:
+    term: "(\"Data Analyst\" OR \"Veri Analisti\") (SQL OR Python OR PowerBI OR Tableau) -Senior -Lead"
+    hours_old: 72
+    results: 25
+
+  ERP_Consultant:
+    term: "(\"ERP Consultant\" OR \"ERP Danışmanı\" OR \"SAP Consultant\" OR \"Microsoft Dynamics\") -Senior -Lead -Manager"
+    hours_old: 72
+    results: 25
+
+  Process_Analyst:
+    term: "(\"Process Analyst\" OR \"Süreç Analisti\" OR \"Business Process\" OR \"İş Süreçleri\") -Senior -Lead"
+    hours_old: 72
+    results: 25
+
+  IT_Analyst:
+    term: "(\"IT Analyst\" OR \"BT Analisti\" OR \"System Analyst\" OR \"Sistem Analisti\") -Senior -Lead"
+    hours_old: 72
+    results: 25
+
+  Junior_General_Tech:
+    term: "Junior (Developer OR Analyst OR Engineer OR Specialist OR Uzman OR Danışman) -Senior -Lead"
+    hours_old: 48  # Son 2 gün
+    results: 40  # Daha fazla sonuç
+
+# Dosya yolları
+paths:
+  data_dir: "data"
+  cv_file: "data/cv.txt"
+  chromadb_dir: "data/chromadb"
+  logs_dir: "logs"
+
+# Embedding ayarları
+embedding_settings:
+  batch_size: 10
+  retry_count: 3
+  rate_limit_delay: 0.1  # saniye
+
+# Vector store ayarları
+vector_store_settings:
+  collection_name: "job_embeddings"
+  similarity_metric: "cosine"
+  top_k_results: 50
