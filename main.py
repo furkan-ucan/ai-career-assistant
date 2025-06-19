@@ -21,14 +21,14 @@ from src.filter import filter_junior_suitable_jobs, filter_jobs_by_date
 # Konfigürasyon sabitleri
 ENABLE_DATE_FILTER = True  # Manuel doğrulama için True yapın
 DATE_FILTER_DAYS = 3       # Son X gün içindeki ilanlar
-MIN_SIMILARITY_THRESHOLD = 60  # Benzerlik eşiği (%)
+MIN_SIMILARITY_THRESHOLD = 50  # Benzerlik eşiği (%) - Daha fazla sonuç için düşürüldü
 
 def collect_data_for_all_personas():
     """
     Tüm personalar için ayrı ayrı veri toplar ve sonuçları birleştirir.
     BÖL VE FETHET stratejisi: Karmaşık bir sorgu yerine basit sorgular
     """
-    print("\n🔍 Stratejik Veri Toplama Başlatılıyor (Böl ve Fethet)...")
+    print("\n🔍 Stratejik Veri Toplama Başlatılıyor (Böl ve Fethet - Çoklu Site)...")
     print("=" * 60)
 
     # Her bir persona için basit ve etkili arama terimleri
@@ -55,21 +55,15 @@ def collect_data_for_all_personas():
         print(f"🔍 Arama terimi: '{term}'")
 
         try:
-            # Her persona için 20 ilan çekelim (toplam ~240 ilan hedefi)
-            csv_path = collect_job_data(search_term=term, max_results=20)
+            # Her persona için çoklu site araması (DataFrame döndürür)
+            jobs_df = collect_job_data(search_term=term, max_results_per_site=20)
 
-            if csv_path is not None:
-                # CSV'yi oku
-                jobs_df = pd.read_csv(csv_path)
-                if not jobs_df.empty:
-                    print(f"✅ {len(jobs_df)} ilan toplandı")
-                    # Persona bilgisini ekle
-                    jobs_df['persona'] = persona
-                    jobs_df['search_term'] = term
-                    all_jobs_list.append(jobs_df)
-                    total_collected += len(jobs_df)
-                else:
-                    print(f"❌ '{term}' için CSV boş")
+            if jobs_df is not None and not jobs_df.empty:
+                print(f"✅ {len(jobs_df)} ilan toplandı")                # Persona bilgisini ekle
+                jobs_df['persona'] = persona
+                jobs_df['search_term'] = term
+                all_jobs_list.append(jobs_df)
+                total_collected += len(jobs_df)
             else:
                 print(f"❌ '{term}' için ilan bulunamadı")
 
