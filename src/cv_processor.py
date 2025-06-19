@@ -10,6 +10,7 @@ from .embedding_service import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
+
 class CVProcessor:
     def __init__(self, cv_path: Optional[str] = None):
         """CV işleyici başlat"""
@@ -25,7 +26,7 @@ class CVProcessor:
                 logger.error(f"❌ CV dosyası bulunamadı: {self.cv_path}")
                 return False
 
-            with open(self.cv_path, 'r', encoding='utf-8') as file:
+            with open(self.cv_path, "r", encoding="utf-8") as file:
                 self.cv_text = file.read().strip()
 
             if not self.cv_text:
@@ -86,10 +87,11 @@ class CVProcessor:
             "character_count": len(self.cv_text) if self.cv_text else 0,
             "word_count": len(self.cv_text.split()) if self.cv_text else 0,
             "has_embedding": self.cv_embedding is not None,
-            "embedding_dimensions": len(self.cv_embedding) if self.cv_embedding else 0
+            "embedding_dimensions": len(self.cv_embedding) if self.cv_embedding else 0,
         }
 
-if __name__ == "__main__":    # Test çalıştırması
+
+if __name__ == "__main__":  # Test çalıştırması
     processor = CVProcessor()
     if processor.load_cv():
         logger.info("CV özeti:" + str(processor.get_cv_summary()))
