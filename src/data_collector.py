@@ -1,8 +1,6 @@
 """
 Veri Toplama Modülü - JobSpy Gelişmiş Özellikler ile Optimize Edilmiş
-JobSpy'ın advanced fea    final_count = len(combined_df)
-    removed_count = initial_count - final_count
-    logger.info("✨ Deduplication tamamlandı:")es (hours_old, gelişmiş search queries, site-specific params) kullanarak
+JobSpy'ın advanced features (hours_old, gelişmiş search queries, site-specific params) kullanarak
 birden fazla platformdan CV'ye uygun iş ilanlarını toplar.
 """
 
@@ -41,7 +39,8 @@ def collect_job_data(
         hours_old: Son X saat içindeki ilanlar (JobSpy native filtre)
 
     Returns:
-        pandas.DataFrame: Birleştirilmiş iş ilanları veya None (hata durumunda)"""
+        pandas.DataFrame: Birleştirilmiş iş ilanları veya None (hata durumunda)
+    """
     logger.info("\n🔍 JobSpy Gelişmiş Arama Başlatılıyor...")
     logger.info(f"📍 Lokasyon: {location}")
     logger.info(f"🎯 Hedef: {max_results_per_site} ilan/site")
@@ -61,14 +60,17 @@ def collect_job_data(
                 "location": location,
                 "results_wanted": max_results_per_site,
                 "hours_old": hours_old,  # Native tarih filtresi
-            }  # Site-specific optimizations
+            }
+
+            # Site-specific optimizations
             if site == "indeed":
                 scrape_params["country_indeed"] = "Turkey"
                 logger.info("   🎯 Indeed: Türkiye özel ayarları aktif")
-
             elif site == "linkedin":
                 scrape_params["linkedin_fetch_description"] = True  # Detaylı LinkedIn verisi
-                logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")  # JobSpy ile veri çek
+                logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")
+
+            # JobSpy ile veri çek
             jobs_from_site = scrape_jobs(**scrape_params)
 
             if jobs_from_site is not None and not jobs_from_site.empty:
@@ -80,13 +82,25 @@ def collect_job_data(
 
         except Exception as e:
             logger.error(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True)
-            continue  # Bir sitede hata olursa diğerlerine devam et    if not all_jobs_list:
+            continue  # Bir sitede hata olursa diğerlerine devam et    # Tüm siteler tarandıktan sonra kontrol et
+    if not all_jobs_list:
         logger.error("❌ Hiçbir siteden ilan bulunamadı!")
         return None
 
+    # Boş DataFrame'leri filtrele (FutureWarning'i önlemek için)
+    non_empty_jobs_list = [df for df in all_jobs_list if not df.empty]
+
+    if not non_empty_jobs_list:
+        logger.error("❌ Tüm DataFrame'ler boş!")
+        return None
+
     # Tüm sitelerden gelen DataFrame'leri birleştir
-    combined_df = pd.concat(all_jobs_list, ignore_index=True)  # Zaman damgası ekle
-    combined_df["collected_at"] = datetime.now()  # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
+    combined_df = pd.concat(non_empty_jobs_list, ignore_index=True)
+
+    # Zaman damgası ekle
+    combined_df["collected_at"] = datetime.now()
+
+    # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
     logger.info("\n🔄 Deduplication başlatılıyor...")
     initial_count = len(combined_df)
 
@@ -142,5 +156,3 @@ if __name__ == "__main__":
         logger.info(f"\n✅ Test sonucu: {len(test_df)} ilan bulundu.")
         logger.info(f"📊 Site dağılımı: {test_df['source_site'].value_counts().to_dict()}")
         save_jobs_to_csv(test_df, "test_advanced_jobspy")
-    else:
-        logger.error("❌ Test başarısız!")

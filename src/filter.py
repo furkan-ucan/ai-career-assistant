@@ -30,157 +30,63 @@ def _create_regex_pattern(blacklist_words):
     return re.compile(pattern, re.IGNORECASE)
 
 
-def filter_junior_suitable_jobs(jobs_list, debug=False):
+def filter_junior_suitable_jobs(jobs_list, filter_config, debug=False):
     """
     Junior/Entry-level pozisyonlar için uygun olmayan ilanları filtreler
     YBS öğrencisinin kariyer hedefleri (ERP, Proje Yönetimi, İş Analizi) göz önünde bulundurularak optimizasyon
     """
-    # Başlık blacklist - SADECE kesinlikle senior olanları hedefler
-    title_blacklist = [
-        "senior",
-        "sr.",
-        "sr ",
-        "lead",
-        "principal",
-        "manager",
-        "direktör",
-        "müdür",
-        "chief",
-        "head",
-        "supervisor",
-        "team lead",
-        "tech lead",
-        "kıdemli",
-        "başkan",
-        "architect",
-        "baş ",
-        "lider",
-        "leader",
-    ]
+    # Filtreleme listelerini config'den al
+    title_blacklist = filter_config.get("title_blacklist", [])
+    experience_blacklist = filter_config.get("experience_blacklist", [])
+    responsibility_blacklist = filter_config.get("responsibility_blacklist", [])
+    out_of_scope_blacklist = filter_config.get("out_of_scope_blacklist", [])
 
-    # Deneyim blacklist - Sadece çok net ve yüksek yıl ifadeleri
-    experience_blacklist = [
-        "5+ yıl",
-        "5 yıl",
-        "5+ years",
-        "5 years",
-        "6+ yıl",
-        "7+ yıl",
-        "8+ yıl",
-        "10+ yıl",
-        "en az 5 yıl",
-        "minimum 5 years",
-        "minimum 6",
-        "en az 6",
-        "minimum 7",
-        "en az 7",
-    ]
-
-    # Sorumluluk blacklist - Sadece doğrudan personel yönetimi içerenler
-    responsibility_blacklist = [
-        "takım yönetimi",
-        "team management",
-        "personel yönetimi",
-        "bütçe yönetimi",
-        "budget responsibility",
-        "işe alım",
-        "hiring",
-        "direct reports",
-        "performans değerlendirme",
-        "team building",
-    ]
-
-    # Rol dışı blacklist - Kariyer hedefleriyle ilgisiz pozisyonlar
-    out_of_scope_blacklist = [
-        "avukat",
-        "hukuk",
-        "legal",
-        "asistan",
-        "assistant",
-        "e-ticaret",
-        "e-commerce",
-        "insan kaynakları",
-        "human resources",
-        "pazarlama",
-        "marketing",
-        "satış",
-        "sales",
-        "grafik",
-        "graphic",
-        "tasarım",
-        "design",
-        "muhasebe",
-        "accounting",
-        "finans uzmanı",
-        "customer service",
-        "müşteri hizmetleri",
-        "çağrı merkezi",
-        "güvenlik",
-        "security guard",
-        "temizlik",
-        "cleaning",
-        "çevre",
-        "üretim operatör",
-        "fabrika",
-        "manufacturing operator",
-    ]
-
-    # Regex pattern'leri oluştur (kelime sınırları ile)
+    # Regex pattern'lerini oluştur
     title_pattern = _create_regex_pattern(title_blacklist)
     experience_pattern = _create_regex_pattern(experience_blacklist)
     responsibility_pattern = _create_regex_pattern(responsibility_blacklist)
     out_of_scope_pattern = _create_regex_pattern(out_of_scope_blacklist)
 
     filtered_jobs = []
-    filter_stats = {"title": 0, "experience": 0, "responsibility": 0, "out_of_scope": 0, "passed": 0}
+    rejected_jobs_log = []  # Reddedilen işleri loglamak için
 
     logger.info(f"🔍 {len(jobs_list)} iş ilanı regex tabanlı filtrelemeden geçiriliyor...")
 
     for job in jobs_list:
-        title = job.get("title", "")
-        description = job.get("description", "")
+        title = job.get("title", "").lower()
+        description = str(job.get("description", "")).lower()
+        full_text = title + " " + description
 
-        # 1. Başlık kontrolü (regex ile kelime sınırı kontrolü)
-        title_rejected = bool(title_pattern.search(title))
+        rejection_reasons = []
 
-        # 2. Deneyim kontrolü (regex ile kelime sınırı kontrolü)
-        experience_rejected = bool(experience_pattern.search(description))
+        # 1. Başlık filtresi (Kesin Senior/Yönetici Rolleri)
+        if title_pattern.search(title):
+            rejection_reasons.append(f"Başlıkta yasaklı kelime: '{title_pattern.search(title).group(0)}'")
 
-        # 3. Sorumluluk kontrolü (regex ile kelime sınırı kontrolü)
-        responsibility_rejected = bool(responsibility_pattern.search(description))
+        # 2. Kapsam Dışı Roller (İlgisiz Alanlar)
+        if out_of_scope_pattern.search(title):
+            rejection_reasons.append(f"Kapsam dışı rol: '{out_of_scope_pattern.search(title).group(0)}'")
 
-        # 4. Rol dışı kontrol (regex ile kelime sınırı kontrolü)
-        out_of_scope_rejected = bool(out_of_scope_pattern.search(title))  # Filtreleme kararı
-        if title_rejected:
-            filter_stats["title"] += 1
-            if debug:
-                logger.debug(f"🔥 Filtrelendi (başlık regex): {job.get('title', 'N/A')}")
-        elif experience_rejected:
-            filter_stats["experience"] += 1
-            if debug:
-                logger.debug(f"🔥 Filtrelendi (deneyim regex): {job.get('title', 'N/A')}")
-        elif responsibility_rejected:
-            filter_stats["responsibility"] += 1
-            if debug:
-                logger.debug(f"🔥 Filtrelendi (sorumluluk regex): {job.get('title', 'N/A')}")
-        elif out_of_scope_rejected:
-            filter_stats["out_of_scope"] += 1
-            if debug:
-                logger.debug(f"🔥 Filtrelendi (rol dışı regex): {job.get('title', 'N/A')}")
-        else:
-            # Geçti - listeye ekle
+        # 3. Deneyim ve Sorumluluk Filtresi (Açıklama metni içinde)
+        if experience_pattern.search(full_text):
+            rejection_reasons.append(f"Yüksek deneyim şartı: '{experience_pattern.search(full_text).group(0)}'")
+
+        if responsibility_pattern.search(full_text):
+            rejection_reasons.append(f"Üst düzey sorumluluk: '{responsibility_pattern.search(full_text).group(0)}'")
+
+        if not rejection_reasons:
             filtered_jobs.append(job)
-            filter_stats["passed"] += 1
-            if debug:
-                logger.debug(f"✅ Geçti (regex kontrolü): {job.get('title', 'N/A')}")  # Filtreleme istatistikleri
-    total_processed = len(jobs_list)
-    logger.info("\n📊 Regex Tabanlı Filtreleme İstatistikleri:")
-    logger.info(f"   Toplam işlenen: {total_processed}")
-    logger.info(f"   🔥 Başlık filtresi (regex): {filter_stats['title']}")
-    logger.info(f"   🔥 Deneyim filtresi (regex): {filter_stats['experience']}")
-    logger.info(f"   🔥 Sorumluluk filtresi (regex): {filter_stats['responsibility']}")
-    logger.info(f"   🔥 Rol dışı filtresi (regex): {filter_stats['out_of_scope']}")
-    logger.info(f"   ✅ Geçen (kelime sınırı korumalı): {filter_stats['passed']}")
-    logger.info(f"   📈 Başarı oranı: %{(filter_stats['passed'] / total_processed) * 100:.1f}")
+        else:
+            # Reddedilen işleri ve nedenlerini kaydet
+            rejected_jobs_log.append({"title": job.get("title"), "reasons": rejection_reasons})
+
+    if debug:
+        logger.info("--- FİLTRELEME DEBUG RAPORU ---")
+        logger.info(f"Toplam {len(jobs_list)} ilan analiz edildi.")
+        logger.info(f"{len(filtered_jobs)} ilan uygun bulundu.")
+        logger.info(f"{len(rejected_jobs_log)} ilan reddedildi.")
+        for rejected in rejected_jobs_log[:10]:  # İlk 10 reddedilen ilanı göster
+            logger.info(f"- Reddedildi: {rejected['title']} -> Nedenler: {rejected['reasons']}")
+        logger.info("---------------------------------")
 
     return filtered_jobs

@@ -55,6 +55,7 @@ config = load_config()
 
 # Konfigürasyondan ayarları al
 job_settings = config["job_search_settings"]
+filter_settings = config["filter_settings"]  # Filtre ayarlarını yükle
 MIN_SIMILARITY_THRESHOLD = job_settings["min_similarity_threshold"]
 HEDEFLENEN_SITELER = job_settings["target_sites"]
 DEFAULT_HOURS_OLD = job_settings["default_hours_old"]
@@ -74,24 +75,24 @@ def collect_data_for_all_personas():
 
     all_collected_jobs_list = []
 
-    for persona_name, config in tqdm(persona_search_config.items(), desc="Persona Aramaları"):
+    for persona_name, persona_config in tqdm(persona_search_config.items(), desc="Persona Aramaları"):
         logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
-        logger.info(f"🎯 Optimize edilmiş terim: '{config['term']}'")
-        logger.info(f"⏰ Tarih filtresi: Son {config['hours_old']} saat")
+        logger.info(f"🎯 Optimize edilmiş terim: '{persona_config['term']}'")
+        logger.info(f"⏰ Tarih filtresi: Son {persona_config['hours_old']} saat")
 
         try:
             # JobSpy'ın gelişmiş özelliklerini kullanarak veri toplama
             jobs_df_for_persona = collect_job_data(
-                search_term=config["term"],
+                search_term=persona_config["term"],
                 site_names=HEDEFLENEN_SITELER,  # LinkedIn + Indeed
                 location="Turkey",
-                max_results_per_site=config["results"],
-                hours_old=config["hours_old"],
+                max_results_per_site=persona_config["results"],
+                hours_old=persona_config["hours_old"],
             )
             if jobs_df_for_persona is not None and not jobs_df_for_persona.empty:
                 # Persona bilgisini ve arama terimini ekle (analiz için faydalı)
                 jobs_df_for_persona["persona_source"] = persona_name
-                jobs_df_for_persona["search_term_used"] = config["term"]
+                jobs_df_for_persona["search_term_used"] = persona_config["term"]
                 all_collected_jobs_list.append(jobs_df_for_persona)
                 logger.info(f"✨ Persona '{persona_name}' için {len(jobs_df_for_persona)} ilan bulundu.")
             else:
@@ -103,8 +104,17 @@ def collect_data_for_all_personas():
 
     if not all_collected_jobs_list:
         logger.error("❌ Hiçbir persona ve site kombinasyonundan ilan bulunamadı.")
-        return None  # Tüm personaların sonuçlarını birleştir
-    final_df = pd.concat(all_collected_jobs_list, ignore_index=True)
+        return None
+
+    # Boş DataFrame'leri filtrele (FutureWarning'i önlemek için)
+    non_empty_jobs_list = [df for df in all_collected_jobs_list if not df.empty]
+
+    if not non_empty_jobs_list:
+        logger.error("❌ Tüm DataFrame'ler boş!")
+        return None
+
+    # Tüm personaların sonuçlarını birleştir
+    final_df = pd.concat(non_empty_jobs_list, ignore_index=True)
     logger.info(f"\n📊 Birleştirme öncesi (tüm personalar): {len(final_df)} ilan")
 
     # Son genel deduplication (persona'lar arası tekrarlar için)
@@ -200,15 +210,27 @@ def analyze_and_find_best_jobs():
     success = vector_store.add_jobs(jobs_df, job_embeddings)
     if not success:
         logger.error("❌ Vector store yükleme başarısız!")
-        return
-
-    # 5. Benzer işleri bul ve filtrele
+        return    # 5. Benzer işleri bul ve filtrele
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
-    similar_jobs = vector_store.search_similar_jobs(cv_embedding, top_k=50)
+    search_results = vector_store.search_jobs(cv_embedding, n_results=50)
+    
+    # Search results'ı filter fonksiyonunun beklediği formata dönüştür
+    similar_jobs = []
+    if search_results and search_results.get("metadatas"):
+        metadatas = search_results["metadatas"]
+        distances = search_results.get("distances", [])
+        
+        for i, metadata in enumerate(metadatas):
+            # Similarity score'u distance'tan çevir (cosine distance -> similarity)
+            similarity_score = (1 - distances[i]) * 100 if i < len(distances) else 0
+            
+            job_entry = metadata.copy()
+            job_entry["similarity_score"] = similarity_score
+            similar_jobs.append(job_entry)
 
     if similar_jobs:
         logger.info("🔍 Sonuçlar YBS/junior pozisyonlar için akıllı filtreleme...")
-        filtered_jobs = filter_junior_suitable_jobs(similar_jobs, debug=False)
+        filtered_jobs = filter_junior_suitable_jobs(similar_jobs, filter_config=filter_settings, debug=False)
 
         if filtered_jobs:  # Uygunluk puanı eşiği ekleme
             high_quality_jobs = [job for job in filtered_jobs if job["similarity_score"] >= MIN_SIMILARITY_THRESHOLD]
@@ -230,7 +252,7 @@ def analyze_and_find_best_jobs():
                     logger.info(
                         f"   👤 Persona: {job.get('persona_source', job.get('persona', 'N/A'))}"
                     )  # Hangi persona aramasıyla geldiği
-                    logger.info(f"   🔗 {job['url']}")
+                    logger.info(f"   🔗 {job.get('job_url', job.get('url', 'URL bulunamadı'))}")
                     logger.info("-" * 50)
 
                 logger.info(f"\n🎯 Analiz tamamlandı! {len(high_quality_jobs)} yüksek kaliteli pozisyon listelendi.")

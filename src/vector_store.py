@@ -4,6 +4,7 @@ ChromaDB kullanarak iş ilanı vektörlerini saklar ve arama yapar.
 """
 
 # Standard Library
+import hashlib
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -75,76 +76,89 @@ class VectorStore:
         if not self.get_collection():
             return False
 
-        try:
-            valid_jobs = []
-            valid_embeddings = []
-            valid_ids = []
+        if self.collection is None:
+            logger.error("❌ Koleksiyon başlatılmamış. Önce `create_collection` çağırılmalı.")
+            return False
 
-            # Geçerli veri ve embedding'leri filtrele
-            for i, (_, job_row) in enumerate(jobs_df.iterrows()):
-                if i < len(embeddings) and embeddings[i] is not None:
-                    # Benzersiz ID oluştur
-                    job_id = f"job_{hash(str(job_row.to_dict()))}"
+        # Eklenecek geçerli işleri, embedding'leri ve ID'leri topla
+        valid_embeddings = []
+        documents = []
+        metadatas = []
+        ids = []
+        seen_ids = set()  # Bu işlemdeki ID'lerin tekrarını önlemek için
 
-                    # Bu ID zaten var mı kontrol et
-                    try:
-                        existing = self.collection.get(ids=[job_id])
-                        if len(existing["ids"]) > 0:
-                            continue  # Bu iş ilanı zaten var, atla
-                    except Exception:
-                        pass  # ID yoksa devam et
+        for index, job in jobs_df.iterrows():
+            # Sadece geçerli embedding'i olan işleri ekle
+            if embeddings[index] is not None:
+                # ID oluşturmadan önce alanları normalleştir (küçük harf, boşlukları temizle)
+                title_norm = job.get("title", "").lower().strip()
+                company_norm = job.get("company", "").lower().strip()
+                location_norm = job.get("location", "").lower().strip()
 
-                    valid_jobs.append(job_row.to_dict())
-                    valid_embeddings.append(embeddings[i])
-                    valid_ids.append(job_id)
+                # Benzersiz ve tutarlı bir ID oluştur (normalleştirilmiş içeriğe dayalı)
+                job_id_str = f"{title_norm}-{company_norm}-{location_norm}"
+                job_id = hashlib.md5(job_id_str.encode("utf-8")).hexdigest()
 
-            if not valid_jobs:
-                logger.info("ℹ️ Eklenecek yeni iş ilanı bulunamadı (tümü zaten mevcut)")
-                return True
+                # Bu ID'yi bu pakette daha önce görmediğimizden emin ol
+                if job_id not in seen_ids:
+                    seen_ids.add(job_id)  # Görüldü olarak işaretle
 
-            # Batch olarak ekle
-            self.collection.add(
-                embeddings=valid_embeddings,
-                documents=[f"{job.get('title', '')} {job.get('description', '')}" for job in valid_jobs],
-                metadatas=valid_jobs,
-                ids=valid_ids,
-            )
+                    # Metadatayı hazırla (sadece serileştirilebilir tipler)
+                    metadata = {
+                        "title": job.get("title", "N/A"),
+                        "company": job.get("company", "N/A"),
+                        "location": job.get("location", "N/A"),
+                        "description": str(job.get("description", ""))[:500],  # İlk 500 karakter
+                        "job_url": job.get("job_url", job.get("url", "N/A")),
+                        "source_site": job.get("source", "N/A"),
+                        "persona_source": job.get("persona_source", "N/A"),
+                    }
+                    # Sadece string, int, float veya bool olanları al
+                    metadata = {k: v for k, v in metadata.items() if isinstance(v, (str, int, float, bool))}
 
-            logger.info(f"✅ {len(valid_jobs)} yeni iş ilanı başarıyla eklendi")
+                    metadatas.append(metadata)
+                    valid_embeddings.append(embeddings[index])
+                    documents.append(f"{job.get('title', '')} at {job.get('company', '')}")
+                    ids.append(job_id)
+                else:
+                    logger.warning(f"⚠️ Yinelenen ID ({job_id}) atlanıyor. İlan: '{title_norm}'")
+
+        if not ids:
+            logger.info("ℹ️ Vector store'a eklenecek yeni iş ilanı bulunamadı.")
             return True
 
+        try:
+            # ChromaDB'ye toplu ekleme (upsert mantığıyla çalışır)
+            self.collection.upsert(embeddings=valid_embeddings, documents=documents, metadatas=metadatas, ids=ids)
+            logger.info(f"✅ {len(ids)} adet iş ilanı vector store'a başarıyla eklendi/güncellendi.")
+            return True
         except Exception as e:
-            logger.error(f"❌ İş ilanları ekleme hatası: {str(e)}", exc_info=True)
+            logger.error(f"❌ Vector store'a ekleme sırasında hata: {e}", exc_info=True)
             return False
 
     def search_jobs(
-        self, query_embedding: List[float], n_results: int = 10, filter_metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, List]:
-        """Vektör benzerliği ile iş ilanı ara"""
-        if not self.get_collection():
-            return {"matches": [], "distances": [], "metadatas": []}
+        self, query_embedding: list, n_results: int = 50
+    ) -> dict:
+        """
+        Verilen bir embedding'e en benzer işleri vector store'dan arar.
+        """
+        if self.collection is None:
+            logger.error("❌ Koleksiyon başlatılmamış.")
+            return {}
+        if not query_embedding:
+            logger.error("❌ Sorgu embedding'i boş olamaz.")
+            return {}
 
         try:
-            where_clause = filter_metadata if filter_metadata else {}
-
-            results = self.collection.query(
-                query_embeddings=[query_embedding], n_results=n_results, where=where_clause if where_clause else None
+            search_results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=n_results,
             )
-
-            if results and results.get("metadatas") and len(results["metadatas"]) > 0:
-                logger.info(f"🔍 {len(results['metadatas'][0])} iş ilanı bulundu")
-                return {
-                    "matches": results["documents"][0] if results.get("documents") else [],
-                    "distances": results["distances"][0] if results.get("distances") else [],
-                    "metadatas": results["metadatas"][0] if results.get("metadatas") else [],
-                }
-            else:
-                logger.info("ℹ️ Arama kriterlerine uygun iş ilanı bulunamadı")
-                return {"matches": [], "distances": [], "metadatas": []}
-
+            logger.info(f"✅ Vector store'da {len(search_results.get('ids', [[]])[0])} sonuç bulundu.")
+            return search_results
         except Exception as e:
-            logger.error(f"❌ Vektör arama hatası: {str(e)}", exc_info=True)
-            return {"matches": [], "distances": [], "metadatas": []}
+            logger.error(f"❌ Vector store'da arama hatası: {e}", exc_info=True)
+            return {}
 
     def get_stats(self) -> Dict[str, Any]:
         """Koleksiyon istatistiklerini getir"""
