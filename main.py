@@ -104,17 +104,15 @@ def collect_data_for_all_personas():
 
     if not all_collected_jobs_list:
         logger.error("❌ Hiçbir persona ve site kombinasyonundan ilan bulunamadı.")
-        return None
-
-    # Boş DataFrame'leri filtrele (FutureWarning'i önlemek için)
+        return None    # Boş DataFrame'leri filtrele (FutureWarning'i önlemek için)
     non_empty_jobs_list = [df for df in all_collected_jobs_list if not df.empty]
 
     if not non_empty_jobs_list:
         logger.error("❌ Tüm DataFrame'ler boş!")
         return None
 
-    # Tüm personaların sonuçlarını birleştir
-    final_df = pd.concat(non_empty_jobs_list, ignore_index=True)
+    # Tüm personaların sonuçlarını birleştir (FutureWarning'i önlemek için sort=False)
+    final_df = pd.concat(non_empty_jobs_list, ignore_index=True, sort=False)
     logger.info(f"\n📊 Birleştirme öncesi (tüm personalar): {len(final_df)} ilan")
 
     # Son genel deduplication (persona'lar arası tekrarlar için)
@@ -210,20 +208,17 @@ def analyze_and_find_best_jobs():
     success = vector_store.add_jobs(jobs_df, job_embeddings)
     if not success:
         logger.error("❌ Vector store yükleme başarısız!")
-        return    # 5. Benzer işleri bul ve filtrele
+        return  # 5. Benzer işleri bul ve filtrele
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
-    search_results = vector_store.search_jobs(cv_embedding, n_results=50)
-    
-    # Search results'ı filter fonksiyonunun beklediği formata dönüştür
+    search_results = vector_store.search_jobs(cv_embedding, n_results=50)    # Search results'ı filter fonksiyonunun beklediği formata dönüştür
     similar_jobs = []
     if search_results and search_results.get("metadatas"):
-        metadatas = search_results["metadatas"]
-        distances = search_results.get("distances", [])
-        
+        metadatas = search_results["metadatas"][0]  # ChromaDB nested list format
+        distances = search_results.get("distances", [[]])[0]  # ChromaDB nested list format
+
         for i, metadata in enumerate(metadatas):
             # Similarity score'u distance'tan çevir (cosine distance -> similarity)
             similarity_score = (1 - distances[i]) * 100 if i < len(distances) else 0
-            
             job_entry = metadata.copy()
             job_entry["similarity_score"] = similarity_score
             similar_jobs.append(job_entry)

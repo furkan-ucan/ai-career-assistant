@@ -92,10 +92,8 @@ def collect_job_data(
 
     if not non_empty_jobs_list:
         logger.error("❌ Tüm DataFrame'ler boş!")
-        return None
-
-    # Tüm sitelerden gelen DataFrame'leri birleştir
-    combined_df = pd.concat(non_empty_jobs_list, ignore_index=True)
+        return None    # Tüm sitelerden gelen DataFrame'leri birleştir (FutureWarning'i önlemek için sort=False)
+    combined_df = pd.concat(non_empty_jobs_list, ignore_index=True, sort=False)
 
     # Zaman damgası ekle
     combined_df["collected_at"] = datetime.now()

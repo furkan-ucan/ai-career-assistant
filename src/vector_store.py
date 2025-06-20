@@ -89,7 +89,8 @@ class VectorStore:
 
         for index, job in jobs_df.iterrows():
             # Sadece geçerli embedding'i olan işleri ekle
-            if embeddings[index] is not None:                # ID oluşturmadan önce alanları normalleştir (küçük harf, boşlukları temizle)
+            if embeddings[index] is not None:
+                # ID oluşturmadan önce alanları normalleştir (küçük harf, boşlukları temizle)
                 title_norm = str(job.get("title", "")).lower().strip()
                 company_norm = str(job.get("company", "")).lower().strip()
                 location_norm = str(job.get("location", "")).lower().strip()
@@ -104,15 +105,14 @@ class VectorStore:
 
                     # Metadatayı hazırla (sadece serileştirilebilir tipler)
                     metadata = {
-                        "title": job.get("title", "N/A"),
-                        "company": job.get("company", "N/A"),
-                        "location": job.get("location", "N/A"),
+                        "title": str(job.get("title", "N/A")),
+                        "company": str(job.get("company", "N/A")),
+                        "location": str(job.get("location", "N/A")),
                         "description": str(job.get("description", ""))[:500],  # İlk 500 karakter
-                        "job_url": job.get("job_url", job.get("url", "N/A")),
-                        "source_site": job.get("source", "N/A"),
-                        "persona_source": job.get("persona_source", "N/A"),
-                    }
-                    # Sadece string, int, float veya bool olanları al
+                        "job_url": str(job.get("job_url", job.get("url", "N/A"))),
+                        "source_site": str(job.get("source", "N/A")),
+                        "persona_source": str(job.get("persona_source", "N/A")),
+                    }  # Sadece string, int, float veya bool olanları al
                     metadata = {k: v for k, v in metadata.items() if isinstance(v, (str, int, float, bool))}
 
                     metadatas.append(metadata)
@@ -135,9 +135,7 @@ class VectorStore:
             logger.error(f"❌ Vector store'a ekleme sırasında hata: {e}", exc_info=True)
             return False
 
-    def search_jobs(
-        self, query_embedding: list, n_results: int = 50
-    ) -> dict:
+    def search_jobs(self, query_embedding: list, n_results: int = 50) -> dict:
         """
         Verilen bir embedding'e en benzer işleri vector store'dan arar.
         """
