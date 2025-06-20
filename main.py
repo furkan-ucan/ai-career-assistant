@@ -109,10 +109,11 @@ def collect_data_for_all_personas():
 
     if not non_empty_jobs_list:
         logger.error("❌ Tüm DataFrame'ler boş!")
-        return None
-
-    # Tüm personaların sonuçlarını birleştir (FutureWarning'i önlemek için sort=False)
-    final_df = pd.concat(non_empty_jobs_list, ignore_index=True, sort=False)
+        return None    # Tüm personaların sonuçlarını birleştir (FutureWarning'i önlemek için)
+    if len(non_empty_jobs_list) == 1:
+        final_df = non_empty_jobs_list[0].copy()
+    else:
+        final_df = pd.concat(non_empty_jobs_list, ignore_index=True, sort=False)
     logger.info(f"\n📊 Birleştirme öncesi (tüm personalar): {len(final_df)} ilan")
 
     # Son genel deduplication (persona'lar arası tekrarlar için)

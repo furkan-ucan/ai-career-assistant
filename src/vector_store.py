@@ -110,7 +110,7 @@ class VectorStore:
                         "location": str(job.get("location", "N/A")),
                         "description": str(job.get("description", ""))[:500],  # İlk 500 karakter
                         "job_url": str(job.get("job_url", job.get("url", "N/A"))),
-                        "source_site": str(job.get("source", "N/A")),
+                        "source_site": str(job.get("source_site", job.get("source", "N/A"))),
                         "persona_source": str(job.get("persona_source", "N/A")),
                     }  # Sadece string, int, float veya bool olanları al
                     metadata = {k: v for k, v in metadata.items() if isinstance(v, (str, int, float, bool))}
