@@ -89,11 +89,10 @@ class VectorStore:
 
         for index, job in jobs_df.iterrows():
             # Sadece geçerli embedding'i olan işleri ekle
-            if embeddings[index] is not None:
-                # ID oluşturmadan önce alanları normalleştir (küçük harf, boşlukları temizle)
-                title_norm = job.get("title", "").lower().strip()
-                company_norm = job.get("company", "").lower().strip()
-                location_norm = job.get("location", "").lower().strip()
+            if embeddings[index] is not None:                # ID oluşturmadan önce alanları normalleştir (küçük harf, boşlukları temizle)
+                title_norm = str(job.get("title", "")).lower().strip()
+                company_norm = str(job.get("company", "")).lower().strip()
+                location_norm = str(job.get("location", "")).lower().strip()
 
                 # Benzersiz ve tutarlı bir ID oluştur (normalleştirilmiş içeriğe dayalı)
                 job_id_str = f"{title_norm}-{company_norm}-{location_norm}"
