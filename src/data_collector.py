@@ -92,7 +92,7 @@ def collect_job_data(
 
     if not non_empty_jobs_list:
         logger.error("❌ Tüm DataFrame'ler boş!")
-        return None  # Tüm sitelerden gelen DataFrame'leri birleştir (FutureWarning'i önlemek için)
+        return None    # Tüm sitelerden gelen DataFrame'leri birleştir (FutureWarning'i önlemek için)
     if len(non_empty_jobs_list) == 1:
         combined_df = non_empty_jobs_list[0].copy()
     else:

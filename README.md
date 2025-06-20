@@ -207,7 +207,7 @@ Türkçe (Anadil), İngilizce (İş Seviyesi - B2)
 job_search_settings:
   target_sites: ["linkedin", "indeed"]  # Aktif platformlar
   default_hours_old: 72                 # Son 3 günlük ilanlar
-  default_results_per_site: 25          # Platform başına ilan sayısı  
+  default_results_per_site: 25          # Platform başına ilan sayısı
   min_similarity_threshold: 60          # %60+ uygunluk eşiği
 
 # 12 Optimize Persona Konfigürasyonu
@@ -219,7 +219,7 @@ persona_search_configs:
 
   Full_Stack:
     term: '("Full Stack Developer" OR "Full Stack Engineer") -Senior -Lead -Principal -Manager'
-    hours_old: 72  
+    hours_old: 72
     results: 25
 
   Frontend_Developer:
@@ -362,12 +362,12 @@ persona_search_configs:
     term: '("Blockchain Developer" OR "Web3 Developer" OR "Solidity" OR "DeFi") -Senior'
     hours_old: 72
     results: 25
-    
+
   Fintech_Engineer:
     term: '("Fintech Engineer" OR "Financial Software" OR "Payment Systems") -Senior'
     hours_old: 72
     results: 25
-    
+
   Crypto_Analyst:
     term: '("Crypto Analyst" OR "DeFi Analyst" OR "Blockchain Analyst") -Senior'
     hours_old: 72
@@ -381,7 +381,7 @@ persona_search_configs:
     term: '("E-commerce Developer" OR "Shopify Developer" OR "WooCommerce") -Senior'
     hours_old: 72
     results: 25
-    
+
   Product_Manager:
     term: '("Product Manager" OR "E-commerce Product" OR "Digital Product") -Senior'
     hours_old: 72
@@ -474,19 +474,19 @@ def main_pipeline():
     # 1. Data Collection (3-4 minutes)
     raw_jobs = collect_from_12_personas()  # ~232 jobs
     clean_jobs = deduplicate_and_filter()  # ~197 unique jobs
-    
-    # 2. AI Processing (7-8 minutes)  
+
+    # 2. AI Processing (7-8 minutes)
     cv_embedding = gemini_ai.embed(cv_text)          # 768-dim vector
     job_embeddings = [gemini_ai.embed(job) for job in clean_jobs]
-    
+
     # 3. Vector Matching (seconds)
     similarities = cosine_similarity(cv_embedding, job_embeddings)
     ranked_jobs = sort_by_similarity(similarities)   # 0-100% scores
-    
+
     # 4. Smart Filtering (seconds)
     filtered_jobs = regex_filter(ranked_jobs)        # Remove senior/lead
     final_results = threshold_filter(filtered_jobs)  # 60%+ threshold
-    
+
     return final_results  # ~44 high-quality matches
 ```
 
@@ -508,7 +508,7 @@ def main_pipeline():
 // Advanced boolean search with negative filtering
 "Software_Engineer": '("Software Engineer" OR "Yazılım Mühendisi") -Senior -Lead -Principal -Manager -Direktör'
 
-// Technology-specific search with exclusions  
+// Technology-specific search with exclusions
 "Frontend_Developer": '("Frontend Developer" OR "Front End Developer" OR React OR Vue OR Angular) -Senior -Lead'
 
 // Junior-focused with multiple terms
@@ -574,7 +574,7 @@ except Exception as e:
     logger.error(f"❌ LinkedIn error: {e}")
     continue  # Diğer sitelere devam et
 
-# ChromaDB connection reliability  
+# ChromaDB connection reliability
 def create_vector_store_with_fallback():
     try:
         return VectorStore(persist_directory="data/chromadb")
@@ -591,7 +591,7 @@ def create_vector_store_with_fallback():
 # New platform integration example
 SUPPORTED_PLATFORMS = {
     "linkedin": {"fetch_description": True, "premium_required": False},
-    "indeed": {"country_indeed": "Turkey", "premium_required": False},  
+    "indeed": {"country_indeed": "Turkey", "premium_required": False},
     # Ready for expansion:
     "glassdoor": {"location": "Turkey", "premium_required": True},
     "monster": {"country": "tr", "premium_required": False},
@@ -647,10 +647,10 @@ INDUSTRY_PERSONAS = {
 
 🎯 Tier 1 (Excellent): 7-8 ilan
    Software_Engineer: 8 ilan (%18 share)
-   Frontend_Developer: 7 ilan (%16 share) 
+   Frontend_Developer: 7 ilan (%16 share)
    Backend_Developer: 7 ilan (%16 share)
 
-🎯 Tier 2 (Good): 4-6 ilan  
+🎯 Tier 2 (Good): 4-6 ilan
    Entry_Level_Developer: 6 ilan (%14 share)
    Process_Analyst: 5 ilan (%11 share)
    Full_Stack: 4 ilan (%9 share)
@@ -686,7 +686,7 @@ INDUSTRY_PERSONAS = {
 ├── Şişli, Pendik, Çekmeköy (çeşitli ilçeler)
 ├── Hem Avrupa hem Anadolu yakası fırsatlar
 
-Ankara: 12 ilan (%27)  
+Ankara: 12 ilan (%27)
 ├── Yoğun devlet kurumları (Aselsan)
 ├── Savunma sanayii odaklı
 
@@ -712,13 +712,13 @@ Diğer: 8 ilan (%18)
    ├── LinkedIn: ~15-30 sec (detailed scraping)
    └── Indeed: ~1-2 sec (lightweight)
 
-🧠 AI Processing: 07:37 (68.7%)  
+🧠 AI Processing: 07:37 (68.7%)
    ├── CV Embedding: 3 seconds
    ├── Job Embeddings: 07:34 (197 jobs × 2.3 sec/job)
    └── Rate limiting: 2 seconds between requests
 
 ⚡ Matching & Filtering: 00:05 (0.7%)
-   ├── ChromaDB search: <1 second  
+   ├── ChromaDB search: <1 second
    ├── Regex filtering: 1-2 seconds
    └── Ranking & output: 1-2 seconds
 
@@ -732,7 +732,7 @@ Total: 11:05 minutes
 
 Memory Peak: ~2.1 GB
 ├── ChromaDB vectors: ~800 MB
-├── JobSpy data: ~400 MB  
+├── JobSpy data: ~400 MB
 ├── Gemini AI cache: ~300 MB
 └── System overhead: ~600 MB
 
@@ -756,11 +756,11 @@ CPU Usage: Moderate (50-70% peaks)
 
 **LinkedIn Advantages:**
 - Detailed job descriptions
-- Company information 
+- Company information
 - Direct application URLs
 - Professional network integration
 
-**Indeed Advantages:**  
+**Indeed Advantages:**
 - Higher volume
 - Faster scraping
 - Local job focus
@@ -776,14 +776,14 @@ CPU Usage: Moderate (50-70% peaks)
 Input: 50 raw matches (from vector search)
 
 Stage 1 - Regex Title Filter: 50 → 48 (-2)
-├── Blocked: "Senior Developer", "Lead Engineer"  
+├── Blocked: "Senior Developer", "Lead Engineer"
 └── Success Rate: 96%
 
 Stage 2 - Experience Filter: 48 → 46 (-2)
 ├── Blocked: "5+ years experience", "minimum 6 years"
 └── Success Rate: 95.8%
 
-Stage 3 - Responsibility Filter: 46 → 45 (-1)  
+Stage 3 - Responsibility Filter: 46 → 45 (-1)
 ├── Blocked: "team management responsibilities"
 └── Success Rate: 97.8%
 
@@ -805,16 +805,16 @@ Final: 44 high-quality positions (88% retention)
 
 80%+ Score (5 positions):
 ├── Application Response: 80-90%
-├── Interview Rate: 60-70%  
+├── Interview Rate: 60-70%
 └── Offer Probability: 30-40%
 
-75-79% Score (10 positions):  
+75-79% Score (10 positions):
 ├── Application Response: 60-70%
 ├── Interview Rate: 40-50%
 └── Offer Probability: 20-30%
 
 70-74% Score (15 positions):
-├── Application Response: 40-50%  
+├── Application Response: 40-50%
 ├── Interview Rate: 25-35%
 └── Offer Probability: 10-20%
 
@@ -830,7 +830,7 @@ Estimated: 2-3 job offers from 44 applications
 
 **Top tier focus strategy:**
 1. **Prioritize 80%+ matches** (5 positions) - Customize applications
-2. **Quick apply to 75-79%** (10 positions) - Standard applications  
+2. **Quick apply to 75-79%** (10 positions) - Standard applications
 3. **Batch apply to 70-74%** (15 positions) - Template applications
 4. **Monitor 60-69%** (14 positions) - Watch for company updates
 
@@ -1399,7 +1399,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 ┌─ 🥇 RANK: 1 ─────────────────────────────────────────────────┐
 │ 🎯 Pozisyon: Software Engineer                                │
 │ 🏢 Şirket: MUDO                                              │
-│ 📍 Lokasyon: İstanbul, Şişli                                 │  
+│ 📍 Lokasyon: İstanbul, Şişli                                 │
 │ 📊 Uygunluk: 80.5% ⭐⭐⭐⭐⭐                                │
 │ 🎭 Persona: Software_Engineer                                 │
 │ 🌐 Platform: LinkedIn                                         │
@@ -1430,7 +1430,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 🔥 TOP PERFORMERS:
 ┌────────────────────────────────────────────────────────────┐
 │ Software_Engineer      → 8 ilan (%18 - Excellent)         │
-│ Frontend_Developer     → 7 ilan (%16 - Excellent)         │  
+│ Frontend_Developer     → 7 ilan (%16 - Excellent)         │
 │ Backend_Developer      → 7 ilan (%16 - Excellent)         │
 │ Entry_Level_Developer  → 6 ilan (%14 - Very Good)         │
 │ Process_Analyst        → 5 ilan (%11 - Good)              │
@@ -1443,13 +1443,13 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 ⚠️ OPTIMIZATION NEEDED:
 ┌────────────────────────────────────────────────────────────┐
 │ Junior_Developer       → 0 ilan (Query too specific)      │
-│ IT_Analyst            → 0 ilan (Query too narrow)         │  
+│ IT_Analyst            → 0 ilan (Query too narrow)         │
 │ Junior_General_Tech   → 3 ilan but filtered out           │
 └────────────────────────────────────────────────────────────┘
 
 💡 RECOMMENDATIONS:
 • Junior_Developer → Try "Entry Level Software Developer"
-• IT_Analyst → Try "System Analyst" or "Business Analyst"  
+• IT_Analyst → Try "System Analyst" or "Business Analyst"
 • Consider adding: "React Developer", "Vue Developer"
 ```
 
@@ -1461,7 +1461,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 
 🏭 ENTERPRISE COMPANIES (18 ilan):
 ├── TOFAS (Bursa) → Otomotiv sektörü
-├── Aselsan (Ankara) → Savunma sanayii  
+├── Aselsan (Ankara) → Savunma sanayii
 ├── Türk Telekom (İstanbul) → Telekomünikasyon
 └── Garanti BBVA (İstanbul) → Fintech
 
@@ -1487,7 +1487,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 │ İstanbul: 18 ilan (%41) → Çeşitli ilçeler, metro yakını    │
 │ Ankara: 12 ilan (%27) → Çankaya, Bilkent, savunma odaklı  │
 │ Bursa: 6 ilan (%14) → Sanayi bölgesi, TOFAS yakını        │
-│ İzmir: 3 ilan (%7) → Teknoloji merkezi, startup hub       │  
+│ İzmir: 3 ilan (%7) → Teknoloji merkezi, startup hub       │
 │ Konya: 2 ilan (%4) → Sanayi odaklı                        │
 │ Diğer: 3 ilan (%7) → Alanya, Denizli (uzaktan seçenekli)  │
 └─────────────────────────────────────────────────────────────┘
@@ -1502,7 +1502,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 2025-06-20 03:58:25,234 - INFO - 🔍 12 persona ile iş arama başlatılıyor...
 2025-06-20 03:58:25,234 - INFO - 👤 Software_Engineer aranıyor... (LinkedIn)
 2025-06-20 03:58:41,445 - INFO - ✅ Software_Engineer → 24 ilan bulundu (16.2s)
-2025-06-20 03:58:41,456 - INFO - 👤 Software_Engineer aranıyor... (Indeed)  
+2025-06-20 03:58:41,456 - INFO - 👤 Software_Engineer aranıyor... (Indeed)
 2025-06-20 03:58:43,123 - INFO - ✅ Software_Engineer → 18 ilan bulundu (1.7s)
 
 [... 12 persona × 2 platform = 24 arama ...]
@@ -1518,7 +1518,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 2025-06-20 04:09:25,345 - INFO - 📊 50 aday bulundu (benzerlik: 40%+)
 2025-06-20 04:09:25,567 - INFO - 🎯 44 kaliteli pozisyon filtrelendi
 
-2025-06-20 04:09:30,123 - INFO - ✅ Sonuçlar kaydedildi: 
+2025-06-20 04:09:30,123 - INFO - ✅ Sonuçlar kaydedildi:
 2025-06-20 04:09:30,123 - INFO - 📁 data/jobspy_optimize_ilanlar_20250620_040930.csv
 2025-06-20 04:09:30,123 - INFO - 🎉 Tamamlandı! Toplam süre: 11 dakika 5 saniye
 ```

@@ -103,12 +103,18 @@ def collect_job_data(
         # Açıklama varsa daha hassas deduplication
         combined_df["description_short"] = combined_df["description"].str[:100]
         combined_df.drop_duplicates(
-            subset=["title", "company", "location", "description_short"], inplace=True, keep="first"
+            subset=["title", "company", "location", "description_short"],
+            inplace=True,
+            keep="first"
         )
         combined_df.drop(columns=["description_short"], inplace=True)
     else:
         # Temel deduplication
-        combined_df.drop_duplicates(subset=["title", "company", "location"], inplace=True, keep="first")
+        combined_df.drop_duplicates(
+            subset=["title", "company", "location"],
+            inplace=True,
+            keep="first"
+        )
 
     final_count = len(combined_df)
     removed_count = initial_count - final_count
@@ -145,7 +151,11 @@ if __name__ == "__main__":
     # Test için basit bir çalıştırma
     logger.info("🧪 JobSpy Gelişmiş Özellikler Test Ediliyor...")
 
-    test_df = collect_job_data(search_term="Software Engineer", max_results_per_site=10, hours_old=72)
+    test_df = collect_job_data(
+        search_term="Software Engineer",
+        max_results_per_site=10,
+        hours_old=72
+    )
 
     if test_df is not None:
         logger.info(f"\n✅ Test sonucu: {len(test_df)} ilan bulundu.")
