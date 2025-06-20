@@ -82,21 +82,15 @@ def collect_job_data(
 
         except Exception as e:
             logger.error(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True)
-            continue  # Bir sitede hata olursa diğerlerine devam et    # Tüm siteler tarandıktan sonra kontrol et
+            continue  # Bir sitede hata olursa diğerlerine devam et
+
+    # Tüm siteler tarandıktan sonra kontrol et
     if not all_jobs_list:
         logger.error("❌ Hiçbir siteden ilan bulunamadı!")
         return None
 
-    # Boş DataFrame'leri filtrele (FutureWarning'i önlemek için)
-    non_empty_jobs_list = [df for df in all_jobs_list if not df.empty]
-
-    if not non_empty_jobs_list:
-        logger.error("❌ Tüm DataFrame'ler boş!")
-        return None  # Tüm sitelerden gelen DataFrame'leri birleştir (FutureWarning'i önlemek için)
-    if len(non_empty_jobs_list) == 1:
-        combined_df = non_empty_jobs_list[0].copy()
-    else:
-        combined_df = pd.concat(non_empty_jobs_list, ignore_index=True, sort=False)
+    # Tüm sitelerden gelen DataFrame'leri birleştir
+    combined_df = pd.concat(all_jobs_list, ignore_index=True)
 
     # Zaman damgası ekle
     combined_df["collected_at"] = datetime.now()

@@ -104,12 +104,12 @@ def collect_data_for_all_personas():
 
     if not all_collected_jobs_list:
         logger.error("❌ Hiçbir persona ve site kombinasyonundan ilan bulunamadı.")
-        return None    # Boş DataFrame'leri filtrele (FutureWarning'i önlemek için)
+        return None  # Boş DataFrame'leri filtrele (FutureWarning'i önlemek için)
     non_empty_jobs_list = [df for df in all_collected_jobs_list if not df.empty]
 
     if not non_empty_jobs_list:
         logger.error("❌ Tüm DataFrame'ler boş!")
-        return None    # Tüm personaların sonuçlarını birleştir (FutureWarning'i önlemek için)
+        return None  # Tüm personaların sonuçlarını birleştir (FutureWarning'i önlemek için)
     if len(non_empty_jobs_list) == 1:
         final_df = non_empty_jobs_list[0].copy()
     else:
@@ -211,7 +211,9 @@ def analyze_and_find_best_jobs():
         logger.error("❌ Vector store yükleme başarısız!")
         return  # 5. Benzer işleri bul ve filtrele
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
-    search_results = vector_store.search_jobs(cv_embedding, n_results=50)    # Search results'ı filter fonksiyonunun beklediği formata dönüştür
+    search_results = vector_store.search_jobs(
+        cv_embedding, n_results=50
+    )  # Search results'ı filter fonksiyonunun beklediği formata dönüştür
     similar_jobs = []
     if search_results and search_results.get("metadatas"):
         metadatas = search_results["metadatas"][0]  # ChromaDB nested list format
