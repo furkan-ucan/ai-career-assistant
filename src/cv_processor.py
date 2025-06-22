@@ -14,9 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 class CVProcessor:
-    def __init__(self, cv_path: Optional[str] = None):
+    def __init__(self, cv_path: Optional[str] = None, embedding_settings: Optional[dict] = None):
         """CV işleyici başlat"""
-        self.embedding_service = EmbeddingService()
+        if embedding_settings:
+            self.embedding_service = EmbeddingService(**embedding_settings)
+        else:
+            self.embedding_service = EmbeddingService()
         self.cv_path = Path(cv_path) if cv_path else Path("data") / "cv.txt"
         self.cv_text = None
         self.cv_embedding = None
