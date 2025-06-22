@@ -5,7 +5,10 @@ from __future__ import annotations
 # Standard Library
 import logging
 import re
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
+
+# Third Party
+import numpy as np
 
 
 def _create_regex_pattern(keyword: str) -> re.Pattern:
@@ -46,7 +49,7 @@ logger = logging.getLogger(__name__)
 class IntelligentScoringSystem:
     """Weighted scoring and regex-based experience detection."""
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, cv_embedding: Optional[List[float]] = None):
         scoring_cfg = config.get("scoring_system", {})
 
         weight_cfg = scoring_cfg.get("weights", {})
@@ -55,6 +58,9 @@ class IntelligentScoringSystem:
             "positive": weight_cfg.get("positive", 30),
         }
         self.threshold = scoring_cfg.get("threshold", 0)
+        self.cv_skill_boost_threshold = scoring_cfg.get("cv_skill_boost_threshold", 0.8)
+        self.cv_skill_bonus_points = scoring_cfg.get("cv_skill_bonus_points", 10)
+        self.cv_embedding = cv_embedding
 
         title_cfg = scoring_cfg.get("title_keywords", {})
         desc_weights_cfg = scoring_cfg.get("description_weights", {})
@@ -122,13 +128,42 @@ class IntelligentScoringSystem:
         logger.debug("Experience %s years -> 0", years)
         return 0
 
+    @staticmethod
+    def _cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
+        arr1 = np.array(vec1)
+        arr2 = np.array(vec2)
+        denom = np.linalg.norm(arr1) * np.linalg.norm(arr2)
+        if denom == 0:
+            return 0.0
+        return float(np.dot(arr1, arr2) / denom)
+
+    def calculate_total_score(
+        self,
+        base_score: int,
+        job_embedding: Optional[List[float]] = None,
+        cv_embedding: Optional[List[float]] = None,
+    ) -> int:
+        cv_vec = cv_embedding if cv_embedding is not None else self.cv_embedding
+        if job_embedding is None or cv_vec is None:
+            return base_score
+        similarity = self._cosine_similarity(job_embedding, cv_vec)
+        if similarity >= self.cv_skill_boost_threshold:
+            logger.debug(
+                "CV skill boost applied: similarity %.3f >= %.3f",
+                similarity,
+                self.cv_skill_boost_threshold,
+            )
+            return base_score + self.cv_skill_bonus_points
+        return base_score
+
     def score_job(self, job_data: Dict[str, str]) -> Tuple[int, Dict[str, int]]:
         title = job_data.get("title", "")
         desc = job_data.get("description", "")
         title_score = self.score_title(title)
         desc_score = self.score_description(desc)
         exp_score = self.score_experience(desc)
-        total = title_score + desc_score + exp_score
+        base_total = title_score + desc_score + exp_score
+        total = self.calculate_total_score(base_total, job_data.get("embedding"))
         details = {
             "title": title_score,
             "description": desc_score,

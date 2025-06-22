@@ -131,3 +131,5 @@ scoring_system:
     "3": -10
   cv_skill_keywords: []
   threshold: -20
+  cv_skill_boost_threshold: 0.8
+  cv_skill_bonus_points: 10
