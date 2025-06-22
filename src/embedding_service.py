@@ -21,27 +21,31 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
-    def __init__(self):
-        """Gemini API'yi başlat"""
+    def __init__(self, batch_size: int = 10, retry_count: int = 3, rate_limit_delay: float = 0.1):
+        """Gemini API'yi başlat ve konfigürasyon ayarlarını sakla"""
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key or api_key == "your_gemini_api_key_here":
             raise ValueError("Gemini API key geçerli değil! .env dosyasını kontrol edin.")
 
         genai.configure(api_key=api_key)
         self.model = "models/text-embedding-004"
+        self.batch_size = batch_size
+        self.retry_count = retry_count
+        self.rate_limit_delay = rate_limit_delay
         logger.info("✅ Gemini API bağlantısı kuruldu")
 
-    def create_embedding(self, text: str, retry_count: int = 3) -> Optional[List[float]]:
+    def create_embedding(self, text: str, retry_count: Optional[int] = None) -> Optional[List[float]]:
         """
         Tek bir metin için embedding oluştur
 
         Args:
             text: Embedding oluşturulacak metin
-            retry_count: Hata durumunda deneme sayısı
+            retry_count: Hata durumunda deneme sayısı (None ise varsayılan kullanılır)
 
         Returns:
             Embedding vektörü veya None
         """
+        retry_count = retry_count if retry_count is not None else self.retry_count
         for attempt in range(retry_count):
             try:
                 result = genai.embed_content(model=self.model, content=text, task_type="retrieval_document")
@@ -55,17 +59,29 @@ class EmbeddingService:
                     logger.error(f"❌ Embedding oluşturulamadı: {text[:50]}...")
                     return None
 
-    def create_embeddings_batch(self, texts: List[str], batch_size: int = 10) -> List[Optional[List[float]]]:
+    def create_embeddings_batch(
+        self,
+        texts: List[str],
+        batch_size: Optional[int] = None,
+        retry_count: Optional[int] = None,
+        rate_limit_delay: Optional[float] = None,
+    ) -> List[Optional[List[float]]]:
         """
         Birden fazla metin için batch embedding oluştur
 
         Args:
             texts: Embedding oluşturulacak metinler
-            batch_size: Batch boyutu
+            batch_size: Batch boyutu (None ise varsayılan kullanılır)
+            retry_count: Hata durumunda deneme sayısı
+            rate_limit_delay: Her istek sonrası bekleme süresi
 
         Returns:
             Embedding vektörlerinin listesi
         """
+        batch_size = batch_size if batch_size is not None else self.batch_size
+        retry_count = retry_count if retry_count is not None else self.retry_count
+        delay = rate_limit_delay if rate_limit_delay is not None else self.rate_limit_delay
+
         embeddings = []
         total = len(texts)
 
@@ -76,11 +92,11 @@ class EmbeddingService:
             batch_embeddings = []
 
             for text in batch:
-                embedding = self.create_embedding(text)
+                embedding = self.create_embedding(text, retry_count=retry_count)
                 batch_embeddings.append(embedding)
 
                 # Rate limiting için kısa bekleme
-                time.sleep(0.1)
+                time.sleep(delay)
 
             embeddings.extend(batch_embeddings)
             logger.info(f"📊 İlerleme: {min(i + batch_size, total)}/{total}")
