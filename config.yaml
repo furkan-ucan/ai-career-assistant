@@ -110,9 +110,24 @@ scoring_system:
       - trainee
       - intern
       - stajyer
-  description_keywords:
-    negative: []
-    positive: []
-  experience_keywords: []
+  description_weights:
+    positive:
+      "python,python3,py": 10
+      "react,reactjs,react.js": 8
+      "typescript,ts,javascript": 8
+      "remote,uzaktan,home office,wfh": 15
+      "agile,scrum,kanban": 5
+      "api,rest,restful": 7
+    negative:
+      "müşteri ziyareti,saha": -15
+      "yoğun seyahat": -20
+      "satış hedefi,kota": -30
+      "çağrı merkezi": -40
+  experience_penalties:
+    "10": -60
+    "8": -50
+    "5": -40
+    "4": -20
+    "3": -10
   cv_skill_keywords: []
   threshold: -20
