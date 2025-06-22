@@ -46,6 +46,8 @@ source kariyer-asistani-env/bin/activate
 
 # 4. Bağımlılıkları yükleyin
 pip install -r requirements.txt
+# test ve gelistirme icin
+pip install -e .[dev]
 
 # 5. API key'inizi ayarlayın
 # .env dosyası oluşturun ve içine ekleyin:
@@ -665,6 +667,7 @@ kariyer-asistani/
 - [ ] ✅ `git clone` ile projeyi indirdim
 - [ ] ✅ `python -m venv` ile sanal ortam oluşturdum
 - [ ] ✅ `pip install -r requirements.txt` çalıştırdım
+- [ ] ✅ `pip install -e .[dev]` ile test/gelistirme bagimliliklarini kurdum
 - [ ] ✅ Gemini API key aldım ve `.env` dosyasına ekledim
 - [ ] ✅ `data/` klasörünü oluşturdum
 - [ ] ✅ `data/cv.txt` dosyasına CV'mi yazdım
@@ -816,6 +819,8 @@ Bu proje açık kaynaklıdır ve topluluğun katkılarıyla büyür. Her seviyed
 3. **💻 Geliştirme yapın**
    ```bash
    # Kodunuzu yazın
+   # Geliştirme bagimliliklarini kurmak icin
+pip install -e .[dev]
    # Testlerinizi çalıştırın
    python -m pytest tests/
    ```
