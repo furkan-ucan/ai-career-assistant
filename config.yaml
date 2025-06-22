@@ -89,3 +89,16 @@ vector_store_settings:
   collection_name: "job_embeddings"
   similarity_metric: "cosine"
   top_k_results: 50
+
+# Intelligent scoring system configuration
+scoring_system:
+  title_weights:
+    negative:
+      senior: -50
+      manager: -30
+      lead: -20
+    positive:
+      junior: 40
+      entry: 35
+      trainee: 30
+  threshold: -20

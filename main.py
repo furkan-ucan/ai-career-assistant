@@ -19,7 +19,8 @@ from tqdm import tqdm
 from src.cv_processor import CVProcessor
 from src.data_collector import collect_job_data
 from src.embedding_service import EmbeddingService
-from src.filter import filter_junior_suitable_jobs
+from src.filter import score_jobs
+from src.intelligent_scoring import IntelligentScoringSystem
 from src.vector_store import VectorStore
 
 # Environment variables yükle
@@ -52,6 +53,7 @@ def load_config():
 
 # Konfigürasyonu yükle
 config = load_config()
+scoring_system = IntelligentScoringSystem(config)
 
 # Konfigürasyondan ayarları al
 job_settings = config["job_search_settings"]
@@ -204,59 +206,53 @@ def analyze_and_find_best_jobs():
 
     # 5. Benzer işleri bul ve filtrele
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
-    similar_jobs = vector_store.search_similar_jobs(cv_embedding, top_k=50)
+    # Vector store araması
+    search_results = vector_store.search_jobs(cv_embedding, n_results=50)
+    similar_jobs = [
+        dict(metadata, similarity_score=(1 - dist) * 100)
+        for metadata, dist in zip(search_results.get("metadatas", []), search_results.get("distances", []))
+    ]
 
     if similar_jobs:
-        logger.info("🔍 Sonuçlar YBS/junior pozisyonlar için akıllı filtreleme...")
-        filtered_jobs = filter_junior_suitable_jobs(similar_jobs, debug=False)
+        logger.info("🔍 Sonuçlar akıllı puanlama ile değerlendiriliyor...")
+        scored_jobs = score_jobs(similar_jobs, scoring_system, debug=False)
+        high_quality_jobs = [job for job in scored_jobs if job["similarity_score"] >= MIN_SIMILARITY_THRESHOLD]
 
-        if filtered_jobs:  # Uygunluk puanı eşiği ekleme
-            high_quality_jobs = [job for job in filtered_jobs if job["similarity_score"] >= MIN_SIMILARITY_THRESHOLD]
+        if high_quality_jobs:
+            logger.info(f"✅ {len(high_quality_jobs)} adet yüksek kaliteli pozisyon bulundu!")
+            logger.info(f"📊 Uygunluk eşiği: %{MIN_SIMILARITY_THRESHOLD} ve üzeri")
 
-            if high_quality_jobs:
-                logger.info(f"✅ {len(high_quality_jobs)} adet yüksek kaliteli pozisyon bulundu!")
-                logger.info(f"📊 Uygunluk eşiği: %{MIN_SIMILARITY_THRESHOLD} ve üzeri")
+            logger.info("\n" + "=" * 70)
+            logger.info("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI (JobSpy Optimize)")
+            logger.info("🎯 YBS + Full-Stack + Veri Analizi Odaklı")
+            logger.info("=" * 70)
 
-                logger.info("\n" + "=" * 70)
-                logger.info("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI (JobSpy Optimize)")
-                logger.info("🎯 YBS + Full-Stack + Veri Analizi Odaklı")
-                logger.info("=" * 70)
+            for i, job in enumerate(high_quality_jobs[:15], 1):  # Top 15 göster
+                logger.info(f"\n{i}. {job['title']} - {job['company']}")
+                logger.info(f"   📍 {job['location']}")
+                logger.info(f"   📊 Uygunluk: %{job['similarity_score']:.1f}")
+                logger.info(f"   💼 Site: {job.get('source_site', 'N/A')}")
+                logger.info(f"   👤 Persona: {job.get('persona_source', job.get('persona', 'N/A'))}")
+                logger.info(f"   🔗 {job['url']}")
+                logger.info("-" * 50)
 
-                for i, job in enumerate(high_quality_jobs[:15], 1):  # Top 15 göster
-                    logger.info(f"\n{i}. {job['title']} - {job['company']}")
-                    logger.info(f"   📍 {job['location']}")
-                    logger.info(f"   📊 Uygunluk: %{job['similarity_score']:.1f}")
-                    logger.info(f"   💼 Site: {job.get('source_site', 'N/A')}")  # Hangi siteden geldiği
-                    logger.info(
-                        f"   👤 Persona: {job.get('persona_source', job.get('persona', 'N/A'))}"
-                    )  # Hangi persona aramasıyla geldiği
-                    logger.info(f"   🔗 {job['url']}")
-                    logger.info("-" * 50)
+            logger.info(f"\n🎯 Analiz tamamlandı! {len(high_quality_jobs)} yüksek kaliteli pozisyon listelendi.")
 
-                logger.info(f"\n🎯 Analiz tamamlandı! {len(high_quality_jobs)} yüksek kaliteli pozisyon listelendi.")
+            if high_quality_jobs and ("persona_source" in high_quality_jobs[0] or "persona" in high_quality_jobs[0]):
+                persona_counts = {}
+                for job in high_quality_jobs:
+                    persona = job.get("persona_source", job.get("persona", "Unknown"))
+                    persona_counts[persona] = persona_counts.get(persona, 0) + 1
 
-                # Persona dağılımı analizi
-                if high_quality_jobs and (
-                    "persona_source" in high_quality_jobs[0] or "persona" in high_quality_jobs[0]
-                ):
-                    persona_counts = {}
-                    for job in high_quality_jobs:
-                        persona = job.get("persona_source", job.get("persona", "Unknown"))
-                        persona_counts[persona] = persona_counts.get(persona, 0) + 1
-
-                    logger.info("\n📈 Persona Dağılımı:")
-                    for persona, count in sorted(persona_counts.items(), key=lambda x: x[1], reverse=True):
-                        logger.info(f"   {persona}: {count} ilan")
-
-            else:
-                logger.warning(
-                    f"⚠️  Filtreleme sonrası {len(filtered_jobs)} ilan bulundu ama "
-                    f"uygunluk eşiği (%{MIN_SIMILARITY_THRESHOLD}) altında."
-                )
-                logger.info("💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi düşünebilirsiniz.")
+                logger.info("\n📈 Persona Dağılımı:")
+                for persona, count in sorted(persona_counts.items(), key=lambda x: x[1], reverse=True):
+                    logger.info(f"   {persona}: {count} ilan")
 
         else:
-            logger.warning("❌ Filtreleme sonrası uygun pozisyon bulunamadı! Kriterleri gözden geçirin.")
+            logger.warning(
+                f"⚠️  {len(scored_jobs)} ilan bulundu ancak uygunluk eşiği (%{MIN_SIMILARITY_THRESHOLD}) altında."
+            )
+            logger.info("💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi düşünebilirsiniz.")
     else:
         logger.warning("❌ Benzer iş bulunamadı!")
 
