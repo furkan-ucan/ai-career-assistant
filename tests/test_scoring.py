@@ -1,15 +1,17 @@
-# Standard Library
 import os
 import sys
-import time
-
-# Third Party
-import yaml
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+# Standard Library
+import time  # noqa: E402
+
+# Third Party
+import yaml  # noqa: E402
+
 # Local
-from src.filter import compare_filters, score_jobs
-from src.intelligent_scoring import IntelligentScoringSystem
+from src.filter import compare_filters, score_jobs  # noqa: E402
+from src.intelligent_scoring import IntelligentScoringSystem  # noqa: E402
 
 
 def load_scoring_system():
