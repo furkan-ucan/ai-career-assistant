@@ -233,12 +233,14 @@ def analyze_and_find_best_jobs():
             logger.info("=" * 70)
 
             for i, job in enumerate(high_quality_jobs[:15], 1):  # Top 15 göster
-                logger.info(f"\n{i}. {job['title']} - {job['company']}")
-                logger.info(f"   📍 {job['location']}")
-                logger.info(f"   📊 Uygunluk: %{job['similarity_score']:.1f}")
-                logger.info(f"   💼 Site: {job.get('source_site', 'N/A')}")
-                logger.info(f"   👤 Persona: {job.get('persona_source', job.get('persona', 'N/A'))}")
-                logger.info(f"   🔗 {job.get('url', 'URL bulunamadı')}")
+                logger.info(f"\n{i}. {job.get('title', 'Başlık belirtilmemiş')} - {job.get('company', 'Şirket belirtilmemiş')}")
+                logger.info(f"   📍 {job.get('location', 'Lokasyon belirtilmemiş')}")
+                # match_score veya similarity_score'u güvenli şekilde al
+                score = job.get('match_score', job.get('similarity_score', 0))
+                logger.info(f"   📊 Uygunluk: %{score:.1f}")
+                logger.info(f"   💼 Site: {job.get('source_site', job.get('site', 'Site belirtilmemiş'))}")
+                logger.info(f"   👤 Persona: {job.get('persona_source', job.get('persona', 'Persona belirtilmemiş'))}")
+                logger.info(f"   🔗 {job.get('url', job.get('job_url', 'URL bulunamadı'))}")
                 logger.info("-" * 50)
 
             logger.info(f"\n🎯 Analiz tamamlandı! {len(high_quality_jobs)} yüksek kaliteli pozisyon listelendi.")
