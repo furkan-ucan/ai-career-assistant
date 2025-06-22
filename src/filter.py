@@ -155,3 +155,21 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
     logger.info(f"   📈 Başarı oranı: %{(filter_stats['passed'] / total_processed) * 100:.1f}")
 
     return filtered_jobs
+
+
+def score_jobs(jobs_list, scoring_system, debug=False):
+    """Apply intelligent scoring system and return jobs above threshold."""
+    scored = []
+    for job in jobs_list:
+        total, details = scoring_system.score_job(job)
+        job["score"] = total
+        job["score_details"] = details
+        if scoring_system.should_include(total):
+            scored.append(job)
+            if debug:
+                logger.debug(f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')}")
+        elif debug:
+            logger.debug(f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')}")
+
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored
