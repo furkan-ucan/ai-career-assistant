@@ -1,7 +1,9 @@
+# Standard Library
 import argparse
 from pathlib import Path
 from typing import List
 
+# Third Party
 import yaml
 
 
@@ -16,9 +18,7 @@ def load_persona_choices(config_path: Path = Path("config.yaml")) -> List[str]:
 
 
 def build_parser(personas: List[str]) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Akilli Kariyer Asistani komut satiri arayuzu"
-    )
+    parser = argparse.ArgumentParser(description="Akilli Kariyer Asistani komut satiri arayuzu")
     parser.add_argument(
         "-p",
         "--persona",
@@ -26,7 +26,8 @@ def build_parser(personas: List[str]) -> argparse.ArgumentParser:
         choices=personas,
         help="Sadece belirtilen persona(lar) icin arama yapar. Opsiyonel olarak birden fazla kullanilabilir.",
     )
-    parser.add_argument(        "-r",
+    parser.add_argument(
+        "-r",
         "--results",
         type=int,
         help="Her site icin cekilecek maksimum ilan sayisi",

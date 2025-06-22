@@ -8,7 +8,7 @@ scoring = IntelligentScoringSystem(cfg)
 # Test actual scores
 test_titles = [
     'Senior Software Engineer',
-    'Junior React Developer', 
+    'Junior React Developer',
     'Sr. Data Scientist',
     'Entry Level Python Dev',
     'Architect'

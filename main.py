@@ -237,10 +237,12 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
             logger.info("=" * 70)
 
             for i, job in enumerate(high_quality_jobs[:15], 1):  # Top 15 göster
-                logger.info(f"\n{i}. {job.get('title', 'Başlık belirtilmemiş')} - {job.get('company', 'Şirket belirtilmemiş')}")
+                logger.info(
+                    f"\n{i}. {job.get('title', 'Başlık belirtilmemiş')} - {job.get('company', 'Şirket belirtilmemiş')}"
+                )
                 logger.info(f"   📍 {job.get('location', 'Lokasyon belirtilmemiş')}")
                 # match_score veya similarity_score'u güvenli şekilde al
-                score = job.get('match_score', job.get('similarity_score', 0))
+                score = job.get("match_score", job.get("similarity_score", 0))
                 logger.info(f"   📊 Uygunluk: %{score:.1f}")
                 logger.info(f"   💼 Site: {job.get('source_site', job.get('site', 'Site belirtilmemiş'))}")
                 logger.info(f"   👤 Persona: {job.get('persona_source', job.get('persona', 'Persona belirtilmemiş'))}")
@@ -260,9 +262,7 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
                     logger.info(f"   {persona}: {count} ilan")
 
         else:
-            logger.warning(
-                f"⚠️  {len(scored_jobs)} ilan bulundu ancak uygunluk eşiği (%{threshold}) altında."
-            )
+            logger.warning(f"⚠️  {len(scored_jobs)} ilan bulundu ancak uygunluk eşiği (%{threshold}) altında.")
             logger.info("💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi düşünebilirsiniz.")
     else:
         logger.warning("❌ Benzer iş bulunamadı!")
@@ -318,6 +318,7 @@ def main(selected_personas=None, results_per_site=None, similarity_threshold=Non
 
 # Test fonksiyonları için
 if __name__ == "__main__":
+    # Local
     from src.cli import parse_args
 
     args = parse_args()

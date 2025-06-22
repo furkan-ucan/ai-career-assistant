@@ -14,7 +14,7 @@ def _create_regex_pattern(keyword: str) -> re.Pattern:
     Spaces or hyphens in the keyword are treated interchangeably.
     """
     escaped = re.escape(keyword.strip())
-    escaped = escaped.replace(r"\ ", r"(?:\s|-)" ).replace(r"\-", r"(?:\s|-)")
+    escaped = escaped.replace(r"\ ", r"(?:\s|-)").replace(r"\-", r"(?:\s|-)")
     return re.compile(rf"\b{escaped}\b", re.IGNORECASE)
 
 
@@ -22,7 +22,7 @@ def _compile_patterns_from_config(items: List[str]) -> List[re.Pattern]:
     """Compile a list of keywords (comma separated allowed) into regex patterns."""
     patterns = []
     for item in items or []:
-        for part in str(item).split(','):
+        for part in str(item).split(","):
             part = part.strip()
             if part:
                 patterns.append(_create_regex_pattern(part))
@@ -33,11 +33,12 @@ def _compile_weighted_patterns(items: Dict[str, int]) -> List[Tuple[re.Pattern, 
     """Compile mapping of comma-separated keywords to weighted regex patterns."""
     patterns = []
     for key, weight in (items or {}).items():
-        for part in str(key).split(','):
+        for part in str(key).split(","):
             part = part.strip()
             if part:
                 patterns.append((_create_regex_pattern(part), int(weight)))
     return patterns
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,9 @@ class IntelligentScoringSystem:
             "positive": _compile_weighted_patterns(desc_weights_cfg.get("positive", {})),
         }
         self.experience_penalties = {int(k): int(v) for k, v in exp_penalty_cfg.items()}
-        self.cv_skill_patterns = _compile_patterns_from_config(cv_cfg)        # Supported variations: "3 yıl", "4 sene", "2 yr", "5 yrs", "1 year", "7 years", "10+ years"
+        self.cv_skill_patterns = _compile_patterns_from_config(
+            cv_cfg
+        )  # Supported variations: "3 yıl", "4 sene", "2 yr", "5 yrs", "1 year", "7 years", "10+ years"
         self.experience_pattern = re.compile(
             r"(\d+)\+?\s*(y[ıi]l|sene|yrs?|years?)",
             re.IGNORECASE,
