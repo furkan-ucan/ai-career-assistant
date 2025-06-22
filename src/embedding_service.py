@@ -34,7 +34,9 @@ class EmbeddingService:
         self.rate_limit_delay = rate_limit_delay
         logger.info("✅ Gemini API bağlantısı kuruldu")
 
-    def create_embedding(self, text: str, retry_count: Optional[int] = None, max_chars: int = 8000) -> Optional[List[float]]:
+    def create_embedding(
+        self, text: str, retry_count: Optional[int] = None, max_chars: int = 8000
+    ) -> Optional[List[float]]:
         """
         Tek bir metin için embedding oluştur - Token limit kontrolü ile
 
