@@ -123,7 +123,15 @@ Bu değerleri ihtiyacınıza göre değiştirebilirsiniz.
 ```bash
 # Sistemi çalıştırın
 python main.py
+# Örnek: sadece Data_Analyst personası için
+python main.py --persona Data_Analyst --results 10 --threshold 50
 ```
+
+#### Komut Satırı Seçenekleri
+
+- `--persona`: Sadece belirtilen persona(lar) için arama yapar. Birden fazla persona belirtmek için argümanı tekrarlayın.
+- `--results`: Her site için çekilecek maksimum ilan sayısı.
+- `--threshold`: Benzerlik eşiği (%). Varsayılan değeri geçersiz kılar.
 
 **Beklenen çıktı:**
 ```
