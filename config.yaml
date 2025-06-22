@@ -47,8 +47,8 @@ persona_search_configs:
     results: 25
 
   Data_Analyst:
-    term: "(\"Data Analyst\" OR \"Veri Analisti\") (SQL OR Python OR PowerBI OR Tableau) -Senior -Lead"
-    hours_old: 72
+    term: "(\"Data Analyst\" OR \"Veri Analisti\" OR \"BI Analyst\" OR \"Business Intelligence\") (SQL OR Python OR PowerBI OR Tableau) -Senior -Lead"
+    hours_old: 168
     results: 25
 
   ERP_Consultant:
@@ -62,8 +62,8 @@ persona_search_configs:
     results: 25
 
   IT_Analyst:
-    term: "(\"IT Analyst\" OR \"BT Analisti\" OR \"System Analyst\" OR \"Sistem Analisti\") -Senior -Lead"
-    hours_old: 72
+    term: "(\"IT Analyst\" OR \"BT Analisti\" OR \"System Analyst\" OR \"Sistem Analisti\" OR \"Technical Support\") -Senior -Lead"
+    hours_old: 168
     results: 25
 
   Junior_General_Tech:

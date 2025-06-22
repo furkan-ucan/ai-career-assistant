@@ -48,9 +48,13 @@ class VectorStore:
 
     @staticmethod
     def _stable_job_id(job_dict: Dict[str, Any]) -> str:
-        """Create a deterministic job ID from the job's canonical JSON."""
-        canonical = json.dumps(job_dict, sort_keys=True, ensure_ascii=False)
-        digest = hashlib.sha1(canonical.encode("utf-8")).hexdigest()
+        """Create a deterministic job ID using URL if available."""
+        url = job_dict.get("url") or job_dict.get("job_url")
+        if url:
+            digest = hashlib.sha1(url.encode("utf-8")).hexdigest()
+        else:
+            canonical = json.dumps(job_dict, sort_keys=True, ensure_ascii=False)
+            digest = hashlib.sha1(canonical.encode("utf-8")).hexdigest()
         return f"job_{digest}"
 
     def create_collection(self) -> bool:
@@ -86,6 +90,18 @@ class VectorStore:
 
         return self.collection
 
+    def job_exists(self, job_dict: Dict[str, Any]) -> bool:
+        """Check whether a job with the given ID already exists."""
+        if not self.get_collection():
+            return False
+
+        job_id = self._stable_job_id(job_dict)
+        try:
+            existing = self.collection.get(ids=[job_id])
+            return len(existing.get("ids", [])) > 0
+        except Exception:
+            return False
+
     def add_jobs(self, jobs_df: pd.DataFrame, embeddings: List[Optional[List[float]]]) -> bool:
         """İş ilanlarını ve embeddings'lerini koleksiyona ekle - Tekrar eklemeyi önler"""
         if not self.get_collection():
@@ -99,18 +115,11 @@ class VectorStore:
             # Geçerli veri ve embedding'leri filtrele
             for i, (_, job_row) in enumerate(jobs_df.iterrows()):
                 if i < len(embeddings) and embeddings[i] is not None:
-                    # Benzersiz ve deterministik ID oluştur
                     job_dict = job_row.to_dict()
+                    if self.job_exists(job_dict):
+                        continue
+
                     job_id = self._stable_job_id(job_dict)
-
-                    # Bu ID zaten var mı kontrol et
-                    try:
-                        existing = self.collection.get(ids=[job_id])
-                        if len(existing["ids"]) > 0:
-                            continue  # Bu iş ilanı zaten var, atla
-                    except Exception:
-                        pass  # ID yoksa devam et
-
                     valid_jobs.append(job_dict)
                     valid_embeddings.append(embeddings[i])
                     valid_ids.append(job_id)
