@@ -1,10 +1,3 @@
-import os
-import sys
-
-import pytest
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from src.embedding_service import EmbeddingService
 
 
@@ -48,4 +41,3 @@ def test_retry_logic(monkeypatch):
     emb = service.create_embedding("text")
     assert emb == [1.0]
     assert call_count["n"] == 2
-

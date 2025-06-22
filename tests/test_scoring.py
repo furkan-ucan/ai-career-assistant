@@ -1,13 +1,9 @@
 # Standard Library
-import os
-import sys
 import time
 
 # Third Party
 import yaml
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-# Local
 from src.filter import compare_filters, score_jobs, filter_junior_suitable_jobs
 from src.intelligent_scoring import IntelligentScoringSystem
 import pytest
@@ -95,8 +91,8 @@ def test_experience_regex_detection():
         ("1 yıl deneyim", 0),             # Below threshold
         ("Deneyim gerekmez", 0),          # No years mentioned
         ("En az 5 sene tecrübe", -40),    # 'sene' variant
-        ("4 yrs experience required", -20), # English 'yrs'
-        ("3 years of work", -10),         # English 'years'
+        ("4 yrs experience required", -20),  # English 'yrs'
+        ("3 years of work", -10),          # English 'years'
     ],
 )
 def test_experience_penalty_thresholds(description, expected_penalty):
@@ -126,7 +122,7 @@ def test_experience_multiple_years_max():
         ("Manager", -35, -25),                   # Manager matches (-30)
         ("Trainee Software Engineer", 25, 35),  # Trainee matches (+30)
         ("Intern Developer", 25, 35),            # Intern matches (+30)
-        ("Stajyer Yazılım Geliştirici", 25, 35), # Stajyer matches (+30)
+        ("Stajyer Yazılım Geliştirici", 25, 35),  # Stajyer matches (+30)
     ],
 )
 def test_parametrized_title_scores(title, expected_min, expected_max):
@@ -364,6 +360,8 @@ def test_comprehensive_integration():
     assert scoring.should_include(total), "Complex positive job should be included"
 
 # Enhanced Edge Case Testing for Issue #18 Phase 4
+
+
 @pytest.mark.parametrize(
     "description,expected_positive",
     [
@@ -390,15 +388,16 @@ def test_description_scoring_edge_cases(description, expected_positive):
 
 
 @pytest.mark.parametrize(
-    "title,description,experience_text,expected_include",        [
-            ("Junior Developer", "Python development", "0 yıl deneyim", True),
-            ("Entry Level React Dev", "React projects", "Fresh graduate", True),
-            ("Senior Engineer", "5+ years experience", "5 yıl deneyim", False),
-            ("Lead Developer", "Team leadership", "8 years experience", False),
-            ("Trainee Position", "Learning opportunity", "No experience required", True),
-            ("", "", "", True),  # All empty but score=0 >= threshold(-20)
-            (None, None, None, True),  # All None but score=0 >= threshold(-20)
-        ],
+    "title,description,experience_text,expected_include",
+    [
+        ("Junior Developer", "Python development", "0 yıl deneyim", True),
+        ("Entry Level React Dev", "React projects", "Fresh graduate", True),
+        ("Senior Engineer", "5+ years experience", "5 yıl deneyim", False),
+        ("Lead Developer", "Team leadership", "8 years experience", False),
+        ("Trainee Position", "Learning opportunity", "No experience required", True),
+        ("", "", "", True),  # All empty but score=0 >= threshold(-20)
+        (None, None, None, True),  # All None but score=0 >= threshold(-20)
+    ],
 )
 def test_comprehensive_job_scoring(title, description, experience_text, expected_include):
     """Test comprehensive job scoring with realistic job combinations."""
@@ -409,7 +408,10 @@ def test_comprehensive_job_scoring(title, description, experience_text, expected
     total, details = scoring.score_job(job)
     result = scoring.should_include(total)
 
-    assert result == expected_include, f"Job {title} with desc '{job_desc}' - Expected: {expected_include}, Got: {result}, Score: {total}, Details: {details}"
+    assert result == expected_include, (
+        f"Job {title} with desc '{job_desc}' - Expected: {expected_include}, "
+        f"Got: {result}, Score: {total}, Details: {details}"
+    )
 
 
 @pytest.mark.parametrize(
