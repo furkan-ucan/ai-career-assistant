@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """Test Intelligent Scoring System functionality"""
 
-import sys
-import os
-sys.path.insert(0, os.path.abspath('.'))
-
 from src.intelligent_scoring import IntelligentScoringSystem
 import yaml
 
@@ -39,7 +35,7 @@ for job in test_jobs:
     print(f"🏆 Karar: {decision}")
     print("-" * 40)
 
-print(f"\n⚙️ Sistem Ayarları:")
+print("\n⚙️ Sistem Ayarları:")
 print(f"🎯 Eşik Değeri: {scoring.threshold}")
 print(f"➕ Pozitif Kelimeler: {config['scoring_system']['title_weights']['positive']}")
 print(f"➖ Negatif Kelimeler: {config['scoring_system']['title_weights']['negative']}")
