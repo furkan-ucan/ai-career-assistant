@@ -1,9 +1,8 @@
 """
-Veri Toplama Modülü - JobSpy Gelişmiş Özellikler ile Optimize Edilmiş
-JobSpy'ın advanced fea    final_count = len(combined_df)
-    removed_count = initial_count - final_count
-    logger.info("✨ Deduplication tamamlandı:")es (hours_old, gelişmiş search queries, site-specific params) kullanarak
-birden fazla platformdan CV'ye uygun iş ilanlarını toplar.
+Data collector for scraping job listings with JobSpy.
+
+The module performs advanced searches across multiple job sites,
+deduplicates the results and provides utilities to save them to CSV.
 """
 
 # Standard Library
