@@ -778,6 +778,7 @@ applied_jobs = {
 - **Git Workflow:** Feature branches, PR reviews
 - **Testing:** Unit tests, Integration tests
 - **Documentation:** Docstrings, README güncellemeleri
+- **Örnek Scriptler:** `examples/test_scoring_manual.py` ve `examples/test_scores.py` dosyalarıyla manuel puanlama yapabilirsiniz
 
 ### 🎯 Kariyer Tavsiyeleri
 - **CV Optimizasyonu:** ATS-friendly formatlar
