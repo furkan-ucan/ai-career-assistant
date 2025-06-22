@@ -8,7 +8,7 @@ import yaml
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 # Local
-from src.filter import compare_filters, score_jobs
+from src.filter import compare_filters, score_jobs, filter_junior_suitable_jobs
 from src.intelligent_scoring import IntelligentScoringSystem
 
 
@@ -60,3 +60,7 @@ def test_scoring_performance():
     start = time.time()
     score_jobs(jobs, scoring)
     assert (time.time() - start) < 1.0
+
+
+def test_filter_empty_list():
+    assert filter_junior_suitable_jobs([]) == []

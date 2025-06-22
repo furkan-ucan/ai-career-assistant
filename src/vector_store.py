@@ -8,16 +8,19 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import hashlib
+import json
 
 # Third Party
 import chromadb
 import pandas as pd
+import yaml
 
 logger = logging.getLogger(__name__)
 
 
 class VectorStore:
-    def __init__(self, persist_directory: str = None):
+    def __init__(self, persist_directory: str = None, collection_name: str = None):
         """ChromaDB istemcisini başlat"""
         try:
             if persist_directory:
@@ -28,14 +31,29 @@ class VectorStore:
             else:
                 self.client = chromadb.Client()
                 logger.info("✅ ChromaDB geçici client başlatıldı")
-
-            self.collection_name = "job_listings"
+            if collection_name is None:
+                try:
+                    with open("config.yaml", "r", encoding="utf-8") as f:
+                        cfg = yaml.safe_load(f)
+                    collection_name = cfg.get("vector_store_settings", {}).get("collection_name")
+                except Exception as cfg_err:
+                    logger.warning(
+                        f"Config load failed: {cfg_err}; using default collection name"
+                    )
+            self.collection_name = collection_name or "job_embeddings"
             self.collection = None
             logger.info("VectorStore başarıyla başlatıldı")
 
         except Exception as e:
             logger.error(f"❌ VectorStore başlatma hatası: {str(e)}", exc_info=True)
             raise
+
+    @staticmethod
+    def _stable_job_id(job_dict: Dict[str, Any]) -> str:
+        """Create a deterministic job ID from the job's canonical JSON."""
+        canonical = json.dumps(job_dict, sort_keys=True, ensure_ascii=False)
+        digest = hashlib.sha1(canonical.encode("utf-8")).hexdigest()
+        return f"job_{digest}"
 
     def create_collection(self) -> bool:
         """Koleksiyon oluştur veya mevcut olanı getir"""
@@ -83,8 +101,9 @@ class VectorStore:
             # Geçerli veri ve embedding'leri filtrele
             for i, (_, job_row) in enumerate(jobs_df.iterrows()):
                 if i < len(embeddings) and embeddings[i] is not None:
-                    # Benzersiz ID oluştur
-                    job_id = f"job_{hash(str(job_row.to_dict()))}"
+                    # Benzersiz ve deterministik ID oluştur
+                    job_dict = job_row.to_dict()
+                    job_id = self._stable_job_id(job_dict)
 
                     # Bu ID zaten var mı kontrol et
                     try:
@@ -94,7 +113,7 @@ class VectorStore:
                     except Exception:
                         pass  # ID yoksa devam et
 
-                    valid_jobs.append(job_row.to_dict())
+                    valid_jobs.append(job_dict)
                     valid_embeddings.append(embeddings[i])
                     valid_ids.append(job_id)
 
@@ -181,10 +200,14 @@ class VectorStore:
 
 
 # Yardımcı fonksiyonlar
-def create_vector_store(persist_directory: str = None) -> Optional[VectorStore]:
+def create_vector_store(
+    persist_directory: str = None, collection_name: str = None
+) -> Optional[VectorStore]:
     """VectorStore örneği oluştur"""
     try:
-        return VectorStore(persist_directory=persist_directory)
+        return VectorStore(
+            persist_directory=persist_directory, collection_name=collection_name
+        )
     except Exception as e:
         logger.error(f"VectorStore oluşturma hatası: {str(e)}")
         return None

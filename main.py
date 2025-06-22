@@ -55,6 +55,9 @@ def load_config():
 config = load_config()
 scoring_system = IntelligentScoringSystem(config)
 
+# Embedding ayarları
+embedding_settings = config.get("embedding_settings", {})
+
 # Konfigürasyondan ayarları al
 job_settings = config["job_search_settings"]
 MIN_SIMILARITY_THRESHOLD = job_settings["min_similarity_threshold"]
@@ -146,7 +149,7 @@ def analyze_and_find_best_jobs():
 
     # 2. CV'yi işle
     logger.info("\n📄 2/6: CV analizi...")
-    cv_processor = CVProcessor()
+    cv_processor = CVProcessor(embedding_settings=embedding_settings)
     if not cv_processor.load_cv():
         logger.error("❌ CV yükleme başarısız!")
         return
@@ -160,7 +163,10 @@ def analyze_and_find_best_jobs():
 
     # 3. Vector store'u başlat
     logger.info("\n🗃️ 3/6: Vector store hazırlığı...")
-    vector_store = VectorStore()
+    vector_store = VectorStore(
+        persist_directory=config["paths"]["chromadb_dir"],
+        collection_name=config["vector_store_settings"]["collection_name"],
+    )
 
     # 4. İş ilanlarını vector store'a yükle
     logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")  # CSV'yi pathlib ile oku
@@ -184,7 +190,7 @@ def analyze_and_find_best_jobs():
         return
 
     # İş ilanları için embeddings oluştur (tqdm ile)
-    embedding_service = EmbeddingService()
+    embedding_service = EmbeddingService(**embedding_settings)
 
     logger.info("🔄 5/6: İş ilanları için AI embeddings oluşturuluyor...")
     job_embeddings = []

@@ -107,6 +107,17 @@ HEDEFLER:
 GEMINI_API_KEY=AIzaSyC... (gerçek key'iniz)
 ```
 
+#### `config.yaml` Ayarları
+Embedding parametreleri bu dosyada tanımlıdır:
+
+```yaml
+embedding_settings:
+  batch_size: 10       # Batch boyutu
+  retry_count: 3       # Hata durumunda deneme sayısı
+  rate_limit_delay: 0.1  # Saniye cinsinden bekleme
+```
+Bu değerleri ihtiyacınıza göre değiştirebilirsiniz.
+
 ### 2️⃣ İlk Çalıştırma
 
 ```bash

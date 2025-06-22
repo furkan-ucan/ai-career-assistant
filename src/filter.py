@@ -14,6 +14,10 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
     Junior/Entry-level pozisyonlar için uygun olmayan ilanları filtreler
     YBS öğrencisinin kariyer hedefleri (ERP, Proje Yönetimi, İş Analizi) göz önünde bulundurularak optimizasyon
     """
+    if not jobs_list:
+        logger.info("No jobs provided for filtering.")
+        return []
+
     # Başlık blacklist - SADECE kesinlikle senior olanları hedefler
     title_blacklist = [
         "senior",
@@ -152,7 +156,13 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
     logger.info(f"   🔥 Sorumluluk filtresi: {filter_stats['responsibility']}")
     logger.info(f"   🔥 Rol dışı filtresi: {filter_stats['out_of_scope']}")
     logger.info(f"   ✅ Geçen: {filter_stats['passed']}")
-    logger.info(f"   📈 Başarı oranı: %{(filter_stats['passed'] / total_processed) * 100:.1f}")
+
+    if total_processed == 0:
+        logger.info("   📈 Başarı oranı: %0.1f", 0.0)
+        logger.info("No jobs were processed.")
+    else:
+        success_rate = (filter_stats["passed"] / total_processed) * 100
+        logger.info(f"   📈 Başarı oranı: %{success_rate:.1f}")
 
     return filtered_jobs
 
