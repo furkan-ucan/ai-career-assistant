@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 # Standard Library
+import logging
 import re
 from typing import Dict, Tuple
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,11 @@ class IntelligentScoringSystem:
         self.weights = scoring_cfg.get("title_weights", {})
         self.threshold = scoring_cfg.get("threshold", 0)
         # compile patterns once
-        self.experience_pattern = re.compile(r"(\d+)\s*(y[ıi]l|sene|year)s?", re.IGNORECASE)
+        # Supported variations: "3 yıl", "4 sene", "2 yr", "5 yrs", "1 year", "7 years"
+        self.experience_pattern = re.compile(
+            r"(\d+)\s*(y[ıi]l|sene|yrs?|years?)",
+            re.IGNORECASE,
+        )
 
     def score_title(self, title: str) -> int:
         score = 0
