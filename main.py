@@ -76,24 +76,24 @@ def collect_data_for_all_personas():
 
     all_collected_jobs_list = []
 
-    for persona_name, config in tqdm(persona_search_config.items(), desc="Persona Aramaları"):
+    for persona_name, persona_cfg in tqdm(persona_search_config.items(), desc="Persona Aramaları"):
         logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
-        logger.info(f"🎯 Optimize edilmiş terim: '{config['term']}'")
-        logger.info(f"⏰ Tarih filtresi: Son {config['hours_old']} saat")
+        logger.info(f"🎯 Optimize edilmiş terim: '{persona_cfg['term']}'")
+        logger.info(f"⏰ Tarih filtresi: Son {persona_cfg['hours_old']} saat")
 
         try:
             # JobSpy'ın gelişmiş özelliklerini kullanarak veri toplama
             jobs_df_for_persona = collect_job_data(
-                search_term=config["term"],
+                search_term=persona_cfg["term"],
                 site_names=HEDEFLENEN_SITELER,  # LinkedIn + Indeed
                 location="Turkey",
-                max_results_per_site=config["results"],
-                hours_old=config["hours_old"],
+                max_results_per_site=persona_cfg["results"],
+                hours_old=persona_cfg["hours_old"],
             )
             if jobs_df_for_persona is not None and not jobs_df_for_persona.empty:
                 # Persona bilgisini ve arama terimini ekle (analiz için faydalı)
                 jobs_df_for_persona["persona_source"] = persona_name
-                jobs_df_for_persona["search_term_used"] = config["term"]
+                jobs_df_for_persona["search_term_used"] = persona_cfg["term"]
                 all_collected_jobs_list.append(jobs_df_for_persona)
                 logger.info(f"✨ Persona '{persona_name}' için {len(jobs_df_for_persona)} ilan bulundu.")
             else:
