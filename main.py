@@ -108,10 +108,11 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
             logger.error(f"❌ Persona '{persona_name}' için hata: {str(e)}", exc_info=True)
             continue
 
-    if not all_collected_jobs_list:
+    non_empty = [df for df in all_collected_jobs_list if df is not None and not df.empty]
+    if not non_empty:
         logger.error("❌ Hiçbir persona ve site kombinasyonundan ilan bulunamadı.")
-        return None  # Tüm personaların sonuçlarını birleştir
-    final_df = pd.concat(all_collected_jobs_list, ignore_index=True)
+        return None
+    final_df = pd.concat(non_empty, ignore_index=True)
     logger.info(f"\n📊 Birleştirme öncesi (tüm personalar): {len(final_df)} ilan")
 
     # Son genel deduplication (persona'lar arası tekrarlar için)
@@ -200,6 +201,11 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
     job_embeddings = []
 
     for _, job in tqdm(jobs_df.iterrows(), total=len(jobs_df), desc="İlan Embeddings"):
+        job_dict = job.to_dict()
+        if vector_store.job_exists(job_dict):
+            job_embeddings.append(None)
+            continue
+
         if pd.notna(job.get("description", "")):
             try:
                 embedding = embedding_service.create_embedding(str(job["description"]))
@@ -208,7 +214,7 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
                 logger.warning(f"⚠️ Embedding oluşturma hatası: {e}")
                 job_embeddings.append(None)
         else:
-            job_embeddings.append(None)  # Vector store'a ekle (deduplication ile)
+            job_embeddings.append(None)
     success = vector_store.add_jobs(jobs_df, job_embeddings)
     if not success:
         logger.error("❌ Vector store yükleme başarısız!")
@@ -227,6 +233,21 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
         logger.info("🔍 Sonuçlar akıllı puanlama ile değerlendiriliyor...")
         scored_jobs = score_jobs(similar_jobs, scoring_system, debug=False)
         high_quality_jobs = [job for job in scored_jobs if job["similarity_score"] >= threshold]
+
+        if high_quality_jobs:
+            seen_keys = set()
+            unique_jobs = []
+            for job in high_quality_jobs:
+                key = (
+                    job.get("title"),
+                    job.get("company"),
+                    job.get("url", job.get("job_url")),
+                )
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    unique_jobs.append(job)
+            high_quality_jobs = unique_jobs
+            logger.info(f"✨ Tekrarlar temizlendi, kalan yüksek kaliteli pozisyon: {len(high_quality_jobs)}")
 
         if high_quality_jobs:
             logger.info(f"✅ {len(high_quality_jobs)} adet yüksek kaliteli pozisyon bulundu!")

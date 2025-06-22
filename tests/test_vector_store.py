@@ -20,6 +20,13 @@ def test_stable_job_id_consistency():
     assert first == second
 
 
+def test_stable_job_id_uses_url():
+    job1 = {"title": "Dev", "description": "desc", "url": "http://example.com/1"}
+    job2 = {"title": "Dev", "description": "desc", "url": "http://example.com/1", "persona_source": "A"}
+    vs = VectorStore()
+    assert vs._stable_job_id(job1) == vs._stable_job_id(job2)
+
+
 def test_duplicate_detection_across_runs():
     job = {"title": "Dev", "description": "desc"}
     df = pd.DataFrame([job])
