@@ -26,8 +26,7 @@ def build_parser(personas: List[str]) -> argparse.ArgumentParser:
         choices=personas,
         help="Sadece belirtilen persona(lar) icin arama yapar. Opsiyonel olarak birden fazla kullanilabilir.",
     )
-    parser.add_argument(
-        "-r",
+    parser.add_argument(        "-r",
         "--results",
         type=int,
         help="Her site icin cekilecek maksimum ilan sayisi",
@@ -36,7 +35,7 @@ def build_parser(personas: List[str]) -> argparse.ArgumentParser:
         "-t",
         "--threshold",
         type=int,
-        help="Benzerlik esigi (%)",
+        help="Benzerlik esigi (yuzde)",
     )
     return parser
 
