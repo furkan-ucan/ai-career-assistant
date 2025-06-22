@@ -160,7 +160,10 @@ def analyze_and_find_best_jobs():
 
     # 3. Vector store'u başlat
     logger.info("\n🗃️ 3/6: Vector store hazırlığı...")
-    vector_store = VectorStore()
+    vector_store = VectorStore(
+        persist_directory=config["paths"]["chromadb_dir"],
+        collection_name=config["vector_store_settings"]["collection_name"],
+    )
 
     # 4. İş ilanlarını vector store'a yükle
     logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")  # CSV'yi pathlib ile oku

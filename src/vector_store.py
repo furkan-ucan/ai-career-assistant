@@ -12,12 +12,13 @@ from typing import Any, Dict, List, Optional
 # Third Party
 import chromadb
 import pandas as pd
+import yaml
 
 logger = logging.getLogger(__name__)
 
 
 class VectorStore:
-    def __init__(self, persist_directory: str = None):
+    def __init__(self, persist_directory: str = None, collection_name: str = None):
         """ChromaDB istemcisini başlat"""
         try:
             if persist_directory:
@@ -28,8 +29,16 @@ class VectorStore:
             else:
                 self.client = chromadb.Client()
                 logger.info("✅ ChromaDB geçici client başlatıldı")
-
-            self.collection_name = "job_listings"
+            if collection_name is None:
+                try:
+                    with open("config.yaml", "r", encoding="utf-8") as f:
+                        cfg = yaml.safe_load(f)
+                    collection_name = cfg.get("vector_store_settings", {}).get("collection_name")
+                except Exception as cfg_err:
+                    logger.warning(
+                        f"Config load failed: {cfg_err}; using default collection name"
+                    )
+            self.collection_name = collection_name or "job_embeddings"
             self.collection = None
             logger.info("VectorStore başarıyla başlatıldı")
 
@@ -181,10 +190,14 @@ class VectorStore:
 
 
 # Yardımcı fonksiyonlar
-def create_vector_store(persist_directory: str = None) -> Optional[VectorStore]:
+def create_vector_store(
+    persist_directory: str = None, collection_name: str = None
+) -> Optional[VectorStore]:
     """VectorStore örneği oluştur"""
     try:
-        return VectorStore(persist_directory=persist_directory)
+        return VectorStore(
+            persist_directory=persist_directory, collection_name=collection_name
+        )
     except Exception as e:
         logger.error(f"VectorStore oluşturma hatası: {str(e)}")
         return None
