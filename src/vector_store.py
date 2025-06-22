@@ -4,12 +4,12 @@ ChromaDB kullanarak iş ilanı vektörlerini saklar ve arama yapar.
 """
 
 # Standard Library
+import hashlib
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-import hashlib
-import json
 
 # Third Party
 import chromadb
@@ -37,9 +37,7 @@ class VectorStore:
                         cfg = yaml.safe_load(f)
                     collection_name = cfg.get("vector_store_settings", {}).get("collection_name")
                 except Exception as cfg_err:
-                    logger.warning(
-                        f"Config load failed: {cfg_err}; using default collection name"
-                    )
+                    logger.warning(f"Config load failed: {cfg_err}; using default collection name")
             self.collection_name = collection_name or "job_embeddings"
             self.collection = None
             logger.info("VectorStore başarıyla başlatıldı")
@@ -200,14 +198,10 @@ class VectorStore:
 
 
 # Yardımcı fonksiyonlar
-def create_vector_store(
-    persist_directory: str = None, collection_name: str = None
-) -> Optional[VectorStore]:
+def create_vector_store(persist_directory: str = None, collection_name: str = None) -> Optional[VectorStore]:
     """VectorStore örneği oluştur"""
     try:
-        return VectorStore(
-            persist_directory=persist_directory, collection_name=collection_name
-        )
+        return VectorStore(persist_directory=persist_directory, collection_name=collection_name)
     except Exception as e:
         logger.error(f"VectorStore oluşturma hatası: {str(e)}")
         return None
