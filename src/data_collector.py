@@ -7,6 +7,7 @@ deduplicates the results and provides utilities to save them to CSV.
 
 # Standard Library
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
@@ -50,39 +51,39 @@ def collect_job_data(
 
     all_jobs_list = []
 
-    for site in site_names:
+    def scrape_single(site: str):
         logger.info(f"\n--- Site '{site}' için arama yapılıyor ---")
         try:
-            # JobSpy'ın gelişmiş parametreleri
             scrape_params = {
                 "site_name": site,
                 "search_term": search_term,
                 "location": location,
                 "results_wanted": max_results_per_site,
-                "hours_old": hours_old,  # Native tarih filtresi
-            }  # Site-specific optimizations
+                "hours_old": hours_old,
+            }
             if site == "indeed":
                 scrape_params["country_indeed"] = "Turkey"
                 logger.info("   🎯 Indeed: Türkiye özel ayarları aktif")
-
             elif site == "linkedin":
-                scrape_params["linkedin_fetch_description"] = True  # Detaylı LinkedIn verisi
-                logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")  # JobSpy ile veri çek
-            jobs_from_site = scrape_jobs(**scrape_params)
+                scrape_params["linkedin_fetch_description"] = True
+                logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")
 
+            jobs_from_site = scrape_jobs(**scrape_params)
             if jobs_from_site is not None and not jobs_from_site.empty:
                 logger.info(f"✅ '{site}' sitesinden {len(jobs_from_site)} ilan toplandı.")
-                jobs_from_site["source_site"] = site  # Hangi siteden geldiğini işaretle
-                all_jobs_list.append(jobs_from_site)
-            else:
-                logger.info(f"ℹ️ '{site}' sitesinden bu arama terimi için ilan bulunamadı.")
-
+                jobs_from_site["source_site"] = site
+                return jobs_from_site
+            logger.info(f"ℹ️ '{site}' sitesinden bu arama terimi için ilan bulunamadı.")
         except Exception as e:
-            logger.error(
-                f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}",
-                exc_info=True,
-            )
-            continue  # Bir sitede hata olursa diğerlerine devam et
+            logger.error(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True)
+        return None
+
+    with ThreadPoolExecutor(max_workers=len(site_names)) as executor:
+        future_to_site = {executor.submit(scrape_single, site): site for site in site_names}
+        for future in as_completed(future_to_site):
+            result = future.result()
+            if result is not None:
+                all_jobs_list.append(result)
 
     if not all_jobs_list:
         logger.error("❌ Hiçbir siteden ilan bulunamadı!")

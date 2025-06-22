@@ -69,28 +69,30 @@ DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings["default_results_per_site"]
 persona_search_config = config["persona_search_configs"]
 
 
-def collect_data_for_all_personas():
-    """
-    JobSpy Gelişmiş Özellikler ile Tüm Personalar için Optimize Edilmiş Veri Toplama
-    Config.yaml'dan persona ayarları alınır.
-    """
+def collect_data_for_all_personas(selected_personas=None, results_per_site=None):
+    """Collect job data for the given personas and return CSV path."""
     logger.info("🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor...")
     logger.info("=" * 70)
 
     all_collected_jobs_list = []
 
-    for persona_name, persona_cfg in tqdm(persona_search_config.items(), desc="Persona Aramaları"):
+    personas = persona_search_config.items()
+    if selected_personas:
+        personas = [(p, cfg) for p, cfg in persona_search_config.items() if p in selected_personas]
+
+    for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
         logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
         logger.info(f"🎯 Optimize edilmiş terim: '{persona_cfg['term']}'")
         logger.info(f"⏰ Tarih filtresi: Son {persona_cfg['hours_old']} saat")
 
         try:
             # JobSpy'ın gelişmiş özelliklerini kullanarak veri toplama
+            max_results = results_per_site if results_per_site is not None else persona_cfg["results"]
             jobs_df_for_persona = collect_job_data(
                 search_term=persona_cfg["term"],
                 site_names=HEDEFLENEN_SITELER,  # LinkedIn + Indeed
                 location="Turkey",
-                max_results_per_site=persona_cfg["results"],
+                max_results_per_site=max_results,
                 hours_old=persona_cfg["hours_old"],
             )
             if jobs_df_for_persona is not None and not jobs_df_for_persona.empty:
@@ -135,14 +137,16 @@ def collect_data_for_all_personas():
     return str(final_csv_path)
 
 
-def analyze_and_find_best_jobs():
-    """Tam otomatik analiz: Stratejik veri toplama + AI analizi + Sonuçlar"""
+def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, similarity_threshold=None):
+    """Run full pipeline and print best jobs."""
     logger.info("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
     logger.info("=" * 60)
 
+    threshold = similarity_threshold if similarity_threshold is not None else MIN_SIMILARITY_THRESHOLD
+
     # 1. Veri toplama
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
-    csv_path = collect_data_for_all_personas()
+    csv_path = collect_data_for_all_personas(selected_personas, results_per_site)
     if not csv_path:
         logger.error("❌ Veri toplama başarısız - analiz durduruluyor!")
         return
@@ -222,11 +226,11 @@ def analyze_and_find_best_jobs():
     if similar_jobs:
         logger.info("🔍 Sonuçlar akıllı puanlama ile değerlendiriliyor...")
         scored_jobs = score_jobs(similar_jobs, scoring_system, debug=False)
-        high_quality_jobs = [job for job in scored_jobs if job["similarity_score"] >= MIN_SIMILARITY_THRESHOLD]
+        high_quality_jobs = [job for job in scored_jobs if job["similarity_score"] >= threshold]
 
         if high_quality_jobs:
             logger.info(f"✅ {len(high_quality_jobs)} adet yüksek kaliteli pozisyon bulundu!")
-            logger.info(f"📊 Uygunluk eşiği: %{MIN_SIMILARITY_THRESHOLD} ve üzeri")
+            logger.info(f"📊 Uygunluk eşiği: %{threshold} ve üzeri")
             logger.info("\n" + "=" * 70)
             logger.info("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI (JobSpy Optimize)")
             logger.info("🎯 YBS + Full-Stack + Veri Analizi Odaklı")
@@ -257,7 +261,7 @@ def analyze_and_find_best_jobs():
 
         else:
             logger.warning(
-                f"⚠️  {len(scored_jobs)} ilan bulundu ancak uygunluk eşiği (%{MIN_SIMILARITY_THRESHOLD}) altında."
+                f"⚠️  {len(scored_jobs)} ilan bulundu ancak uygunluk eşiği (%{threshold}) altında."
             )
             logger.info("💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi düşünebilirsiniz.")
     else:
@@ -275,8 +279,8 @@ def print_manual_validation_guide():
     logger.info("=" * 80)
 
 
-def main():
-    """Tek komutla tam otomatik AI kariyer analizi"""
+def main(selected_personas=None, results_per_site=None, similarity_threshold=None):
+    """Tek komutla tam otomatik AI kariyer analizi."""
     logger.info("🚀 Akıllı Kariyer Asistanı - Böl ve Fethet Stratejisi")
     logger.info("=" * 60)
 
@@ -309,9 +313,16 @@ def main():
     logger.info("🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n")
 
     # Tam otomatik analiz çalıştır
-    analyze_and_find_best_jobs()
+    analyze_and_find_best_jobs(selected_personas, results_per_site, similarity_threshold)
 
 
 # Test fonksiyonları için
 if __name__ == "__main__":
-    main()
+    from src.cli import parse_args
+
+    args = parse_args()
+    main(
+        selected_personas=args.persona,
+        results_per_site=args.results,
+        similarity_threshold=args.threshold,
+    )
