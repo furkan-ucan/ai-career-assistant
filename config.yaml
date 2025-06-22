@@ -92,19 +92,27 @@ vector_store_settings:
 
 # Intelligent scoring system configuration
 scoring_system:
-  title_weights:
+  weights:
+    negative: -30
+    positive: 30
+  title_keywords:
     negative:
-      senior: -50
-      "sr.": -50
-      kıdemli: -50
-      architect: -50
-      director: -50
-      manager: -30
-      lead: -20
+      - senior
+      - "sr."
+      - kıdemli
+      - architect
+      - director
+      - manager
+      - lead
     positive:
-      junior: 40
-      entry: 35
-      trainee: 30
-      intern: 30
-      stajyer: 30
+      - junior
+      - entry
+      - trainee
+      - intern
+      - stajyer
+  description_keywords:
+    negative: []
+    positive: []
+  experience_keywords: []
+  cv_skill_keywords: []
   threshold: -20
