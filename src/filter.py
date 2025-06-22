@@ -167,9 +167,24 @@ def score_jobs(jobs_list, scoring_system, debug=False):
         if scoring_system.should_include(total):
             scored.append(job)
             if debug:
-                logger.debug(f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')}")
+                logger.debug(f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}")
         elif debug:
-            logger.debug(f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')}")
+            logger.debug(f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}")
 
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored
+
+
+def compare_filters(jobs_list, scoring_system, debug=False):
+    """Return comparison of legacy filter and intelligent scoring results."""
+    old_filtered = filter_junior_suitable_jobs(jobs_list, debug=debug)
+    new_filtered = score_jobs(jobs_list, scoring_system, debug=debug)
+
+    old_titles = {job.get("title") for job in old_filtered}
+    new_titles = {job.get("title") for job in new_filtered}
+
+    return {
+        "old_only": list(old_titles - new_titles),
+        "new_only": list(new_titles - old_titles),
+        "intersection": list(old_titles & new_titles),
+    }

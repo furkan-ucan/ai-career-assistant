@@ -78,8 +78,13 @@ def collect_job_data(
                 logger.info(f"ℹ️ '{site}' sitesinden bu arama terimi için ilan bulunamadı.")
 
         except Exception as e:
-            logger.error(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True)
-            continue  # Bir sitede hata olursa diğerlerine devam et    if not all_jobs_list:
+            logger.error(
+                f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}",
+                exc_info=True,
+            )
+            continue  # Bir sitede hata olursa diğerlerine devam et
+
+    if not all_jobs_list:
         logger.error("❌ Hiçbir siteden ilan bulunamadı!")
         return None
 
