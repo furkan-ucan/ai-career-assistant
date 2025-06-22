@@ -36,6 +36,17 @@ def test_experience_regex_detection():
     assert details["experience"] < 0
 
 
+def test_description_keyword_scoring():
+    scoring = load_scoring_system()
+    positive_job = {"title": "Developer", "description": "Remote work available"}
+    _, details_pos = scoring.score_job(positive_job)
+    assert details_pos["description"] > 0
+
+    negative_job = {"title": "Developer", "description": "Management experience"}
+    _, details_neg = scoring.score_job(negative_job)
+    assert details_neg["description"] < 0
+
+
 def test_should_include_threshold():
     scoring = load_scoring_system()
     job = {"title": "Intern Developer", "description": "0 yıl deneyim"}

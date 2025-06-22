@@ -107,4 +107,9 @@ scoring_system:
       trainee: 30
       intern: 30
       stajyer: 30
+  description_weights:
+    negative:
+      management: -20
+    positive:
+      remote: 15
   threshold: -20
