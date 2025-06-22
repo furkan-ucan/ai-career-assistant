@@ -35,11 +35,9 @@ class VectorStore:
                 try:
                     with open("config.yaml", "r", encoding="utf-8") as f:
                         cfg = yaml.safe_load(f)
-                    collection_name = cfg.get(
-                        "vector_store_settings", {}).get("collection_name")
+                    collection_name = cfg.get("vector_store_settings", {}).get("collection_name")
                 except Exception as cfg_err:
-                    logger.warning(
-                        f"Config load failed: {cfg_err}; using default collection name")
+                    logger.warning(f"Config load failed: {cfg_err}; using default collection name")
             self.collection_name = collection_name or "job_embeddings"
             self.collection = None
             logger.info("VectorStore başarıyla başlatıldı")
@@ -77,8 +75,7 @@ class VectorStore:
 
             return True
         except Exception as e:
-            logger.error(
-                f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True)
+            logger.error(f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True)
             return False
 
     def get_collection(self):
@@ -135,8 +132,7 @@ class VectorStore:
             # Batch olarak ekle
             self.collection.add(
                 embeddings=valid_embeddings,
-                documents=[
-                    f"{job.get('title', '')} {job.get('description', '')}" for job in valid_jobs],
+                documents=[f"{job.get('title', '')} {job.get('description', '')}" for job in valid_jobs],
                 metadatas=valid_jobs,
                 ids=valid_ids,
             )

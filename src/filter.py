@@ -128,12 +128,10 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         experience_rejected = any(exp in description for exp in experience_blacklist)
 
         # 3. Sorumluluk kontrolü
-        responsibility_rejected = any(
-            resp in description for resp in responsibility_blacklist)
+        responsibility_rejected = any(resp in description for resp in responsibility_blacklist)
 
         # 4. Rol dışı kontrol
-        out_of_scope_rejected = any(
-            word in title for word in out_of_scope_blacklist)  # Filtreleme kararı
+        out_of_scope_rejected = any(word in title for word in out_of_scope_blacklist)  # Filtreleme kararı
         if title_rejected:
             filter_stats["title"] += 1
             if debug:
@@ -186,11 +184,9 @@ def score_jobs(jobs_list, scoring_system, debug=False):
         if scoring_system.should_include(total):
             scored.append(job)
             if debug:
-                logger.debug(
-                    f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}")
+                logger.debug(f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}")
         elif debug:
-            logger.debug(
-                f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}")
+            logger.debug(f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}")
 
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored

@@ -42,7 +42,8 @@ class EmbeddingService:
 
         Args:
             text: Embedding oluşturulacak metin
-            retry_count: Hata durumunda deneme sayısı (None ise varsayılan kullanılır)            max_chars: Maksimum karakter sayısı
+            retry_count: Hata durumunda deneme sayısı (None ise varsayılan kullanılır)
+                max_chars: Maksimum karakter sayısı
                 (Gemini token limiti için, ~8000 char ≈ 2000 token)
 
         Returns:
