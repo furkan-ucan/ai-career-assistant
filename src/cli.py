@@ -1,7 +1,7 @@
 """Command line interface for Akilli Kariyer Asistani.
-This module provides a command line interface for the Akilli Kariyer Asistani application,
-allowing users to specify personas, result limits, and similarity thresholds."""
-
+This module provides a command line interface for the Akilli Kariyer
+Asistani application, allowing users to specify personas, result limits,
+and similarity thresholds."""
 
 # Standard Library
 import argparse
@@ -29,7 +29,7 @@ def build_parser(personas: List[str]) -> argparse.ArgumentParser:
         "--persona",
         action="append",
         choices=personas,
-        help="Sadece belirtilen persona(lar) icin arama yapar. Opsiyonel olarak birden fazla kullanilabilir.",
+        help=("Sadece belirtilen persona(lar) icin arama yapar. " "Opsiyonel olarak birden fazla kullanilabilir."),
     )
     parser.add_argument(
         "-r",

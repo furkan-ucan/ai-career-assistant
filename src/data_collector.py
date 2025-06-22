@@ -99,7 +99,9 @@ def collect_job_data(
         # Açıklama varsa daha hassas deduplication
         combined_df["description_short"] = combined_df["description"].str[:100]
         combined_df.drop_duplicates(
-            subset=["title", "company", "location", "description_short"], inplace=True, keep="first"
+            subset=["title", "company", "location", "description_short"],
+            inplace=True,
+            keep="first",
         )
         combined_df.drop(columns=["description_short"], inplace=True)
     else:

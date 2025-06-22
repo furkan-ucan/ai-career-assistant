@@ -14,6 +14,7 @@ def test_custom_config_applied(monkeypatch):
         return {"embedding": [0.0]}
 
     import src.embedding_service as es
+
     monkeypatch.setattr(es.genai, "embed_content", fake_embed_content)
     monkeypatch.setenv("GEMINI_API_KEY", "DUMMY")
     service = EmbeddingService(batch_size=5, retry_count=2, rate_limit_delay=0)
@@ -34,6 +35,7 @@ def test_retry_logic(monkeypatch):
         return {"embedding": [1.0]}
 
     import src.embedding_service as es
+
     monkeypatch.setattr(es.genai, "embed_content", fake_embed_content)
     monkeypatch.setattr(__import__("time"), "sleep", lambda x: None)
     monkeypatch.setenv("GEMINI_API_KEY", "DUMMY")

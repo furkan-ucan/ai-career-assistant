@@ -42,8 +42,8 @@ class EmbeddingService:
 
         Args:
             text: Embedding oluşturulacak metin
-            retry_count: Hata durumunda deneme sayısı (None ise varsayılan kullanılır)
-            max_chars: Maksimum karakter sayısı (Gemini token limiti için, ~8000 char ≈ 2000 token)
+            retry_count: Hata durumunda deneme sayısı (None ise varsayılan kullanılır)            max_chars: Maksimum karakter sayısı
+                (Gemini token limiti için, ~8000 char ≈ 2000 token)
 
         Returns:
             Embedding vektörü veya None
@@ -64,7 +64,7 @@ class EmbeddingService:
                 return result["embedding"]
 
             except Exception as e:
-                logger.warning(f"⚠️ Embedding hatası (deneme {attempt + 1}/{retry_count}): {str(e)}")
+                logger.warning(f"⚠️ Embedding hatası (deneme {attempt + 1}/" f"{retry_count}): {str(e)}")
                 if attempt < retry_count - 1:
                     time.sleep(2**attempt)  # Exponential backoff
                 else:
@@ -169,4 +169,4 @@ if __name__ == "__main__":
     # Test çalıştırması
     service = EmbeddingService()
     test_embedding = service.create_embedding("Bu bir test metnidir.")
-    logger.info(f"Test embedding boyutu: {len(test_embedding) if test_embedding else 'Başarısız'}")
+    logger.info(f"Test embedding boyutu: " f"{len(test_embedding) if test_embedding else 'Başarısız'}")

@@ -109,7 +109,13 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
     ]
 
     filtered_jobs = []
-    filter_stats = {"title": 0, "experience": 0, "responsibility": 0, "out_of_scope": 0, "passed": 0}
+    filter_stats = {
+        "title": 0,
+        "experience": 0,
+        "responsibility": 0,
+        "out_of_scope": 0,
+        "passed": 0,
+    }
 
     for job in jobs_list:
         title = job.get("title", "").lower()
@@ -122,10 +128,12 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         experience_rejected = any(exp in description for exp in experience_blacklist)
 
         # 3. Sorumluluk kontrolü
-        responsibility_rejected = any(resp in description for resp in responsibility_blacklist)
+        responsibility_rejected = any(
+            resp in description for resp in responsibility_blacklist)
 
         # 4. Rol dışı kontrol
-        out_of_scope_rejected = any(word in title for word in out_of_scope_blacklist)  # Filtreleme kararı
+        out_of_scope_rejected = any(
+            word in title for word in out_of_scope_blacklist)  # Filtreleme kararı
         if title_rejected:
             filter_stats["title"] += 1
             if debug:
@@ -147,7 +155,8 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
             filtered_jobs.append(job)
             filter_stats["passed"] += 1
             if debug:
-                logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")  # Filtreleme istatistikleri
+                # Filtreleme istatistikleri
+                logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")
     total_processed = len(jobs_list)
     logger.info("\n📊 Filtreleme İstatistikleri:")
     logger.info(f"   Toplam işlenen: {total_processed}")
@@ -177,9 +186,11 @@ def score_jobs(jobs_list, scoring_system, debug=False):
         if scoring_system.should_include(total):
             scored.append(job)
             if debug:
-                logger.debug(f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}")
+                logger.debug(
+                    f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}")
         elif debug:
-            logger.debug(f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}")
+            logger.debug(
+                f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}")
 
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored

@@ -17,7 +17,12 @@ def test_stable_job_id_consistency():
 
 def test_stable_job_id_uses_url():
     job1 = {"title": "Dev", "description": "desc", "url": "http://example.com/1"}
-    job2 = {"title": "Dev", "description": "desc", "url": "http://example.com/1", "persona_source": "A"}
+    job2 = {
+        "title": "Dev",
+        "description": "desc",
+        "url": "http://example.com/1",
+        "persona_source": "A",
+    }
     vs = VectorStore()
     assert vs._stable_job_id(job1) == vs._stable_job_id(job2)
 

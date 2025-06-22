@@ -35,9 +35,11 @@ class VectorStore:
                 try:
                     with open("config.yaml", "r", encoding="utf-8") as f:
                         cfg = yaml.safe_load(f)
-                    collection_name = cfg.get("vector_store_settings", {}).get("collection_name")
+                    collection_name = cfg.get(
+                        "vector_store_settings", {}).get("collection_name")
                 except Exception as cfg_err:
-                    logger.warning(f"Config load failed: {cfg_err}; using default collection name")
+                    logger.warning(
+                        f"Config load failed: {cfg_err}; using default collection name")
             self.collection_name = collection_name or "job_embeddings"
             self.collection = None
             logger.info("VectorStore başarıyla başlatıldı")
@@ -62,7 +64,8 @@ class VectorStore:
         try:
             # get_or_create_collection kullanarak hem yeni oluşturma hem de mevcut getirme
             self.collection = self.client.get_or_create_collection(
-                name=self.collection_name, metadata={"hnsw:space": "cosine"}  # Cosine similarity kullan
+                name=self.collection_name,
+                metadata={"hnsw:space": "cosine"},  # Cosine similarity kullan
             )
 
             # Mevcut öğe sayısını kontrol et
@@ -74,7 +77,8 @@ class VectorStore:
 
             return True
         except Exception as e:
-            logger.error(f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True)
+            logger.error(
+                f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True)
             return False
 
     def get_collection(self):
@@ -131,7 +135,8 @@ class VectorStore:
             # Batch olarak ekle
             self.collection.add(
                 embeddings=valid_embeddings,
-                documents=[f"{job.get('title', '')} {job.get('description', '')}" for job in valid_jobs],
+                documents=[
+                    f"{job.get('title', '')} {job.get('description', '')}" for job in valid_jobs],
                 metadatas=valid_jobs,
                 ids=valid_ids,
             )
@@ -144,7 +149,10 @@ class VectorStore:
             return False
 
     def search_jobs(
-        self, query_embedding: List[float], n_results: int = 10, filter_metadata: Optional[Dict[str, Any]] = None
+        self,
+        query_embedding: List[float],
+        n_results: int = 10,
+        filter_metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, List]:
         """Vektör benzerliği ile iş ilanı ara"""
         if not self.get_collection():
@@ -154,15 +162,17 @@ class VectorStore:
             where_clause = filter_metadata if filter_metadata else {}
 
             results = self.collection.query(
-                query_embeddings=[query_embedding], n_results=n_results, where=where_clause if where_clause else None
+                query_embeddings=[query_embedding],
+                n_results=n_results,
+                where=where_clause if where_clause else None,
             )
 
             if results and results.get("metadatas") and len(results["metadatas"]) > 0:
                 logger.info(f"🔍 {len(results['metadatas'][0])} iş ilanı bulundu")
                 return {
-                    "matches": results["documents"][0] if results.get("documents") else [],
-                    "distances": results["distances"][0] if results.get("distances") else [],
-                    "metadatas": results["metadatas"][0] if results.get("metadatas") else [],
+                    "matches": (results["documents"][0] if results.get("documents") else []),
+                    "distances": (results["distances"][0] if results.get("distances") else []),
+                    "metadatas": (results["metadatas"][0] if results.get("metadatas") else []),
                 }
             else:
                 logger.info("ℹ️ Arama kriterlerine uygun iş ilanı bulunamadı")
