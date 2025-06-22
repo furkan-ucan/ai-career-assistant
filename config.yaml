@@ -95,10 +95,16 @@ scoring_system:
   title_weights:
     negative:
       senior: -50
+      "sr.": -50
+      kıdemli: -50
+      architect: -50
+      director: -50
       manager: -30
       lead: -20
     positive:
       junior: 40
       entry: 35
       trainee: 30
+      intern: 30
+      stajyer: 30
   threshold: -20
