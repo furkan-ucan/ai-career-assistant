@@ -221,7 +221,6 @@ def analyze_and_find_best_jobs():
         if high_quality_jobs:
             logger.info(f"✅ {len(high_quality_jobs)} adet yüksek kaliteli pozisyon bulundu!")
             logger.info(f"📊 Uygunluk eşiği: %{MIN_SIMILARITY_THRESHOLD} ve üzeri")
-
             logger.info("\n" + "=" * 70)
             logger.info("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI (JobSpy Optimize)")
             logger.info("🎯 YBS + Full-Stack + Veri Analizi Odaklı")
@@ -233,7 +232,7 @@ def analyze_and_find_best_jobs():
                 logger.info(f"   📊 Uygunluk: %{job['similarity_score']:.1f}")
                 logger.info(f"   💼 Site: {job.get('source_site', 'N/A')}")
                 logger.info(f"   👤 Persona: {job.get('persona_source', job.get('persona', 'N/A'))}")
-                logger.info(f"   🔗 {job['url']}")
+                logger.info(f"   🔗 {job.get('url', 'URL bulunamadı')}")
                 logger.info("-" * 50)
 
             logger.info(f"\n🎯 Analiz tamamlandı! {len(high_quality_jobs)} yüksek kaliteli pozisyon listelendi.")
