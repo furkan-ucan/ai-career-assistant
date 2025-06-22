@@ -69,15 +69,15 @@ class IntelligentScoringSystem:
             "positive": _compile_weighted_patterns(desc_weights_cfg.get("positive", {})),
         }
         self.experience_penalties = {int(k): int(v) for k, v in exp_penalty_cfg.items()}
-        self.cv_skill_patterns = _compile_patterns_from_config(cv_cfg)
-
-        # Supported variations: "3 yıl", "4 sene", "2 yr", "5 yrs", "1 year", "7 years"
+        self.cv_skill_patterns = _compile_patterns_from_config(cv_cfg)        # Supported variations: "3 yıl", "4 sene", "2 yr", "5 yrs", "1 year", "7 years", "10+ years"
         self.experience_pattern = re.compile(
-            r"(\d+)\s*(y[ıi]l|sene|yrs?|years?)",
+            r"(\d+)\+?\s*(y[ıi]l|sene|yrs?|years?)",
             re.IGNORECASE,
         )
 
     def score_title(self, title: str) -> int:
+        if not title:  # Handle None, empty string, etc.
+            return 0
         score = 0
         for pattern in self.title_patterns.get("negative", []):
             if pattern.search(title):
@@ -85,12 +85,14 @@ class IntelligentScoringSystem:
         for pattern in self.title_patterns.get("positive", []):
             if pattern.search(title):
                 score += self.weights["positive"]
-        logger.debug("Title score %s for '%s'", score, title)
+                logger.debug("Title score %s for '%s'", score, title)
         return score
 
     def score_description(self, description: str) -> int:
         """Score job description based on weighted keyword matches."""
-        text = (description or "")[:3000]
+        if not description:  # Handle None, empty string, etc.
+            return 0
+        text = description[:3000]
         score = 0
         for pattern, weight in self.description_weights.get("positive", []):
             if pattern.search(text):
@@ -103,6 +105,8 @@ class IntelligentScoringSystem:
 
     def score_experience(self, text: str) -> int:
         """Detect experience years and apply configured penalties."""
+        if not text:  # Handle None, empty string, etc.
+            return 0
         matches = self.experience_pattern.findall(text.lower())
         if not matches:
             logger.debug("No experience information found")
