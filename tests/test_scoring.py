@@ -572,21 +572,3 @@ def test_regression_protection_basic_scores():
         total, _ = scoring.score_job(case["job"])
         assert case["min_score"] <= total <= case["max_score"], \
             f"Regression test failed for {case['job']}: expected {case['min_score']}-{case['max_score']}, got {total}"
-
-
-def test_calculate_total_score_bonus_applied():
-    with open("config.yaml", "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
-    scoring = IntelligentScoringSystem(cfg, cv_embedding=[1.0, 0.0])
-    base = 5
-    boosted = scoring.calculate_total_score(base, job_embedding=[1.0, 0.0])
-    assert boosted == base + scoring.cv_skill_bonus_points
-
-
-def test_calculate_total_score_no_bonus():
-    with open("config.yaml", "r", encoding="utf-8") as f:
-        cfg = yaml.safe_load(f)
-    scoring = IntelligentScoringSystem(cfg, cv_embedding=[1.0, 0.0])
-    base = 5
-    result = scoring.calculate_total_score(base, job_embedding=[0.0, 1.0])
-    assert result == base

@@ -1,3 +1,8 @@
+"""Command line interface for Akilli Kariyer Asistani.
+This module provides a command line interface for the Akilli Kariyer Asistani application,
+allowing users to specify personas, result limits, and similarity thresholds."""
+
+
 # Standard Library
 import argparse
 from pathlib import Path

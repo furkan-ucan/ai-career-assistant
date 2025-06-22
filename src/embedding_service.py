@@ -34,17 +34,27 @@ class EmbeddingService:
         self.rate_limit_delay = rate_limit_delay
         logger.info("✅ Gemini API bağlantısı kuruldu")
 
-    def create_embedding(self, text: str, retry_count: Optional[int] = None) -> Optional[List[float]]:
+    def create_embedding(self, text: str, retry_count: Optional[int] = None, max_chars: int = 8000) -> Optional[List[float]]:
         """
-        Tek bir metin için embedding oluştur
+        Tek bir metin için embedding oluştur - Token limit kontrolü ile
 
         Args:
             text: Embedding oluşturulacak metin
             retry_count: Hata durumunda deneme sayısı (None ise varsayılan kullanılır)
+            max_chars: Maksimum karakter sayısı (Gemini token limiti için, ~8000 char ≈ 2000 token)
 
         Returns:
             Embedding vektörü veya None
         """
+        if not text:
+            return None
+
+        # Token limit için güvenli kısaltma (Gemini text-embedding-004 için optimize)
+        original_length = len(text)
+        if len(text) > max_chars:
+            text = text[:max_chars]
+            logger.debug(f"Metin {original_length} karakterden {max_chars} karaktere kısaltıldı")
+
         retry_count = retry_count if retry_count is not None else self.retry_count
         for attempt in range(retry_count):
             try:
@@ -65,15 +75,17 @@ class EmbeddingService:
         batch_size: Optional[int] = None,
         retry_count: Optional[int] = None,
         rate_limit_delay: Optional[float] = None,
+        max_chars: int = 8000,
     ) -> List[Optional[List[float]]]:
         """
-        Birden fazla metin için batch embedding oluştur
+        Birden fazla metin için batch embedding oluştur - Token limit kontrolü ile
 
         Args:
             texts: Embedding oluşturulacak metinler
             batch_size: Batch boyutu (None ise varsayılan kullanılır)
             retry_count: Hata durumunda deneme sayısı
             rate_limit_delay: Her istek sonrası bekleme süresi
+            max_chars: Maksimum karakter sayısı (her metin için)
 
         Returns:
             Embedding vektörlerinin listesi
@@ -92,7 +104,7 @@ class EmbeddingService:
             batch_embeddings = []
 
             for text in batch:
-                embedding = self.create_embedding(text, retry_count=retry_count)
+                embedding = self.create_embedding(text, retry_count=retry_count, max_chars=max_chars)
                 batch_embeddings.append(embedding)
 
                 # Rate limiting için kısa bekleme
@@ -106,13 +118,14 @@ class EmbeddingService:
 
         return embeddings
 
-    def calculate_similarity(self, text1: str, text2: str) -> float:
+    def calculate_similarity(self, text1: str, text2: str, max_chars: int = 8000) -> float:
         """
         İki metin arasındaki anlamsal benzerliği hesaplar (cosine similarity)
 
         Args:
             text1: İlk metin
             text2: İkinci metin
+            max_chars: Maksimum karakter sayısı (her metin için)
 
         Returns:
             Benzerlik puanı (0-100 arası)
@@ -120,8 +133,8 @@ class EmbeddingService:
         logger.info("🔄 Embedding'ler oluşturuluyor...")
 
         # Her iki metin için embedding oluştur
-        embedding1 = self.create_embedding(text1)
-        embedding2 = self.create_embedding(text2)
+        embedding1 = self.create_embedding(text1, max_chars=max_chars)
+        embedding2 = self.create_embedding(text2, max_chars=max_chars)
 
         if embedding1 is None or embedding2 is None:
             logger.error("❌ Embedding oluşturulamadı!")
