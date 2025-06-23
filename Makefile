@@ -41,10 +41,6 @@ lint:
 	@echo "✅ Kod kalitesi kontrolü tamamlandı"
 
 # Test çalıştırma
-test:
-	python -m pytest tests/ -v --cov=src
-	@echo "✅ Testler tamamlandı"
-
 # Ana uygulama
 run:
 	python main.py
@@ -61,3 +57,10 @@ clean:
 # Hızlı geliştirme döngüsü
 dev-check: format lint
 	@echo "✅ Geliştirme kontrolleri tamamlandı"
+# Test çalıştırma
+test:
+	python -m pytest tests/ -v --cov=src
+	@echo "✅ Testler tamamlandı"
+
+quality-check: format lint test
+	@echo "✅ Kod kalitesi kontrolü tamamlandı"

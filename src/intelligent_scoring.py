@@ -60,6 +60,8 @@ class IntelligentScoringSystem:
         desc_weights_cfg = scoring_cfg.get("description_weights", {})
         exp_penalty_cfg = scoring_cfg.get("experience_penalties", {"5": -40, "4": -20})
         cv_cfg = scoring_cfg.get("cv_skill_keywords", {})
+        dynamic_skills = scoring_cfg.get("dynamic_skill_keywords", [])
+        dynamic_weight = int(scoring_cfg.get("dynamic_skill_weight", 10))
 
         self.title_patterns = {
             "negative": _compile_patterns_from_config(title_cfg.get("negative", [])),
@@ -69,6 +71,11 @@ class IntelligentScoringSystem:
             "negative": _compile_weighted_patterns(desc_weights_cfg.get("negative", {})),
             "positive": _compile_weighted_patterns(desc_weights_cfg.get("positive", {})),
         }
+        # Inject dynamic skills with uniform weight
+        if dynamic_skills:
+            for skill in dynamic_skills:
+                pattern = _create_regex_pattern(skill)
+                self.description_weights.setdefault("positive", []).append((pattern, dynamic_weight))
         self.experience_penalties = {int(k): int(v) for k, v in exp_penalty_cfg.items()}
         self.cv_skill_patterns = _compile_patterns_from_config(
             cv_cfg
