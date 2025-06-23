@@ -133,3 +133,4 @@ scoring_system:
   threshold: -20
   cv_skill_boost_threshold: 0.8
   cv_skill_bonus_points: 10
+  dynamic_skill_weight: 10

@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 
 # Local
+from src.cv_analyzer import CVAnalyzer
 from src.cv_processor import CVProcessor
 from src.data_collector import collect_job_data
 from src.embedding_service import EmbeddingService
@@ -53,7 +54,6 @@ def load_config():
 
 # Konfigürasyonu yükle
 config = load_config()
-scoring_system = IntelligentScoringSystem(config)
 
 # Embedding ayarları
 embedding_settings = config.get("embedding_settings", {})
@@ -165,6 +165,13 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
 
     cv_embedding = cv_processor.cv_embedding
     logger.info("✅ CV embedding oluşturuldu")
+
+    # Dynamically analyze CV for skills and titles
+    cv_text = cv_processor.get_cv_text()
+    analyzer = CVAnalyzer(cache_dir=config["paths"]["data_dir"])
+    metadata = analyzer.extract_metadata_from_cv(cv_text)
+    config["scoring_system"]["dynamic_skill_keywords"] = metadata.get("key_skills", [])
+    scoring_system = IntelligentScoringSystem(config)
 
     # 3. Vector store'u başlat
     logger.info("\n🗃️ 3/6: Vector store hazırlığı...")
