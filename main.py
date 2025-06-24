@@ -26,13 +26,55 @@ from src.vector_store import VectorStore
 # Environment variables yükle
 load_dotenv()
 
-# Loglama konfigürasyonu
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
+# Gelişmiş loglama konfigürasyonu
+def setup_logging():
+    """Enhanced logging setup with file and console handlers."""
+    # Log directory oluştur
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    
+    # Log formatı
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    
+    # Root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # Console handler (terminal çıktısı)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+    
+    # File handler (dosya çıktısı)
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_handler = logging.FileHandler(
+        log_dir / f"kariyer_asistani_{timestamp}.log",
+        encoding="utf-8"
+    )
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    
+    # Error file handler (sadece hatalar)
+    error_handler = logging.FileHandler(
+        log_dir / f"errors_{timestamp}.log",
+        encoding="utf-8"
+    )
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(formatter)
+    
+    # Handler'ları ekle
+    root_logger.addHandler(console_handler)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(error_handler)
+    
+    return root_logger
+
+# Logging sistemini başlat
+logger = setup_logging()
 
 
 def load_config():
