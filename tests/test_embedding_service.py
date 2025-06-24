@@ -1,3 +1,4 @@
+# Local
 from src.embedding_service import EmbeddingService
 
 
@@ -13,6 +14,7 @@ def test_custom_config_applied(monkeypatch):
         dummy.calls += 1
         return {"embedding": [0.0]}
 
+    # Local
     import src.embedding_service as es
 
     monkeypatch.setattr(es.genai, "embed_content", fake_embed_content)
@@ -34,6 +36,7 @@ def test_retry_logic(monkeypatch):
             raise Exception("fail")
         return {"embedding": [1.0]}
 
+    # Local
     import src.embedding_service as es
 
     monkeypatch.setattr(es.genai, "embed_content", fake_embed_content)

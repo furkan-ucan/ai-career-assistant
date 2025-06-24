@@ -4,6 +4,7 @@ import time
 # Third Party
 import pandas as pd
 
+# Local
 from src.data_collector import collect_job_data
 
 

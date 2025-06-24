@@ -66,13 +66,16 @@ class IntelligentScoringSystem:
             "positive": _compile_patterns_from_config(title_cfg.get("positive", [])),
         }
         self.description_weights = {
-            "negative": _compile_weighted_patterns(desc_weights_cfg.get("negative", {})),
-            "positive": _compile_weighted_patterns(desc_weights_cfg.get("positive", {})),
+            "negative": _compile_weighted_patterns(
+                desc_weights_cfg.get("negative", {})
+            ),
+            "positive": _compile_weighted_patterns(
+                desc_weights_cfg.get("positive", {})
+            ),
         }
         self.experience_penalties = {int(k): int(v) for k, v in exp_penalty_cfg.items()}
-        self.cv_skill_patterns = _compile_patterns_from_config(
-            cv_cfg
-        )  # Supported variations: "3 yıl", "4 sene", "2 yr", "5 yrs", "1 year", "7 years", "10+ years"
+        self.cv_skill_patterns = _compile_patterns_from_config(cv_cfg)
+        # Supported variations: "3 yıl", "4 sene", "2 yr", "5 yrs", "1 year", "7 years", "10+ years"
         self.experience_pattern = re.compile(
             r"(\d+)\+?\s*(y[ıi]l|sene|yrs?|years?)",
             re.IGNORECASE,
@@ -115,7 +118,9 @@ class IntelligentScoringSystem:
             logger.debug("No experience information found")
             return 0
         years = max(int(m[0]) for m in matches)
-        for threshold, penalty in sorted(self.experience_penalties.items(), reverse=True):
+        for threshold, penalty in sorted(
+            self.experience_penalties.items(), reverse=True
+        ):
             if years >= threshold:
                 logger.debug("Experience %s years -> %s", years, penalty)
                 return penalty
@@ -138,7 +143,7 @@ class IntelligentScoringSystem:
         logger.debug("Job '%s' scored %s", title, details)
         return total, details
 
-    def should_include(self, score: int) -> bool:
+    def should_include(self, score: float) -> bool:
         include = score >= self.threshold
         logger.debug("Include decision %s for score %s", include, score)
-        return include
+        return bool(include)

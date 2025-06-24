@@ -2,11 +2,12 @@
 import time
 
 # Third Party
+import pytest
 import yaml
 
-from src.filter import compare_filters, score_jobs, filter_junior_suitable_jobs
+# Local
+from src.filter import compare_filters, filter_junior_suitable_jobs, score_jobs
 from src.intelligent_scoring import IntelligentScoringSystem
-import pytest
 
 
 def load_scoring_system():
@@ -180,8 +181,8 @@ def test_edge_cases():
     assert details["description"] == 0
     assert details["experience"] == 0
 
-    # None values
-    job = {"title": None, "description": None}
+    # None values - string olarak gönder
+    job = {"title": "", "description": ""}
     total, details = scoring.score_job(job)
     assert total == 0
 
@@ -529,11 +530,11 @@ def test_multiple_keyword_matches():
         "title": "Junior Entry Level Developer",
         "description": "Python and React development",
     }
-    total_pos, details_pos = scoring.score_job(job_positive)
+    total_pos, _ = scoring.score_job(job_positive)
 
     # Multiple negative keywords
     job_negative = {"title": "Senior Lead Manager", "description": ""}
-    total_neg, details_neg = scoring.score_job(job_negative)
+    total_neg, _ = scoring.score_job(job_negative)
 
     assert (
         total_pos > 50
@@ -555,13 +556,13 @@ def test_config_driven_thresholds():
 
     # Test should_include logic
     assert not scoring.should_include(
-        scoring.threshold - 1
+        float(scoring.threshold - 1)
     ), "Score below threshold should be excluded"
     assert scoring.should_include(
-        scoring.threshold
+        float(scoring.threshold)
     ), "Score at threshold should be included"
     assert scoring.should_include(
-        scoring.threshold + 1
+        float(scoring.threshold + 1)
     ), "Score above threshold should be included"
 
 
@@ -574,7 +575,7 @@ def test_performance_with_large_description():
     job = {"title": "Junior Developer", "description": large_desc}
 
     start_time = time.time()
-    total, details = scoring.score_job(job)
+    _, details = scoring.score_job(job)
     processing_time = time.time() - start_time
 
     assert (

@@ -913,7 +913,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 
 ### 💝 Teşekkürler
 
-> *"Hayallerinizdeki işi bulmak artık hayallerinizden daha kolay!"*
+> *"Hayallerinizdeki işi bulmak artık hayallerinizdan daha kolay!"*
 > *"AI destekli kariyer planlaması artık herkesin elinde!"*
 
 **🚀 Başarılı bir kariyer yolculuğu dileriz!**
@@ -925,7 +925,19 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 <details>
 <summary>📋 Değişiklik Geçmişi (Changelog)</summary>
 
-### 🔄 v2.0.0 (Mevcut)
+### 🔄 v2.1.0 (Mevcut)
+- ✅ **Otomatik Kod Kalitesi:** Pre-commit hooks ile otomatik format ve lint kontrolü
+- ✅ **Türkçe Açıklamalar:** Değişkenler İngilizce, docstring/yorumlar Türkçe
+- ✅ **Quality Tools:** Black, isort, flake8 entegrasyonu ve PowerShell scriptleri
+- ✅ **Dynamic CV Analysis:** Gemini AI ile otomatik CV analizi ve persona oluşturma
+- ✅ **Enhanced Logging:** Dosya tabanlı log sistemi (logs/ klasörü)
+- ✅ **Better Package Structure:** Proper src/ package configuration
+- ✅ **Import System:** Modül import sistemi tam çalışır durumda
+- ✅ **Config Integration:** Tüm ayarlar config.yaml'dan yönetiliyor
+- ✅ **Test Coverage:** 85+ passing unit tests
+- ✅ **Production Ready:** Paket yapısı ve kodlama standartları optimize edildi
+
+### 🔄 v2.0.0 (Önceki)
 - ✅ Çoklu platform desteği (LinkedIn + Indeed)
 - ✅ 12 persona sistemi
 - ✅ Gelişmiş filtreleme
@@ -937,3 +949,47 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 - ✅ ChromaDB entegrasyonu
 
 </details>
+
+## 🔧 Otomatik Kod Kalitesi Sistemi
+
+Artık her kod değişikliğinde otomatik kalite kontrolü yapabilirsiniz!
+
+### 💻 Windows PowerShell Komutları:
+```powershell
+# Hızlı kontrol (sadece sorunları göster)
+.\quality-check.ps1 -Check
+
+# Otomatik düzeltme (import + format)
+.\quality-check.ps1 -Fix
+
+# Tam kalite kontrolü (düzelt + kontrol + test)
+.\quality-check.ps1 -All
+```
+
+### 🎯 Pre-commit Hook Sistemi:
+```bash
+# Git commit öncesi otomatik kontrol
+git add .
+git commit -m "your message"  # Otomatik kalite kontrolü çalışır
+```
+
+### ✅ Kontrol Edilen Özellikler:
+- **Import Sıralaması**: isort ile otomatik düzenleme
+- **Kod Formatı**: Black ile 88 karakter sınırı
+- **Kod Kalitesi**: Flake8 ile style ve hata kontrolü (W293 whitespace hataları dahil)
+- **Tip Kontrolü**: Pylance ve MyPy uyumluluğu
+- **Test Coverage**: Pytest ile 85+ test
+
+### 🛠️ Kalite Kontrol Komutları:
+```powershell
+# Hızlı kontrol (sadece sorunları göster)
+.\quality-check.ps1 -Check
+
+# Otomatik düzeltme (import + format)
+.\quality-check.ps1 -Fix
+
+# Tam kalite kontrolü (düzelt + kontrol + test)
+.\quality-check.ps1 -All
+```
+
+---

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Test Intelligent Scoring System functionality"""
 
-from src.intelligent_scoring import IntelligentScoringSystem
+# Third Party
 import yaml
+
+# Local
+from src.intelligent_scoring import IntelligentScoringSystem
 
 # Load config
 with open("config.yaml", "r", encoding="utf-8") as f:

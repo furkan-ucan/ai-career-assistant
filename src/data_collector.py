@@ -1,8 +1,8 @@
 """
-Data collector for scraping job listings with JobSpy.
+İş ilanı toplama modülü - JobSpy ile web scraping.
 
-The module performs advanced searches across multiple job sites,
-deduplicates the results and provides utilities to save them to CSV.
+Bu modül, birden fazla iş sitesinde gelişmiş arama yapar,
+sonuçları birleştirir ve CSV olarak kaydetme olanağı sağlar.
 """
 
 # Standard Library
@@ -18,30 +18,31 @@ from jobspy import scrape_jobs
 logger = logging.getLogger(__name__)
 
 # --- VARSAYILAN AYARLAR ---
-VARSAYILAN_LOKASYON = "Turkey"
-VARSAYILAN_MAX_SONUC_PER_SITE = 50  # Her site için ayrı limit
-HEDEFLENEN_SITELER = ["indeed", "linkedin"]  # ÇOK ÖNEMLİ: LinkedIn öncelikli!
+DEFAULT_LOCATION = "Turkey"
+DEFAULT_MAX_RESULTS_PER_SITE = 50  # Her site için ayrı limit
+TARGET_SITES = ["indeed", "linkedin"]  # ÖNEMLİ: LinkedIn öncelikli!
 
 
 def collect_job_data(
     search_term,
-    location=VARSAYILAN_LOKASYON,
-    max_results_per_site=VARSAYILAN_MAX_SONUC_PER_SITE,
-    site_names=HEDEFLENEN_SITELER,
+    location=DEFAULT_LOCATION,
+    max_results_per_site=DEFAULT_MAX_RESULTS_PER_SITE,
+    site_names=TARGET_SITES,
     hours_old=72,  # JobSpy native tarih filtresi (varsayılan: 3 gün)
 ):
     """
     JobSpy'ın gelişmiş özelliklerini kullanarak optimize edilmiş iş ilanı toplama.
 
     Args:
-        search_term: Arama terimi - Indeed için gelişmiş operatörler desteklenir
-        location: Arama lokasyonu (varsayılan: Turkey)
-        max_results_per_site: Her site için maksimum sonuç sayısı
-        site_names: Hedeflenen siteler listesi
-        hours_old: Son X saat içindeki ilanlar (JobSpy native filtre)
+        search_term (str): Arama terimi - Indeed için gelişmiş operatörler desteklenir
+        location (str): Arama lokasyonu (varsayılan: Turkey)
+        max_results_per_site (int): Her site için maksimum sonuç sayısı
+        site_names (list): Hedeflenen siteler listesi
+        hours_old (int): Son X saat içindeki ilanlar (JobSpy native filtre)
 
     Returns:
-        pandas.DataFrame: Birleştirilmiş iş ilanları veya None (hata durumunda)"""
+        pandas.DataFrame: Birleştirilmiş iş ilanları veya None (hata durumunda)
+    """
     logger.info("\n🔍 JobSpy Gelişmiş Arama Başlatılıyor...")
     logger.info(f"📍 Lokasyon: {location}")
     logger.info(f"🎯 Hedef: {max_results_per_site} ilan/site")
@@ -66,20 +67,28 @@ def collect_job_data(
                 logger.info("   🎯 Indeed: Türkiye özel ayarları aktif")
             elif site == "linkedin":
                 scrape_params["linkedin_fetch_description"] = True
-                logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")
+                logger.info(
+                    "   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor..."
+                )
 
             jobs_from_site = scrape_jobs(**scrape_params)
             if jobs_from_site is not None and not jobs_from_site.empty:
-                logger.info(f"✅ '{site}' sitesinden {len(jobs_from_site)} ilan toplandı.")
+                logger.info(
+                    f"✅ '{site}' sitesinden {len(jobs_from_site)} ilan toplandı."
+                )
                 jobs_from_site["source_site"] = site
                 return jobs_from_site
             logger.info(f"ℹ️ '{site}' sitesinden bu arama terimi için ilan bulunamadı.")
         except Exception as e:
-            logger.error(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True)
+            logger.error(
+                f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True
+            )
         return None
 
     with ThreadPoolExecutor(max_workers=len(site_names)) as executor:
-        future_to_site = {executor.submit(scrape_single, site): site for site in site_names}
+        future_to_site = {
+            executor.submit(scrape_single, site): site for site in site_names
+        }
         for future in as_completed(future_to_site):
             result = future.result()
             if result is not None:
@@ -91,7 +100,9 @@ def collect_job_data(
 
     # Tüm sitelerden gelen DataFrame'leri birleştir
     combined_df = pd.concat(all_jobs_list, ignore_index=True)  # Zaman damgası ekle
-    combined_df["collected_at"] = datetime.now()  # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
+    combined_df["collected_at"] = (
+        datetime.now()
+    )  # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
     logger.info("\n🔄 Deduplication başlatılıyor...")
     initial_count = len(combined_df)
 
@@ -106,7 +117,9 @@ def collect_job_data(
         combined_df.drop(columns=["description_short"], inplace=True)
     else:
         # Temel deduplication
-        combined_df.drop_duplicates(subset=["title", "company", "location"], inplace=True, keep="first")
+        combined_df.drop_duplicates(
+            subset=["title", "company", "location"], inplace=True, keep="first"
+        )
 
     final_count = len(combined_df)
     removed_count = initial_count - final_count
@@ -143,11 +156,15 @@ if __name__ == "__main__":
     # Test için basit bir çalıştırma
     logger.info("🧪 JobSpy Gelişmiş Özellikler Test Ediliyor...")
 
-    test_df = collect_job_data(search_term="Software Engineer", max_results_per_site=10, hours_old=72)
+    test_df = collect_job_data(
+        search_term="Software Engineer", max_results_per_site=10, hours_old=72
+    )
 
     if test_df is not None:
         logger.info(f"\n✅ Test sonucu: {len(test_df)} ilan bulundu.")
-        logger.info(f"📊 Site dağılımı: {test_df['source_site'].value_counts().to_dict()}")
+        logger.info(
+            f"📊 Site dağılımı: {test_df['source_site'].value_counts().to_dict()}"
+        )
         save_jobs_to_csv(test_df, "test_advanced_jobspy")
     else:
         logger.error("❌ Test başarısız!")

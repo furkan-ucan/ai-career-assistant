@@ -1,3 +1,4 @@
+# Local
 from src.filter import filter_junior_suitable_jobs
 
 

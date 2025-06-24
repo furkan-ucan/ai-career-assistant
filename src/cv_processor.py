@@ -14,15 +14,17 @@ logger = logging.getLogger(__name__)
 
 
 class CVProcessor:
-    def __init__(self, cv_path: Optional[str] = None, embedding_settings: Optional[dict] = None):
+    def __init__(
+        self, cv_path: Optional[str] = None, embedding_settings: Optional[dict] = None
+    ):
         """CV işleyici başlat"""
         if embedding_settings:
             self.embedding_service = EmbeddingService(**embedding_settings)
         else:
             self.embedding_service = EmbeddingService()
         self.cv_path = Path(cv_path) if cv_path else Path("data") / "cv.txt"
-        self.cv_text = None
-        self.cv_embedding = None
+        self.cv_text: Optional[str] = None
+        self.cv_embedding: Optional[List[float]] = None
 
     def load_cv(self) -> bool:
         """CV dosyasını yükle"""
@@ -53,15 +55,21 @@ class CVProcessor:
 
     def create_cv_embedding(self) -> bool:
         """CV için embedding oluştur"""
-        if not self.cv_text:
-            if not self.load_cv():
-                return False
+        if not self.cv_text and not self.load_cv():
+            return False
+
+        # None kontrolü ekle
+        if self.cv_text is None:
+            logger.error("❌ CV metni None - embedding oluşturulamaz")
+            return False
 
         logger.info("🔄 CV embedding'i oluşturuluyor...")
         self.cv_embedding = self.embedding_service.create_embedding(self.cv_text)
 
         if self.cv_embedding:
-            logger.info(f"✅ CV embedding oluşturuldu (boyut: {len(self.cv_embedding)})")
+            logger.info(
+                f"✅ CV embedding oluşturuldu (boyut: {len(self.cv_embedding)})"
+            )
             return True
         else:
             logger.error("❌ CV embedding oluşturulamadı")
@@ -69,17 +77,15 @@ class CVProcessor:
 
     def get_cv_embedding(self) -> Optional[List[float]]:
         """CV embedding'ini döndür"""
-        if not self.cv_embedding:
-            if not self.create_cv_embedding():
-                return None
+        if not self.cv_embedding and not self.create_cv_embedding():
+            return None
 
         return self.cv_embedding
 
     def get_cv_text(self) -> Optional[str]:
         """CV metnini döndür"""
-        if not self.cv_text:
-            if not self.load_cv():
-                return None
+        if not self.cv_text and not self.load_cv():
+            return None
 
         return self.cv_text
 

@@ -106,3 +106,19 @@ memory-bank/
 # Temporary files
 *.tmp
 *.temp
+
+# Development Cache'ler
+.mypy_cache/
+.pytest_cache/
+.coverage
+.cache/
+
+# IDE ve Editor Cache'leri
+.vscode/settings.json
+.idea/
+
+# Temporary dosyalar
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

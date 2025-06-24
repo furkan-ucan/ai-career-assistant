@@ -8,6 +8,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Dict, List, Optional
 
 # Third Party
 import pandas as pd
@@ -26,59 +27,75 @@ from src.vector_store import VectorStore
 # Environment variables yükle
 load_dotenv()
 
+
 # Gelişmiş loglama konfigürasyonu
 def setup_logging():
-    """Enhanced logging setup with file and console handlers."""
+    """
+    Gelişmiş logging kurulumu - dosya ve konsol çıktısı ile.
+
+    Returns:
+        logging.Logger: Yapılandırılmış logger nesnesi
+    """
     # Log directory oluştur
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
-    
+
     # Log formatı
     formatter = logging.Formatter(
         "%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
-    
+
     # Root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    
+
     # Console handler (terminal çıktısı)
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
-    
+
     # File handler (dosya çıktısı)
+    # Standard Library
     from datetime import datetime
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     file_handler = logging.FileHandler(
-        log_dir / f"kariyer_asistani_{timestamp}.log",
-        encoding="utf-8"
+        log_dir / f"kariyer_asistani_{timestamp}.log", encoding="utf-8"
     )
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
-    
+
     # Error file handler (sadece hatalar)
     error_handler = logging.FileHandler(
-        log_dir / f"errors_{timestamp}.log",
-        encoding="utf-8"
+        log_dir / f"errors_{timestamp}.log", encoding="utf-8"
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
-    
+
     # Handler'ları ekle
     root_logger.addHandler(console_handler)
     root_logger.addHandler(file_handler)
     root_logger.addHandler(error_handler)
-    
+
     return root_logger
+
 
 # Logging sistemini başlat
 logger = setup_logging()
 
 
 def load_config():
-    """config.yaml dosyasını yükle"""
+    """
+    config.yaml dosyasını yükler ve parse eder.
+
+    Returns:
+        dict: Yüklenmiş konfigürasyon verisi
+
+    Raises:
+        FileNotFoundError: Config dosyası bulunamazsa
+        yaml.YAMLError: YAML parse hatası olursa
+    """
     config_path = Path("config.yaml")
     try:
         with open(config_path, "r", encoding="utf-8") as file:
@@ -100,10 +117,10 @@ scoring_system = IntelligentScoringSystem(config)
 # Embedding ayarları
 embedding_settings = config.get("embedding_settings", {})
 
-# Konfigürasyondan ayarları al
+# Job settings from config
 job_settings = config["job_search_settings"]
 MIN_SIMILARITY_THRESHOLD = job_settings["min_similarity_threshold"]
-HEDEFLENEN_SITELER = job_settings["target_sites"]
+TARGET_SITES = job_settings["target_sites"]
 DEFAULT_HOURS_OLD = job_settings["default_hours_old"]
 DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings["default_results_per_site"]
 
@@ -112,15 +129,30 @@ persona_search_config = config["persona_search_configs"]
 
 
 def collect_data_for_all_personas(selected_personas=None, results_per_site=None):
-    """Collect job data for the given personas and return CSV path."""
-    logger.info("🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor...")
+    """
+    Tüm persona'lar için iş ilanlarını toplar ve CSV yolunu döner.
+
+    Args:
+        selected_personas: Seçili persona listesi (None ise tümü)
+        results_per_site: Site başına sonuç sayısı (None ise config'den)
+
+    Returns:
+        str: Toplanan verilerin CSV dosya yolu
+    """
+    logger.info(
+        "🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor..."
+    )
     logger.info("=" * 70)
 
     all_collected_jobs_list = []
 
     personas = persona_search_config.items()
     if selected_personas:
-        personas = [(p, cfg) for p, cfg in persona_search_config.items() if p in selected_personas]
+        personas = [
+            (p, cfg)
+            for p, cfg in persona_search_config.items()
+            if p in selected_personas
+        ]
 
     for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
         logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
@@ -129,10 +161,14 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
 
         try:
             # JobSpy'ın gelişmiş özelliklerini kullanarak veri toplama
-            max_results = results_per_site if results_per_site is not None else persona_cfg["results"]
+            max_results = (
+                results_per_site
+                if results_per_site is not None
+                else persona_cfg["results"]
+            )
             jobs_df_for_persona = collect_job_data(
                 search_term=persona_cfg["term"],
-                site_names=HEDEFLENEN_SITELER,  # LinkedIn + Indeed
+                site_names=TARGET_SITES,  # LinkedIn + Indeed
                 location="Turkey",
                 max_results_per_site=max_results,
                 hours_old=persona_cfg["hours_old"],
@@ -142,15 +178,24 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
                 jobs_df_for_persona["persona_source"] = persona_name
                 jobs_df_for_persona["search_term_used"] = persona_cfg["term"]
                 all_collected_jobs_list.append(jobs_df_for_persona)
-                logger.info(f"✨ Persona '{persona_name}' için {len(jobs_df_for_persona)} ilan bulundu.")
+                logger.info(
+                    f"✨ Persona '{persona_name}' için "
+                    f"{len(jobs_df_for_persona)} ilan bulundu."
+                )
             else:
-                logger.info(f"ℹ️ Persona '{persona_name}' için hiçbir siteden ilan bulunamadı.")
+                logger.info(
+                    f"ℹ️ Persona '{persona_name}' için hiçbir siteden ilan bulunamadı."
+                )
 
         except Exception as e:
-            logger.error(f"❌ Persona '{persona_name}' için hata: {str(e)}", exc_info=True)
+            logger.error(
+                f"❌ Persona '{persona_name}' için hata: {str(e)}", exc_info=True
+            )
             continue
 
-    non_empty = [df for df in all_collected_jobs_list if df is not None and not df.empty]
+    non_empty = [
+        df for df in all_collected_jobs_list if df is not None and not df.empty
+    ]
     if not non_empty:
         logger.error("❌ Hiçbir persona ve site kombinasyonundan ilan bulunamadı.")
         return None
@@ -161,13 +206,20 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
     if "description" in final_df.columns and not final_df.empty:
         final_df["description_short"] = final_df["description"].astype(str).str[:100]
         final_df.drop_duplicates(
-            subset=["title", "company", "location", "description_short"], inplace=True, keep="first"
+            subset=["title", "company", "location", "description_short"],
+            inplace=True,
+            keep="first",
         )
         final_df.drop(columns=["description_short"], inplace=True)
     elif not final_df.empty:
-        final_df.drop_duplicates(subset=["title", "company", "location"], inplace=True, keep="first")
+        final_df.drop_duplicates(
+            subset=["title", "company", "location"], inplace=True, keep="first"
+        )
 
-    logger.info(f"✨✨✨ TOPLAM: {len(final_df)} adet BENZERSİZ ilan (JobSpy optimize edilmiş)! ✨✨✨")
+    logger.info(
+        f"✨✨✨ TOPLAM: {len(final_df)} adet BENZERSİZ ilan "
+        f"(JobSpy optimize edilmiş)! ✨✨✨"
+    )
 
     # Optimize edilmiş CSV kaydetme (pathlib ile)
     output_dir = Path(config["paths"]["data_dir"])
@@ -180,12 +232,18 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
     return str(final_csv_path)
 
 
-def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, similarity_threshold=None):
+def analyze_and_find_best_jobs(
+    selected_personas=None, results_per_site=None, similarity_threshold=None
+):
     """Run full pipeline and print best jobs."""
     logger.info("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
     logger.info("=" * 60)
 
-    threshold = similarity_threshold if similarity_threshold is not None else MIN_SIMILARITY_THRESHOLD
+    threshold = (
+        similarity_threshold
+        if similarity_threshold is not None
+        else MIN_SIMILARITY_THRESHOLD
+    )
 
     # 1. Veri toplama
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
@@ -195,10 +253,8 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
         return
 
     # 2. CV'yi işle
-    logger.info("\n📄 2/6: CV analizi...")
-    cv_processor = CVProcessor(embedding_settings=embedding_settings)
-    if not cv_processor.load_cv():
-        logger.error("❌ CV yükleme başarısız!")
+    cv_processor = _setup_cv_processor()
+    if not cv_processor:
         return
 
     if not cv_processor.create_cv_embedding():
@@ -209,41 +265,94 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
     logger.info("✅ CV embedding oluşturuldu")
 
     # 3. Vector store'u başlat
+    vector_store = _setup_vector_store()
+    if not vector_store:
+        return
+
+    # 4. İş ilanlarını vector store'a yükle
+    logger.info(
+        "🔄 4/6: İş ilanları vector store'a yükleniyor..."
+    )  # CSV'yi pathlib ile oku
+    jobs_df = _load_and_validate_csv(csv_path)
+    if jobs_df is None:
+        return
+
+    job_embeddings = _process_job_embeddings(jobs_df, vector_store)
+    success = vector_store.add_jobs(jobs_df, job_embeddings)
+    if not success:
+        logger.error("❌ Vector store yükleme başarısız!")
+        return
+
+    # 5. Benzer işleri bul ve filtrele
+    if cv_embedding is None:
+        logger.error("❌ CV embedding oluşturulamadı, arama yapılamıyor")
+        return
+
+    similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, threshold)
+    _display_results(similar_jobs, threshold)
+
+
+def _load_and_validate_csv(csv_path: str) -> Optional[pd.DataFrame]:
+    """CSV dosyasını yükle ve doğrula"""
+    try:
+        csv_path_obj = Path(csv_path)
+        jobs_df = pd.read_csv(csv_path_obj)
+        logger.info(f"📊 {len(jobs_df)} iş ilanı yüklendi")
+        return jobs_df
+    except FileNotFoundError:
+        logger.error(f"❌ CSV dosyası bulunamadı: {csv_path}")
+        return None
+    except pd.errors.EmptyDataError:
+        logger.error("❌ CSV dosyası boş!")
+        return None
+    except Exception as e:
+        logger.error(f"❌ CSV okuma hatası: {e}")
+        return None
+
+
+def _setup_cv_processor() -> Optional[CVProcessor]:
+    """CV processor'ı kurulum yap"""
+    logger.info("\n📄 2/6: CV analizi...")
+    cv_processor = CVProcessor(embedding_settings=embedding_settings)
+
+    if not cv_processor.load_cv():
+        logger.error("❌ CV yükleme başarısız!")
+        return None
+
+    if not cv_processor.create_cv_embedding():
+        logger.error("❌ CV embedding oluşturma başarısız!")
+        return None
+
+    logger.info("✅ CV embedding oluşturuldu")
+    return cv_processor
+
+
+def _setup_vector_store() -> Optional[VectorStore]:
+    """Vector store'u kurulum yap"""
     logger.info("\n🗃️ 3/6: Vector store hazırlığı...")
     vector_store = VectorStore(
         persist_directory=config["paths"]["chromadb_dir"],
         collection_name=config["vector_store_settings"]["collection_name"],
     )
 
-    # 4. İş ilanlarını vector store'a yükle
-    logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")  # CSV'yi pathlib ile oku
-    try:
-        csv_path_obj = Path(csv_path)
-        jobs_df = pd.read_csv(csv_path_obj)
-        logger.info(f"📊 {len(jobs_df)} iş ilanı yüklendi")
-    except FileNotFoundError:
-        logger.error(f"❌ CSV dosyası bulunamadı: {csv_path}")
-        return
-    except pd.errors.EmptyDataError:
-        logger.error("❌ CSV dosyası boş!")
-        return
-    except Exception as e:
-        logger.error(f"❌ CSV okuma hatası: {e}")
-        return
-
-    # Koleksiyon oluştur
     if not vector_store.create_collection():
         logger.error("❌ Vector store koleksiyon oluşturma başarısız!")
-        return
+        return None
 
-    # İş ilanları için embeddings oluştur (tqdm ile)
+    return vector_store
+
+
+def _process_job_embeddings(
+    jobs_df: pd.DataFrame, vector_store: VectorStore
+) -> List[Optional[List[float]]]:
+    """İş ilanları için embeddings oluştur"""
     embedding_service = EmbeddingService(**embedding_settings)
-
     logger.info("🔄 5/6: İş ilanları için AI embeddings oluşturuluyor...")
-    job_embeddings = []
 
+    job_embeddings: List[Optional[List[float]]] = []
     for _, job in tqdm(jobs_df.iterrows(), total=len(jobs_df), desc="İlan Embeddings"):
         job_dict = job.to_dict()
+
         if vector_store.job_exists(job_dict):
             job_embeddings.append(None)
             continue
@@ -257,78 +366,88 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
                 job_embeddings.append(None)
         else:
             job_embeddings.append(None)
-    success = vector_store.add_jobs(jobs_df, job_embeddings)
-    if not success:
-        logger.error("❌ Vector store yükleme başarısız!")
-        return
 
-    # 5. Benzer işleri bul ve filtrele
+    return job_embeddings
+
+
+def _search_and_score_jobs(
+    cv_embedding: List[float], vector_store: VectorStore, threshold: float
+) -> List[dict]:
+    """Benzer işleri bul ve puanla"""
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
-    # Vector store araması
-    search_results = vector_store.search_jobs(cv_embedding, n_results=50)
+
+    top_k = config["vector_store_settings"]["top_k_results"]
+    search_results = vector_store.search_jobs(cv_embedding, n_results=top_k)
+
     similar_jobs = [
         dict(metadata, similarity_score=(1 - dist) * 100)
-        for metadata, dist in zip(search_results.get("metadatas", []), search_results.get("distances", []))
+        for metadata, dist in zip(
+            search_results.get("metadatas", []), search_results.get("distances", [])
+        )
     ]
 
+    if not similar_jobs:
+        return []
+
+    logger.info("🔍 Sonuçlar akıllı puanlama ile değerlendiriliyor...")
+    scored_jobs = score_jobs(similar_jobs, scoring_system, debug=False)
+    return [job for job in scored_jobs if job["similarity_score"] >= threshold]
+
+
+def _display_results(similar_jobs: List[dict], threshold: float) -> None:
+    """Sonuçları görüntüle"""
     if similar_jobs:
-        logger.info("🔍 Sonuçlar akıllı puanlama ile değerlendiriliyor...")
-        scored_jobs = score_jobs(similar_jobs, scoring_system, debug=False)
-        high_quality_jobs = [job for job in scored_jobs if job["similarity_score"] >= threshold]
+        logger.info(f"✅ {len(similar_jobs)} adet yüksek kaliteli pozisyon bulundu!")
+        logger.info(f"📊 Uygunluk eşiği: %{threshold} ve üzeri")
+        logger.info("\n" + "=" * 70)
+        logger.info("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI (JobSpy Optimize)")
+        logger.info("🎯 YBS + Full-Stack + Veri Analizi Odaklı")
+        logger.info("=" * 70)
 
-        if high_quality_jobs:
-            seen_keys = set()
-            unique_jobs = []
-            for job in high_quality_jobs:
-                key = (
-                    job.get("title"),
-                    job.get("company"),
-                    job.get("url", job.get("job_url")),
-                )
-                if key not in seen_keys:
-                    seen_keys.add(key)
-                    unique_jobs.append(job)
-            high_quality_jobs = unique_jobs
-            logger.info(f"✨ Tekrarlar temizlendi, kalan yüksek kaliteli pozisyon: {len(high_quality_jobs)}")
+        for i, job in enumerate(similar_jobs[:15], 1):  # Top 15 göster
+            logger.info(
+                f"\n{i}. {job.get('title', 'Başlık belirtilmemiş')} - "
+                f"{job.get('company', 'Şirket belirtilmemiş')}"
+            )
+            logger.info(f"   📍 {job.get('location', 'Lokasyon belirtilmemiş')}")
+            # match_score veya similarity_score'u güvenli şekilde al
+            score = job.get("match_score", job.get("similarity_score", 0))
+            logger.info(f"   📊 Uygunluk: %{score:.1f}")
+            logger.info(
+                f"   💼 Site: "
+                f"{job.get('source_site', job.get('site', 'Site belirtilmemiş'))}"
+            )
+            logger.info(
+                f"   👤 Persona: "
+                f"{job.get('persona_source', job.get('persona', 'Persona belirtilmemiş'))}"
+            )
+            logger.info(f"   🔗 {job.get('url', job.get('job_url', 'URL bulunamadı'))}")
+            logger.info("-" * 50)
 
-        if high_quality_jobs:
-            logger.info(f"✅ {len(high_quality_jobs)} adet yüksek kaliteli pozisyon bulundu!")
-            logger.info(f"📊 Uygunluk eşiği: %{threshold} ve üzeri")
-            logger.info("\n" + "=" * 70)
-            logger.info("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI (JobSpy Optimize)")
-            logger.info("🎯 YBS + Full-Stack + Veri Analizi Odaklı")
-            logger.info("=" * 70)
+        logger.info(
+            f"\n🎯 Analiz tamamlandı! {len(similar_jobs)} yüksek kaliteli pozisyon listelendi."
+        )
 
-            for i, job in enumerate(high_quality_jobs[:15], 1):  # Top 15 göster
-                logger.info(
-                    f"\n{i}. {job.get('title', 'Başlık belirtilmemiş')} - {job.get('company', 'Şirket belirtilmemiş')}"
-                )
-                logger.info(f"   📍 {job.get('location', 'Lokasyon belirtilmemiş')}")
-                # match_score veya similarity_score'u güvenli şekilde al
-                score = job.get("match_score", job.get("similarity_score", 0))
-                logger.info(f"   📊 Uygunluk: %{score:.1f}")
-                logger.info(f"   💼 Site: {job.get('source_site', job.get('site', 'Site belirtilmemiş'))}")
-                logger.info(f"   👤 Persona: {job.get('persona_source', job.get('persona', 'Persona belirtilmemiş'))}")
-                logger.info(f"   🔗 {job.get('url', job.get('job_url', 'URL bulunamadı'))}")
-                logger.info("-" * 50)
+        if similar_jobs and (
+            "persona_source" in similar_jobs[0] or "persona" in similar_jobs[0]
+        ):
+            persona_counts: Dict[str, int] = {}
+            for job in similar_jobs:
+                persona = job.get("persona_source", job.get("persona", "Unknown"))
+                persona_counts[persona] = persona_counts.get(persona, 0) + 1
 
-            logger.info(f"\n🎯 Analiz tamamlandı! {len(high_quality_jobs)} yüksek kaliteli pozisyon listelendi.")
+            logger.info("\n📈 Persona Dağılımı:")
+            for persona, count in sorted(
+                persona_counts.items(), key=lambda x: x[1], reverse=True
+            ):
+                logger.info(f"   {persona}: {count} ilan")
 
-            if high_quality_jobs and ("persona_source" in high_quality_jobs[0] or "persona" in high_quality_jobs[0]):
-                persona_counts = {}
-                for job in high_quality_jobs:
-                    persona = job.get("persona_source", job.get("persona", "Unknown"))
-                    persona_counts[persona] = persona_counts.get(persona, 0) + 1
-
-                logger.info("\n📈 Persona Dağılımı:")
-                for persona, count in sorted(persona_counts.items(), key=lambda x: x[1], reverse=True):
-                    logger.info(f"   {persona}: {count} ilan")
-
-        else:
-            logger.warning(f"⚠️  {len(scored_jobs)} ilan bulundu ancak uygunluk eşiği (%{threshold}) altında.")
-            logger.info("💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi düşünebilirsiniz.")
     else:
-        logger.warning("❌ Benzer iş bulunamadı!")
+        logger.warning(f"⚠️  0 ilan bulundu veya uygunluk eşiği (%{threshold}) altında.")
+        logger.info(
+            "💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi "
+            "düşünebilirsiniz."
+        )
 
 
 def print_manual_validation_guide():
@@ -373,10 +492,14 @@ def main(selected_personas=None, results_per_site=None, similarity_threshold=Non
         return
 
     logger.info("✅ Sistem kontrolleri başarılı")
-    logger.info("🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n")
+    logger.info(
+        "🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n"
+    )
 
     # Tam otomatik analiz çalıştır
-    analyze_and_find_best_jobs(selected_personas, results_per_site, similarity_threshold)
+    analyze_and_find_best_jobs(
+        selected_personas, results_per_site, similarity_threshold
+    )
 
 
 # Test fonksiyonları için

@@ -20,7 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class VectorStore:
-    def __init__(self, persist_directory: str = None, collection_name: str = None):
+    def __init__(
+        self,
+        persist_directory: Optional[str] = None,
+        collection_name: Optional[str] = None,
+    ):
         """ChromaDB istemcisini başlat"""
         try:
             if persist_directory:
@@ -35,11 +39,15 @@ class VectorStore:
                 try:
                     with open("config.yaml", "r", encoding="utf-8") as f:
                         cfg = yaml.safe_load(f)
-                    collection_name = cfg.get("vector_store_settings", {}).get("collection_name")
+                    collection_name = cfg.get("vector_store_settings", {}).get(
+                        "collection_name"
+                    )
                 except Exception as cfg_err:
-                    logger.warning(f"Config load failed: {cfg_err}; using default collection name")
+                    logger.warning(
+                        f"Config load failed: {cfg_err}; using default collection name"
+                    )
             self.collection_name = collection_name or "job_embeddings"
-            self.collection = None
+            self.collection: Optional[Any] = None
             logger.info("VectorStore başarıyla başlatıldı")
 
         except Exception as e:
@@ -67,15 +75,18 @@ class VectorStore:
             )
 
             # Mevcut öğe sayısını kontrol et
-            existing_count = self.collection.count()
-            if existing_count > 0:
-                logger.info(f"✅ Mevcut koleksiyon yüklendi ({existing_count} öğe)")
-            else:
-                logger.info("✅ Yeni koleksiyon oluşturuldu")
+            if self.collection is not None:
+                existing_count = self.collection.count()
+                if existing_count > 0:
+                    logger.info(f"✅ Mevcut koleksiyon yüklendi ({existing_count} öğe)")
+                else:
+                    logger.info("✅ Yeni koleksiyon oluşturuldu")
 
             return True
         except Exception as e:
-            logger.error(f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True)
+            logger.error(
+                f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True
+            )
             return False
 
     def get_collection(self):
@@ -92,20 +103,26 @@ class VectorStore:
         return self.collection
 
     def job_exists(self, job_dict: Dict[str, Any]) -> bool:
-        """Check whether a job with the given ID already exists."""
-        if not self.get_collection():
+        """İş ilanının zaten mevcut olup olmadığını kontrol eder."""
+        collection = self.get_collection()
+        if not collection:
             return False
 
         job_id = self._stable_job_id(job_dict)
         try:
-            existing = self.collection.get(ids=[job_id])
+            existing = collection.get(ids=[job_id])
             return len(existing.get("ids", [])) > 0
         except Exception:
             return False
 
-    def add_jobs(self, jobs_df: pd.DataFrame, embeddings: List[Optional[List[float]]]) -> bool:
-        """İş ilanlarını ve embeddings'lerini koleksiyona ekle - Tekrar eklemeyi önler"""
-        if not self.get_collection():
+    def add_jobs(
+        self, jobs_df: pd.DataFrame, embeddings: List[Optional[List[float]]]
+    ) -> bool:
+        """
+        İş ilanlarını ve embeddings'lerini koleksiyona ekle - Tekrar eklemeyi önler
+        """
+        collection = self.get_collection()
+        if not collection:
             return False
 
         try:
@@ -130,9 +147,12 @@ class VectorStore:
                 return True
 
             # Batch olarak ekle
-            self.collection.add(
+            collection.add(
                 embeddings=valid_embeddings,
-                documents=[f"{job.get('title', '')} {job.get('description', '')}" for job in valid_jobs],
+                documents=[
+                    f"{job.get('title', '')} {job.get('description', '')}"
+                    for job in valid_jobs
+                ],
                 metadatas=valid_jobs,
                 ids=valid_ids,
             )
@@ -151,40 +171,62 @@ class VectorStore:
         filter_metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, List]:
         """Vektör benzerliği ile iş ilanı ara"""
-        if not self.get_collection():
+        collection = self.get_collection()
+        if not collection:
             return {"matches": [], "distances": [], "metadatas": []}
 
         try:
             where_clause = filter_metadata if filter_metadata else {}
 
-            results = self.collection.query(
+            results = collection.query(
                 query_embeddings=[query_embedding],
                 n_results=n_results,
                 where=where_clause if where_clause else None,
             )
 
-            if results and results.get("metadatas") and len(results["metadatas"]) > 0:
-                logger.info(f"🔍 {len(results['metadatas'][0])} iş ilanı bulundu")
-                return {
-                    "matches": (results["documents"][0] if results.get("documents") else []),
-                    "distances": (results["distances"][0] if results.get("distances") else []),
-                    "metadatas": (results["metadatas"][0] if results.get("metadatas") else []),
-                }
-            else:
-                logger.info("ℹ️ Arama kriterlerine uygun iş ilanı bulunamadı")
-                return {"matches": [], "distances": [], "metadatas": []}
+            return self._extract_search_results(results)
 
         except Exception as e:
             logger.error(f"❌ Vektör arama hatası: {str(e)}", exc_info=True)
             return {"matches": [], "distances": [], "metadatas": []}
 
+    def _extract_search_results(self, results: Optional[dict]) -> Dict[str, List]:
+        """Search sonuçlarını güvenli şekilde çıkar"""
+        if not results:
+            return {"matches": [], "distances": [], "metadatas": []}
+
+        metadatas = results.get("metadatas")
+        documents = results.get("documents")
+        distances = results.get("distances")
+
+        if (
+            metadatas
+            and isinstance(metadatas, list)
+            and len(metadatas) > 0
+            and metadatas[0] is not None
+        ):
+            metadatas_list = metadatas[0] if metadatas[0] else []
+            documents_list = documents[0] if documents and documents[0] else []
+            distances_list = distances[0] if distances and distances[0] else []
+
+            logger.info(f"🔍 {len(metadatas_list)} iş ilanı bulundu")
+            return {
+                "matches": documents_list,
+                "distances": distances_list,
+                "metadatas": metadatas_list,
+            }
+        else:
+            logger.info("ℹ️ Arama kriterlerine uygun iş ilanı bulunamadı")
+            return {"matches": [], "distances": [], "metadatas": []}
+
     def get_stats(self) -> Dict[str, Any]:
         """Koleksiyon istatistiklerini getir"""
-        if not self.get_collection():
+        collection = self.get_collection()
+        if not collection:
             return {"total_jobs": 0, "error": "Koleksiyon erişim hatası"}
 
         try:
-            total_count = self.collection.count()
+            total_count = collection.count()
             return {
                 "total_jobs": total_count,
                 "collection_name": self.collection_name,
@@ -213,10 +255,14 @@ class VectorStore:
 
 
 # Yardımcı fonksiyonlar
-def create_vector_store(persist_directory: str = None, collection_name: str = None) -> Optional[VectorStore]:
+def create_vector_store(
+    persist_directory: Optional[str] = None, collection_name: Optional[str] = None
+) -> Optional[VectorStore]:
     """VectorStore örneği oluştur"""
     try:
-        return VectorStore(persist_directory=persist_directory, collection_name=collection_name)
+        return VectorStore(
+            persist_directory=persist_directory, collection_name=collection_name
+        )
     except Exception as e:
         logger.error(f"VectorStore oluşturma hatası: {str(e)}")
         return None

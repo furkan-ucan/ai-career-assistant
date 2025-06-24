@@ -1,4 +1,7 @@
+# Third Party
 import yaml
+
+# Local
 from src.intelligent_scoring import IntelligentScoringSystem
 
 with open("config.yaml", "r", encoding="utf-8") as f:

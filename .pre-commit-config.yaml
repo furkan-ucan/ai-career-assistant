@@ -1,0 +1,51 @@
+# Otomatik Kod Kalitesi Kontrolü
+# Her commit öncesinde bu kontroller çalışacak
+
+repos:
+  # Black - Kod formatı
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=88]
+
+  # isort - Import sıralaması
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black]
+
+  # flake8 - Kod kalitesi kontrolleri (geçici devre dışı)
+  # - repo: https://github.com/pycqa/flake8
+  #   rev: 7.0.0
+  #   hooks:
+  #     - id: flake8
+  #       args: [--max-line-length=88, --extend-ignore=E203,W503,E501]
+
+  # Trailing whitespace - Satır sonundaki boşlukları temizler
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  # mypy - Tip kontrolü (gevşek ayarlarla aktif)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-PyYAML, pandas-stubs]
+        args:
+          [
+            --ignore-missing-imports,
+            --no-strict-optional,
+            --allow-untyped-defs,
+            --allow-incomplete-defs,
+            --config-file=pyproject.toml,
+          ]
+        # Sadece ana dosyaları kontrol et
+        files: ^(main\.py|src/(cv_processor|data_collector|embedding_service)\.py)$

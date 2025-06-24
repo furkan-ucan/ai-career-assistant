@@ -9,16 +9,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def filter_junior_suitable_jobs(jobs_list, debug=False):
-    """
-    Junior/Entry-level pozisyonlar için uygun olmayan ilanları filtreler
-    YBS öğrencisinin kariyer hedefleri (ERP, Proje Yönetimi, İş Analizi) göz önünde bulundurularak optimizasyon
-    """
-    if not jobs_list:
-        logger.info("No jobs provided for filtering.")
-        return []
-
-    # Başlık blacklist - SADECE kesinlikle senior olanları hedefler
+def _get_filter_blacklists():
+    """Filtreleme blacklist'lerini döndürür"""
     title_blacklist = [
         "senior",
         "sr.",
@@ -41,7 +33,6 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         "leader",
     ]
 
-    # Deneyim blacklist - Sadece çok net ve yüksek yıl ifadeleri
     experience_blacklist = [
         "5+ yıl",
         "5 yıl",
@@ -59,7 +50,6 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         "en az 7",
     ]
 
-    # Sorumluluk blacklist - Sadece doğrudan personel yönetimi içerenler
     responsibility_blacklist = [
         "takım yönetimi",
         "team management",
@@ -73,7 +63,6 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         "team building",
     ]
 
-    # Rol dışı blacklist - Kariyer hedefleriyle ilgisiz pozisyonlar
     out_of_scope_blacklist = [
         "avukat",
         "hukuk",
@@ -108,54 +97,36 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         "manufacturing operator",
     ]
 
-    filtered_jobs = []
-    filter_stats = {
-        "title": 0,
-        "experience": 0,
-        "responsibility": 0,
-        "out_of_scope": 0,
-        "passed": 0,
-    }
+    return (
+        title_blacklist,
+        experience_blacklist,
+        responsibility_blacklist,
+        out_of_scope_blacklist,
+    )
 
-    for job in jobs_list:
-        title = job.get("title", "").lower()
-        description = job.get("description", "").lower()
 
-        # 1. Başlık kontrolü
-        title_rejected = any(word in title for word in title_blacklist)
+def _check_job_filters(job, blacklists):
+    """Tek bir iş ilanını blacklist'lere karşı kontrol et"""
+    title_bl, exp_bl, resp_bl, scope_bl = blacklists
 
-        # 2. Deneyim kontrolü
-        experience_rejected = any(exp in description for exp in experience_blacklist)
+    title = job.get("title", "").lower()
+    description = job.get("description", "").lower()
 
-        # 3. Sorumluluk kontrolü
-        responsibility_rejected = any(resp in description for resp in responsibility_blacklist)
+    # Filtreleme kontrolleri
+    if any(word in title for word in title_bl):
+        return "title"
+    elif any(exp in description for exp in exp_bl):
+        return "experience"
+    elif any(resp in description for resp in resp_bl):
+        return "responsibility"
+    elif any(word in title for word in scope_bl):
+        return "out_of_scope"
+    else:
+        return "passed"
 
-        # 4. Rol dışı kontrol
-        out_of_scope_rejected = any(word in title for word in out_of_scope_blacklist)  # Filtreleme kararı
-        if title_rejected:
-            filter_stats["title"] += 1
-            if debug:
-                logger.debug(f"🔥 Filtrelendi (başlık): {job.get('title', 'N/A')}")
-        elif experience_rejected:
-            filter_stats["experience"] += 1
-            if debug:
-                logger.debug(f"🔥 Filtrelendi (deneyim): {job.get('title', 'N/A')}")
-        elif responsibility_rejected:
-            filter_stats["responsibility"] += 1
-            if debug:
-                logger.debug(f"🔥 Filtrelendi (sorumluluk): {job.get('title', 'N/A')}")
-        elif out_of_scope_rejected:
-            filter_stats["out_of_scope"] += 1
-            if debug:
-                logger.debug(f"🔥 Filtrelendi (rol dışı): {job.get('title', 'N/A')}")
-        else:
-            # Geçti - listeye ekle
-            filtered_jobs.append(job)
-            filter_stats["passed"] += 1
-            if debug:
-                # Filtreleme istatistikleri
-                logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")
-    total_processed = len(jobs_list)
+
+def _log_filter_stats(filter_stats, total_processed):
+    """Filtreleme istatistiklerini logla"""
     logger.info("\n📊 Filtreleme İstatistikleri:")
     logger.info(f"   Toplam işlenen: {total_processed}")
     logger.info(f"   🔥 Başlık filtresi: {filter_stats['title']}")
@@ -171,6 +142,48 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         success_rate = (filter_stats["passed"] / total_processed) * 100
         logger.info(f"   📈 Başarı oranı: %{success_rate:.1f}")
 
+
+def filter_junior_suitable_jobs(jobs_list, debug=False):
+    """
+    Junior/Entry-level pozisyonlar için uygun olmayan ilanları filtreler
+    YBS öğrencisinin kariyer hedefleri (ERP, Proje Yönetimi, İş Analizi)
+    göz önünde bulundurularak optimizasyon
+    """
+    if not jobs_list:
+        logger.info("No jobs provided for filtering.")
+        return []
+
+    blacklists = _get_filter_blacklists()
+
+    filtered_jobs = []
+    filter_stats = {
+        "title": 0,
+        "experience": 0,
+        "responsibility": 0,
+        "out_of_scope": 0,
+        "passed": 0,
+    }
+
+    for job in jobs_list:
+        filter_result = _check_job_filters(job, blacklists)
+
+        if filter_result == "passed":
+            filtered_jobs.append(job)
+            filter_stats["passed"] += 1
+            if debug:
+                logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")
+        else:
+            filter_stats[filter_result] += 1
+            if debug:
+                logger.debug(
+                    f"🔥 Filtrelendi ({filter_result}): {job.get('title', 'N/A')}"
+                )
+            if debug:
+                # Filtreleme istatistikleri
+                logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")
+    total_processed = len(jobs_list)
+    _log_filter_stats(filter_stats, total_processed)
+
     return filtered_jobs
 
 
@@ -184,9 +197,13 @@ def score_jobs(jobs_list, scoring_system, debug=False):
         if scoring_system.should_include(total):
             scored.append(job)
             if debug:
-                logger.debug(f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}")
+                logger.debug(
+                    f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}"
+                )
         elif debug:
-            logger.debug(f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}")
+            logger.debug(
+                f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}"
+            )
 
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored
