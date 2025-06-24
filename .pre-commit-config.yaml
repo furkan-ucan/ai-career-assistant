@@ -33,7 +33,7 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
-  # mypy - Tip kontrolü (gevşek ayarlarla aktif)
+  # mypy - Tip kontrolü (pyproject.toml kullanıyor)
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
     hooks:
@@ -47,5 +47,5 @@ repos:
             --allow-incomplete-defs,
             --config-file=pyproject.toml,
           ]
-        # Sadece ana dosyaları kontrol et
-        files: ^(main\.py|src/(cv_processor|data_collector|embedding_service)\.py)$
+        # Tüm Python dosyalarını kontrol et
+        files: ^(main\.py|src/.*\.py|tree_generator\.py)$

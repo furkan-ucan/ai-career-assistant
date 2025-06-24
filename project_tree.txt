@@ -1,0 +1,85 @@
+📁 kariyer-asistani
+├── 📁 config
+├── 📁 data
+│   ├── 📁 chromadb
+│   │   ├── 📁 c42915c7-92ce-4389-a6fb-74cecd23fb86
+│   │   │   ├── ⚙️ data_level0.bin
+│   │   │   ├── ⚙️ header.bin
+│   │   │   ├── ⚙️ length.bin
+│   │   │   └── ⚙️ link_lists.bin
+│   │   └── 🗃️ chroma.sqlite3
+│   ├── 📊 birlesmis_TUM_kaynaklar_ilanlar_20250621_012450.csv
+│   ├── 📄 cv.txt
+│   ├── 📊 jobspy_optimize_ilanlar_20250622_152212.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250622_182348.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250622_190331.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250622_192300.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250622_204739.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250622_223851.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250622_230828.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250623_000009.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250624_223750.csv
+│   └── 📋 meta_d0bb69c5e5132f58.json
+├── 📁 docs
+├── 📁 examples
+│   ├── 🐍 test_scores.py
+│   └── 🐍 test_scoring_manual.py
+├── 📁 memory-bank
+│   └── 📁 memory-bank
+│       ├── 📄 .byterules
+│       ├── 📝 activeContext.md
+│       ├── 📝 productContext.md
+│       ├── 📝 progress.md
+│       ├── 📝 projectbrief.md
+│       ├── 📝 README.md
+│       ├── 📝 systemPatterns.md
+│       └── 📝 techContext.md
+├── 📁 memory-bank-mcp
+│   ├── 📁 src
+│   │   ├── 📁 mcp
+│   │   │   └── 📘 memoryBankMcp.ts
+│   │   ├── 📁 templates
+│   │   │   ├── 📄 .byterules
+│   │   │   ├── 📝 activeContext.md
+│   │   │   ├── 📝 productContext.md
+│   │   │   ├── 📝 progress.md
+│   │   │   ├── 📝 projectbrief.md
+│   │   │   ├── 📝 systemPatterns.md
+│   │   │   └── 📝 techContext.md
+│   │   ├── 📁 utils
+│   │   │   ├── 📘 cursorRulesGenerator.ts
+│   │   │   ├── 📘 fileManager.ts
+│   │   │   └── 📘 gemini.ts
+│   │   └── 📘 index.ts
+│   ├── 📄 .gitignore
+│   ├── 📋 package.json
+│   ├── 📝 README.md
+│   └── 📋 tsconfig.json
+├── 📁 scripts
+├── 📁 src
+│   ├── 🐍 __init__.py
+│   ├── 🐍 cli.py
+│   ├── 🐍 cv_processor.py
+│   ├── 🐍 data_collector.py
+│   ├── 🐍 embedding_service.py
+│   ├── 🐍 filter.py
+│   ├── 🐍 intelligent_scoring.py
+│   └── 🐍 vector_store.py
+├── 📁 tests
+│   ├── 🐍 test_data_collector.py
+│   ├── 🐍 test_embedding_service.py
+│   ├── 🐍 test_filter.py
+│   ├── 🐍 test_scoring.py
+│   └── 🐍 test_vector_store.py
+├── 📄 .gitignore
+├── ⚙️ .pre-commit-config.yaml
+├── 📝 AGENTS.md
+├── ⚙️ config.yaml
+├── 📄 LICENSE
+├── 🐍 main.py
+├── 📄 Makefile
+├── 📄 project_tree.txt
+├── ⚙️ pyproject.toml
+├── 💙 quality-check.ps1
+├── 📝 README.md
+└── 📄 requirements.txt
