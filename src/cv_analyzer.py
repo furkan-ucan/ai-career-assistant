@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 
@@ -53,7 +53,7 @@ class CVAnalyzer:
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
             genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        self.model = genai.GenerativeModel("gemini-2.5-flash")
         self.cache_dir = Path("data")
         self.cache_dir.mkdir(exist_ok=True)
 
@@ -71,7 +71,7 @@ class CVAnalyzer:
             ts = str(data.get("generated_at", ""))
             if ts:
                 generated_at = datetime.fromisoformat(ts)
-                if datetime.now(timezone.utc) - generated_at <= timedelta(days=7):
+                if datetime.now(UTC) - generated_at <= timedelta(days=7):
                     return cast(dict[str, object], data.get("metadata", data))
         except Exception:  # noqa: BLE001
             logger.exception("Cache load failed")
@@ -82,7 +82,7 @@ class CVAnalyzer:
         cache_file = self.cache_dir / f"meta_{cache_key}.json"
         cache_data = {
             "metadata": metadata,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
             "cv_hash": cache_key,
         }
         try:

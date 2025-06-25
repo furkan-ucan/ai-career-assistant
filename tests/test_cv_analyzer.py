@@ -1,5 +1,4 @@
 import hashlib
-from typing import List
 
 from src.cv_analyzer import CVAnalyzer
 
@@ -14,7 +13,7 @@ def test_cache_key_generation():
 
 def test_normalize_skills_blacklist():
     analyzer = CVAnalyzer()
-    skills: List[str] = ["Python", "MS Office", "react-js", "python"]
+    skills: list[str] = ["Python", "MS Office", "react-js", "python"]
     normalized = analyzer._normalize_skills(skills)
     assert "python" in normalized
     assert "reactjs" in normalized

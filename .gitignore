@@ -123,3 +123,7 @@ memory-bank/
 *.temp
 .DS_Store
 Thumbs.db
+
+
+.github/workflows/# GitHub Actions
+.github/workflows/*.yml

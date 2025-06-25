@@ -110,7 +110,7 @@ def load_config():
 
 # Konfigürasyonu yükle
 config = load_config()
-scoring_system: Optional[IntelligentScoringSystem] = None
+scoring_system: IntelligentScoringSystem | None = None
 
 # Embedding ayarları
 embedding_settings = config.get("embedding_settings", {})
@@ -126,59 +126,64 @@ DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings["default_results_per_site"]
 persona_search_config = config["persona_search_configs"]
 
 
-def collect_data_for_all_personas(selected_personas=None, results_per_site=None, persona_configs=None):
+def _collect_jobs_for_persona(
+    persona_name: str, persona_cfg: dict, results_per_site: int | None
+) -> pd.DataFrame | None:
     """
-    Tüm persona'lar için iş ilanlarını toplar ve CSV yolunu döner.
+    Tek persona için iş ilanları toplar.
 
     Args:
-        selected_personas: Seçili persona listesi (None ise tümü)
-        results_per_site: Site başına sonuç sayısı (None ise config'den)
+        persona_name: Persona adı
+        persona_cfg: Persona konfigürasyonu
+        results_per_site: Site başına sonuç sayısı
 
     Returns:
-        str: Toplanan verilerin CSV dosya yolu
+        DataFrame | None: Toplanan iş ilanları veya None
     """
-    logger.info("🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor...")
-    logger.info("=" * 70)
+    logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
+    logger.info(f"🎯 Optimize edilmiş terim: '{persona_cfg['term']}'")
+    logger.info(f"⏰ Tarih filtresi: Son {persona_cfg['hours_old']} saat")
 
-    all_collected_jobs_list = []
+    try:
+        max_results = results_per_site if results_per_site is not None else persona_cfg["results"]
+        jobs_df_for_persona = collect_job_data(
+            search_term=persona_cfg["term"],
+            site_names=TARGET_SITES,  # LinkedIn + Indeed
+            location="Turkey",
+            max_results_per_site=max_results,
+            hours_old=persona_cfg["hours_old"],
+        )
+        # Type safety: collect_job_data fonksiyonundan dönen değeri kontrol et
+        if jobs_df_for_persona is not None and not jobs_df_for_persona.empty:
+            # Persona bilgisini ve arama terimini ekle (analiz için faydalı)
+            jobs_df_for_persona["persona_source"] = persona_name
+            jobs_df_for_persona["search_term_used"] = persona_cfg["term"]
+            logger.info(f"✨ Persona '{persona_name}' için {len(jobs_df_for_persona)} ilan bulundu.")
+            return jobs_df_for_persona  # type: ignore[no-any-return]
+        else:
+            logger.info(f"ℹ️ Persona '{persona_name}' için hiçbir siteden ilan bulunamadı.")
+            return None
 
-    cfg = persona_configs or persona_search_config
-    personas = cfg.items()
-    if selected_personas:
-        personas = [(p, cfg[p]) for p in selected_personas if p in cfg]
+    except Exception as e:
+        logger.error(f"❌ Persona '{persona_name}' için hata: {str(e)}", exc_info=True)
+        return None
 
-    for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
-        logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
-        logger.info(f"🎯 Optimize edilmiş terim: '{persona_cfg['term']}'")
-        logger.info(f"⏰ Tarih filtresi: Son {persona_cfg['hours_old']} saat")
 
-        try:
-            # JobSpy'ın gelişmiş özelliklerini kullanarak veri toplama
-            max_results = results_per_site if results_per_site is not None else persona_cfg["results"]
-            jobs_df_for_persona = collect_job_data(
-                search_term=persona_cfg["term"],
-                site_names=TARGET_SITES,  # LinkedIn + Indeed
-                location="Turkey",
-                max_results_per_site=max_results,
-                hours_old=persona_cfg["hours_old"],
-            )
-            if jobs_df_for_persona is not None and not jobs_df_for_persona.empty:
-                # Persona bilgisini ve arama terimini ekle (analiz için faydalı)
-                jobs_df_for_persona["persona_source"] = persona_name
-                jobs_df_for_persona["search_term_used"] = persona_cfg["term"]
-                all_collected_jobs_list.append(jobs_df_for_persona)
-                logger.info(f"✨ Persona '{persona_name}' için {len(jobs_df_for_persona)} ilan bulundu.")
-            else:
-                logger.info(f"ℹ️ Persona '{persona_name}' için hiçbir siteden ilan bulunamadı.")
+def _deduplicate_and_save_jobs(all_jobs_list: list[pd.DataFrame]) -> str | None:
+    """
+    İş ilanlarını birleştirir, duplikatları temizler ve CSV olarak kaydeder.
 
-        except Exception as e:
-            logger.error(f"❌ Persona '{persona_name}' için hata: {str(e)}", exc_info=True)
-            continue
+    Args:
+        all_jobs_list: İş ilanları DataFrame listesi
 
-    non_empty = [df for df in all_collected_jobs_list if df is not None and not df.empty]
+    Returns:
+        str | None: CSV dosya yolu veya None
+    """
+    non_empty = [df for df in all_jobs_list if df is not None and not df.empty]
     if not non_empty:
         logger.error("❌ Hiçbir persona ve site kombinasyonundan ilan bulunamadı.")
         return None
+
     final_df = pd.concat(non_empty, ignore_index=True)
     logger.info(f"\n📊 Birleştirme öncesi (tüm personalar): {len(final_df)} ilan")
 
@@ -207,6 +212,37 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None,
     return str(final_csv_path)
 
 
+def collect_data_for_all_personas(selected_personas=None, results_per_site=None, persona_configs=None):
+    """
+    Tüm persona'lar için iş ilanlarını toplar ve CSV yolunu döner.
+
+    Args:
+        selected_personas: Seçili persona listesi (None ise tümü)
+        results_per_site: Site başına sonuç sayısı (None ise config'den)
+        persona_configs: Persona konfigürasyonları (None ise default)
+
+    Returns:
+        str | None: Toplanan verilerin CSV dosya yolu
+    """
+    logger.info("🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor...")
+    logger.info("=" * 70)
+
+    all_collected_jobs_list = []
+    cfg = persona_configs or persona_search_config
+    personas = cfg.items()
+    if selected_personas:
+        personas = [(p, cfg[p]) for p in selected_personas if p in cfg]
+
+    # Her persona için veri toplama
+    for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
+        jobs_df = _collect_jobs_for_persona(persona_name, persona_cfg, results_per_site)
+        if jobs_df is not None:
+            all_collected_jobs_list.append(jobs_df)
+
+    # Verileri birleştir ve kaydet
+    return _deduplicate_and_save_jobs(all_collected_jobs_list)
+
+
 def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, similarity_threshold=None):
     """Run full pipeline and print best jobs."""
     logger.info("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
@@ -214,24 +250,54 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
 
     threshold = similarity_threshold if similarity_threshold is not None else MIN_SIMILARITY_THRESHOLD
 
+    # Setup AI metadata and configurations
+    ai_metadata, personas_cfg = _setup_ai_metadata_and_personas()
+    if not _configure_scoring_system(ai_metadata):
+        return
+
+    # Execute the main pipeline
+    _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold)
+
+
+def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
+    """Setup AI metadata and personas configuration."""
     cv_text = Path(config["paths"]["cv_file"]).read_text(encoding="utf-8")
     analyzer = CVAnalyzer()
     ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
 
     personas_cfg = persona_search_config
     if ai_metadata.get("target_job_titles"):
-        personas_cfg = build_dynamic_personas(ai_metadata["target_job_titles"])
+        # Type safety: ai_metadata["target_job_titles"] var mı ve list[str] mi kontrol et
+        target_titles = ai_metadata["target_job_titles"]
+        if isinstance(target_titles, list) and all(isinstance(title, str) for title in target_titles):
+            personas_cfg = build_dynamic_personas(target_titles)
+        else:
+            logger.warning("AI metadata target_job_titles geçersiz format - static personas kullanılıyor")
     else:
         logger.warning("AI metadata missing - using static personas")
 
+    return ai_metadata, personas_cfg
+
+
+def _configure_scoring_system(ai_metadata: dict) -> bool:
+    """Configure the scoring system with AI metadata."""
     if ai_metadata.get("key_skills"):
-        weight = config["scoring_system"].get("dynamic_skill_weight", 10)
-        for skill in ai_metadata["key_skills"]:
-            config["scoring_system"]["description_weights"]["positive"][skill] = weight
+        # Type safety: key_skills var mı ve iterable mı kontrol et
+        key_skills = ai_metadata["key_skills"]
+        if isinstance(key_skills, list | tuple) and all(isinstance(skill, str) for skill in key_skills):
+            weight = config["scoring_system"].get("dynamic_skill_weight", 10)
+            for skill in key_skills:
+                config["scoring_system"]["description_weights"]["positive"][skill] = weight
+        else:
+            logger.warning("AI metadata key_skills geçersiz format - atlanıyor")
 
     global scoring_system
     scoring_system = IntelligentScoringSystem(config)
+    return True
 
+
+def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold):
+    """Execute the full analysis pipeline."""
     # 1. Veri toplama
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
     csv_path = collect_data_for_all_personas(selected_personas, results_per_site, personas_cfg)
@@ -257,16 +323,7 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
         return
 
     # 4. İş ilanlarını vector store'a yükle
-    logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")  # CSV'yi pathlib ile oku
-    jobs_df = _load_and_validate_csv(csv_path)
-    if jobs_df is None:
-        return
-
-    job_embeddings = _process_job_embeddings(jobs_df, vector_store)
-    success = vector_store.add_jobs(jobs_df, job_embeddings)
-    if not success:
-        logger.error("❌ Vector store yükleme başarısız!")
-        return
+    _process_and_load_jobs(csv_path, vector_store)
 
     # 5. Benzer işleri bul ve filtrele
     if cv_embedding is None:
@@ -275,6 +332,19 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
 
     similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, threshold)
     _display_results(similar_jobs, threshold)
+
+
+def _process_and_load_jobs(csv_path: str, vector_store: VectorStore):
+    """Process and load jobs into vector store."""
+    logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")
+    jobs_df = _load_and_validate_csv(csv_path)
+    if jobs_df is None:
+        return
+
+    job_embeddings = _process_job_embeddings(jobs_df, vector_store)
+    success = vector_store.add_jobs(jobs_df, job_embeddings)
+    if not success:
+        logger.error("❌ Vector store yükleme başarısız!")
 
 
 def _load_and_validate_csv(csv_path: str) -> pd.DataFrame | None:
