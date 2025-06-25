@@ -439,9 +439,17 @@ def _execute_full_pipeline(
 
     similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, threshold)
 
-    if rerank_settings.get("enabled") and ai_metadata.get("cv_summary") and rerank_flag:
+    if (rerank_settings.get("enabled", False) and 
+        ai_metadata.get("cv_summary") and 
+        rerank_flag and 
+        similar_jobs):
         pool_size = rerank_settings.get("rerank_pool_size", len(similar_jobs))
-        similar_jobs = _rerank_with_ai_analysis(similar_jobs[:pool_size], str(ai_metadata.get("cv_summary")))
+        if pool_size <= 0:
+            pool_size = len(similar_jobs)
+        similar_jobs = _rerank_with_ai_analysis(
+            similar_jobs[:pool_size],
+            str(ai_metadata.get("cv_summary"))
+        )
 
     display_results(similar_jobs, threshold)
     try:
