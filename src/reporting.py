@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 from collections import Counter
 
 import pandas as pd
@@ -32,8 +31,17 @@ def display_results(similar_jobs: list[dict], threshold: float) -> None:
                 job.get("company", "Şirket belirtilmemiş"),
             )
             logger.info("   📍 %s", job.get("location", "Lokasyon belirtilmemiş"))
-            score = job.get("match_score", job.get("similarity_score", 0))
+            score = job.get("fit_score", job.get("match_score", job.get("similarity_score", 0)))
             logger.info("   📊 Uygunluk: %.1f", score)
+            reasoning = job.get("reasoning")
+            if reasoning:
+                logger.info("   💡 %s", reasoning)
+            mk = job.get("matching_keywords")
+            if mk:
+                logger.info("   ✅ Eşleşen: %s", ", ".join(mk))
+            miss = job.get("missing_keywords")
+            if miss:
+                logger.info("   ❌ Eksik: %s", ", ".join(miss))
             logger.info("   💼 Site: %s", job.get("source_site", job.get("site", "Site belirtilmemiş")))
             logger.info("   👤 Persona: %s", job.get("persona_source", job.get("persona", "Persona belirtilmemiş")))
             logger.info("   🔗 %s", job.get("url", job.get("job_url", "URL bulunamadı")))
@@ -62,7 +70,7 @@ def log_summary_statistics(
     logger.info("\n📊 Özet İstatistikler:")
 
     _log_site_distribution(all_jobs_df)
-    _log_skill_mentions(all_jobs_df, ai_metadata)
+    _log_top_skills(high_quality_jobs)
     _log_persona_success(high_quality_jobs)
 
 
@@ -74,12 +82,18 @@ def _log_site_distribution(all_jobs_df: pd.DataFrame) -> None:
             logger.info(SITE_COUNT_FORMAT, site, count)
 
 
-def _log_skill_mentions(all_jobs_df: pd.DataFrame, ai_metadata: dict | None) -> None:
-    """Log skill mentions statistics."""
-    if ai_metadata and ai_metadata.get("key_skills") and "description" in all_jobs_df.columns:
-        skills_pattern = "|".join(map(re.escape, ai_metadata["key_skills"]))
-        total = int(all_jobs_df["description"].str.count(skills_pattern, flags=re.IGNORECASE).sum())
-        logger.info("\n🔹 Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı: %s", total)
+def _log_top_skills(high_quality_jobs: list[dict]) -> None:
+    """Log most common matching skills from high-quality jobs."""
+    keywords: list[str] = []
+    for job in high_quality_jobs:
+        kw = job.get("matching_keywords")
+        if isinstance(kw, list):
+            keywords.extend(kw)
+    if keywords:
+        counts = Counter(keywords)
+        logger.info("\n🔹 En Popüler 5 Skill:")
+        for skill, count in counts.most_common(5):
+            logger.info(SITE_COUNT_FORMAT, skill, count)
 
 
 def _log_persona_success(high_quality_jobs: list[dict]) -> None:

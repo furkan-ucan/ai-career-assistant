@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import google.generativeai as genai
 import pandas as pd
 from tqdm import tqdm
 
 from .config import load_settings
-from .cv_analyzer import CVAnalyzer
+from .cv_analyzer import TOKEN_LIMIT, CVAnalyzer
 from .cv_processor import CVProcessor
 from .data_collector import collect_job_data
 from .embedding_service import EmbeddingService
@@ -19,6 +22,21 @@ from .persona_builder import build_dynamic_personas
 from .reporting import display_results, log_summary_statistics
 from .utils.file_helpers import save_dataframe_csv
 from .vector_store import VectorStore
+
+RERANK_PROMPT_TEMPLATE = """
+You are an expert career assistant. Candidate summary: {cv_summary}
+
+JOB TITLE: {title}
+JOB DESCRIPTION: {description}
+
+Return ONLY JSON with fields:\n{
+  "fit_score": int,          # 0-100 suitability
+  "is_recommended": bool,    # True if worth applying
+  "reasoning": str,          # short reasoning
+  "matching_keywords": [str],
+  "missing_keywords": [str]
+}
+"""
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +53,8 @@ DEFAULT_HOURS_OLD = job_settings["default_hours_old"]
 DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings["default_results_per_site"]
 
 persona_search_config = config["persona_search_configs"]
+
+rerank_settings = config.get("ai_reranking_settings", {})
 
 
 def _collect_jobs_for_persona(
@@ -315,6 +335,54 @@ def _search_and_score_jobs(cv_embedding: list[float], vector_store: VectorStore,
     return [job for job in scored_jobs if job["similarity_score"] >= threshold]
 
 
+def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -> dict:
+    """Analyse a single job with Gemini for reranking."""
+    description = job.get("description", "")[:TOKEN_LIMIT]
+    prompt = RERANK_PROMPT_TEMPLATE.format(
+        cv_summary=cv_summary,
+        title=job.get("title", ""),
+        description=description,
+    )
+    try:
+        response = model.generate_content(prompt, generation_config={"temperature": temperature})
+        text = response.text if hasattr(response, "text") else str(response)
+        text = text.strip().strip("`")
+        data = json.loads(text)
+        job.update(
+            {
+                "fit_score": data.get("fit_score", 0),
+                "is_recommended": data.get("is_recommended", False),
+                "reasoning": data.get("reasoning", ""),
+                "matching_keywords": data.get("matching_keywords", []),
+                "missing_keywords": data.get("missing_keywords", []),
+            }
+        )
+    except json.JSONDecodeError as exc:
+        logger.warning("Failed to parse AI response for job %s: %s", job.get("title"), exc)
+    except Exception:
+        logger.exception("Unexpected error during AI analysis for job %s", job.get("title"))
+    return job
+
+
+def _rerank_with_ai_analysis(jobs: list[dict], cv_summary: str) -> list[dict]:
+    """Deep analysis with Gemini to rerank jobs."""
+    if not jobs:
+        return []
+
+    model_name = rerank_settings.get("llm_model", "gemini-1.5-flash-latest")
+    temperature = rerank_settings.get("llm_temperature", 0.1)
+    workers = rerank_settings.get("max_workers", 4)
+    model = genai.GenerativeModel(model_name)
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        analysed = list(executor.map(lambda j: _analyse_single_job(j, cv_summary, model, temperature), jobs))
+
+    analysed.sort(
+        key=lambda j: (not j.get("is_recommended", False), -j.get("fit_score", 0), -j.get("similarity_score", 0))
+    )
+    return analysed
+
+
 def _process_and_load_jobs(csv_path: str, vector_store: VectorStore):
     """Process and load jobs into vector store."""
     logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")
@@ -328,7 +396,9 @@ def _process_and_load_jobs(csv_path: str, vector_store: VectorStore):
         logger.error("❌ Vector store yükleme başarısız!")
 
 
-def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold, ai_metadata):
+def _execute_full_pipeline(
+    selected_personas, results_per_site, personas_cfg, threshold, ai_metadata, rerank_flag: bool = True
+):
     """
     Runs the complete job matching pipeline, including job data collection, CV processing, embedding creation, vector storage, job scoring, result display, and summary statistics logging.
 
@@ -338,6 +408,7 @@ def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, th
         personas_cfg (dict): Configuration dictionary for personas.
         threshold (float): Minimum similarity threshold for job matching.
         ai_metadata (dict): AI-extracted metadata for reporting.
+        rerank_flag (bool): Whether to run the AI reranking stage.
     """
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
     csv_path = collect_data_for_all_personas(selected_personas, results_per_site, personas_cfg)
@@ -367,6 +438,19 @@ def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, th
         return
 
     similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, threshold)
+
+    if (rerank_settings.get("enabled", False) and 
+        ai_metadata.get("cv_summary") and 
+        rerank_flag and 
+        similar_jobs):
+        pool_size = rerank_settings.get("rerank_pool_size", len(similar_jobs))
+        if pool_size <= 0:
+            pool_size = len(similar_jobs)
+        similar_jobs = _rerank_with_ai_analysis(
+            similar_jobs[:pool_size],
+            str(ai_metadata.get("cv_summary"))
+        )
+
     display_results(similar_jobs, threshold)
     try:
         jobs_df = pd.read_csv(Path(csv_path))
@@ -379,7 +463,9 @@ def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, th
     log_summary_statistics(jobs_df, similar_jobs, ai_metadata)
 
 
-def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, similarity_threshold=None):
+def analyze_and_find_best_jobs(
+    selected_personas=None, results_per_site=None, similarity_threshold=None, rerank: bool = True
+):
     """Run full pipeline and print best jobs."""
     logger.info("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
     logger.info("=" * 60)
@@ -390,12 +476,14 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
     if not _configure_scoring_system(ai_metadata):
         return
 
-    _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold, ai_metadata)
+    _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold, ai_metadata, rerank)
 
 
-def run_end_to_end_pipeline(selected_personas=None, results_per_site=None, similarity_threshold=None):
+def run_end_to_end_pipeline(
+    selected_personas=None, results_per_site=None, similarity_threshold=None, rerank: bool = True
+):
     """Public wrapper to run the full analysis pipeline."""
-    analyze_and_find_best_jobs(selected_personas, results_per_site, similarity_threshold)
+    analyze_and_find_best_jobs(selected_personas, results_per_site, similarity_threshold, rerank)
 
 
 __all__ = [

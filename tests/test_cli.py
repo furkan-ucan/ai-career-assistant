@@ -59,3 +59,11 @@ def test_parse_args(mock_load_personas):
     with patch("sys.argv", ["cli.py", "-p", "dev"]):
         args = parse_args()
         assert args.persona == ["dev"]
+
+
+@patch("src.cli.load_persona_choices")
+def test_parse_args_no_rerank(mock_load_personas):
+    mock_load_personas.return_value = ["dev"]
+    with patch("sys.argv", ["cli.py", "--no-rerank"]):
+        args = parse_args()
+        assert args.no_rerank is True

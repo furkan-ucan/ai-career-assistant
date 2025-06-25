@@ -42,6 +42,11 @@ def build_parser(personas: list[str]) -> argparse.ArgumentParser:
         type=int,
         help="Benzerlik esigi (yuzde)",
     )
+    parser.add_argument(
+        "--no-rerank",
+        action="store_true",
+        help="AI derin analiz asamasini devre disi birakir",
+    )
     return parser
 
 
