@@ -1,0 +1,78 @@
+# .coderabbit.yaml - Akıllı Kariyer Asistanı için Gelişmiş ve Optimize Edilmiş Yapılandırma
+# Coderabbit Best Practices v2.1'e göre hazırlanmıştır.
+
+# İncelemelerin dilini Türkçe olarak ayarlıyoruz.
+language: "tr"
+
+# İnceleme süreci için genel ayarlar
+reviews:
+  # 'chill' profili, sadece en önemli ve anlamlı konulara odaklanmasını sağlar.
+  profile: "chill"
+
+  # AI'ın PR'ları bloke etmesini istemiyoruz, sadece yorum yapsın. Karar insanda kalsın.
+  request_changes_workflow: false
+
+  # ⭐ YENİ: Her PR'ın başına, yapılan değişiklikleri özetleyen bir AI yorumu ekle.
+  high_level_summary: true
+
+  # Pull Request açıldığında otomatik olarak incelemeyi başlat.
+  auto_review:
+    enabled: true
+    # ⭐ YENİ: 'base_branches' listesini boş bırakmak, Coderabbit'in
+    # projedeki TÜM dallara yapılan Pull Request'leri incelemesini sağlar.
+    base_branches: []
+
+    # WIP (Work In Progress) etiketli PR'ları inceleme.
+    ignore_title_keywords:
+      - "WIP"
+      - "[skip-review]"
+      - "docs:"
+
+    # Taslak (Draft) PR'ları da incele, erken geri bildirim için harika.
+    drafts: true
+
+  # AI'ın incelememesi gereken dosyalar (Gürültüyü Azaltma)
+  path_filters:
+    - "!**/*.md"
+    - "!docs/**"
+    - "!data/**"
+    - "!logs/**"
+    - "!config.yaml"
+    - "!pyproject.toml"
+    - "!Makefile"
+    - "!quality-check.ps1"
+    - "!.gitignore"
+    - "!.pre-commit-config.yaml"
+    - "!tests/fixtures/**"
+
+  # Dosya yoluna göre özel talimatlar (Projenin Anayasası)
+  path_instructions:
+    - path: "src/**/*.py"
+      instructions: |
+        **Rol:** Kıdemli Python Mimarı. Odak noktan: SOLID prensipleri, temiz kod ve sağlamlık.
+        - **Tek Sorumluluk Prensibi (SRP):** Bu modül veya fonksiyon birden fazla iş mi yapıyor? Özellikle `main.py` ve `pipeline.py`'yi bu gözle incele.
+        - **Hata Yönetimi:** Kod, `None` değerlerine veya beklenmedik API yanıtlarına karşı güvenli mi? `logger.exception` doğru kullanılmış mı?
+        - **Proje Standartları:** `pathlib` kullanılmış mı? `print()` var mı? (YASAK!)
+
+    - path: "tests/**/*.py"
+      instructions: |
+        **Rol:** Kıdemli QA Mühendisi. Odak noktan: Test kalitesi ve okunabilirlik.
+        - **Pytest Pratikleri:** Testler, `pytest`'in en iyi pratiklerine (fixture kullanımı, `parametrize` vb.) uyuyor mu?
+        - **Anlaşılırlık:** Test fonksiyonunun adı, neyi test ettiğini net bir şekilde anlatıyor mu?
+        - **İzolasyon:** Testler birbirinden bağımsız mı çalışıyor? `mock`'lar doğru şekilde kullanılmış mı?
+
+    - path: "main.py"
+      instructions: |
+        **Rol:** Sistem Mimarı. Odak noktan: Bu dosyanın basit bir "orkestratör" olarak kalması.
+        - Bu dosyaya yeni bir iş mantığı eklenmiş mi? Eğer evet ise, bu mantığın `src/` altındaki uygun bir modüle taşınmasını öner.
+        - CLI argümanları ve ana akışın başlatılması dışında bir sorumluluğu olmamalı.
+
+# Coderabbit'in kendi dahili linter'larını kapalı tutuyoruz, çünkü bu işi zaten
+# bizim pre-commit ve CI pipeline'ımız yapıyor.
+tools:
+  ruff:
+    enabled: false
+  shellcheck:
+    enabled: false
+  markdownlint:
+    enabled: false
