@@ -6,7 +6,6 @@ Bu dosya, tüm sistem bileşenlerini koordine eder ve uygulamanın giriş noktas
 # Standard Library
 import os
 from pathlib import Path
-from datetime import datetime
 
 # Third Party
 import pandas as pd
@@ -39,6 +38,8 @@ config = load_settings()
 def load_config() -> dict:
     """Backward compatibility wrapper for tests."""
     return config
+
+
 scoring_system: IntelligentScoringSystem | None = None
 
 # Embedding ayarları
