@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
@@ -34,27 +35,70 @@ SKILL_BLACKLIST = {
 }
 NORMALIZED_BLACKLIST = {s.replace(" ", "").replace("-", "") for s in SKILL_BLACKLIST}
 
-PROMPT_TEMPLATE = """ROLE: You are an expert Tech Recruiter specialised in MIS / ERP / GIS hybrid profiles.
+PROMPT_TEMPLATE = """
+**ROLE:** You are an *expert* Career Strategist for **Management Information
+Systems (MIS / YBS)** professionals who also possess strong full-stack and data
+science skills.
 
-RESUME:
+**PRIME DIRECTIVE:** The candidate is an MIS student—not a pure software
+developer.  Your analysis *must* prioritise business-technology bridge roles
+(e.g. ERP consultant, process analyst).  Failing to do so is a critical error.
+
+**CONTEXT (read carefully):**
+• Strong full-stack: NestJS, React, TypeScript, Flutter
+• Advanced data analytics & ML (Python / Pandas / XGBoost)
+• ERP & Business-Process focus (SAP, requirement & process improvement)
+• GIS niche (QGIS, PostGIS, Leaflet.js)
+
+**RESUME TEXT:**
 ---
 {cv_text}
 ---
 
-TASKS:
-1. Extract 15-20 **key_skills** (snake_case normalization).
-   * CRITICAL: Must include at least 3 MIS/ERP/GIS skills if present in resume
-     (e.g. erp, sap, process_improvement, business_analysis, gis, qgis, postgis, leaflet_js)
-   * Failing to include relevant MIS/ERP/GIS terms will be considered an error
-2. Produce 10-15 **target_job_titles** (entry/junior level).
-   * CRITICAL: Must contain ERP Consultant, Process Analyst, GIS Specialist if resume context supports them
-   * Focus on both software development AND business analysis roles
-3. Give parallel array **skill_importance** (same length as key_skills, float 0-1, 2 decimals).
+**TASK – Return **ONLY** a raw JSON object (no markdown, no commentary).**
 
-SCHEMA:
-{{"type":"object","properties":{{"key_skills":{{"type":"array","items":{{"type":"string"}}}},"target_job_titles":{{"type":"array","items":{{"type":"string"}}}},"skill_importance":{{"type":"array","items":{{"type":"number"}}}}}},"required":["key_skills","target_job_titles","skill_importance"]}}
+1. `"key_skills"`   📋 *array [str]* – top 20-25 skills, ordered by PRIORITY.
+   * **PRIORITY 1 (MUST include):** MIS/Business/Process Skills -> ERP, SAP,
+     business_process_improvement, system_analysis, requirement_analysis,
+     agile, scrum, project_management
+   * **PRIORITY 2:** Core Software & Data Tech -> nestjs, react, python,
+     typescript, postgresql, data_analysis, machine_learning
+   * **PRIORITY 3 (Niche/Supporting):** GIS / Geospatial Skills -> gis, qgis,
+     postgis, leafletjs
+   * Normalise: lowercase, snake_case, no spaces/dashes (`"process_improvement"`).
 
-IMPORTANT: Output ONLY raw JSON, no markdown fences, no explanations."""
+2. `"target_job_titles"`   🎯 *array [str]* – 12-16 junior / entry / associate
+   titles **ordered by best fit**.
+   **≥ 60 %** of items *must* be MIS / Business / ERP / Data focused. Software roles are secondary.
+   Mandatory buckets (if CV supports):
+   - Business / Process Roles: “Business Analyst”, “Process Analyst”,
+     “Business Systems Analyst”, “Junior Project Manager”
+   - ERP / Consulting Roles: “Junior ERP Consultant”, “IT Consultant”
+   - Hybrid Roles: “Technical Business Analyst”, “Data Analyst”
+   - Dev Roles (max 30-40 %): “Full-Stack Developer”, “Mobile Developer (Flutter)”
+   - **GIS Roles (if any, place at the end of the list):** “GIS Specialist”
+
+3. `"skill_importance"`   ⭐ *array [float]* – same length as `key_skills`,
+   values 0.00-1.00 (2 decimals).  Reflect how central the skill is to the
+   candidate’s profile & projects.
+
+**JSON SCHEMA (enforced):**
+{{
+  "type": "object",
+  "properties": {{
+    "key_skills":        {{"type": "array", "items": {{"type": "string"}}}},
+    "target_job_titles": {{"type": "array", "items": {{"type": "string"}}}},
+    "skill_importance":  {{"type": "array", "items": {{"type":"number"}}}}
+  }},
+  "required": ["key_skills", "target_job_titles", "skill_importance"]
+}}
+
+**ABSOLUTE RULES:**
+* Do **NOT** wrap the JSON with ``` or any extra text.
+* Exclude generic office basics (“ms office”, “excel”, “windows”, …).
+* Ensure array lengths match; ordering in `key_skills` ↔ `skill_importance`
+  must correspond.
+"""
 
 
 class CVAnalyzer:
@@ -116,12 +160,49 @@ class CVAnalyzer:
 
     def _strip_markdown_fences(self, content: str) -> str:
         """Remove markdown code fences from JSON response."""
-        import re
-
         # Remove code fences with various languages
         content = re.sub(r"^```[a-zA-Z]*\n", "", content, flags=re.MULTILINE)
         content = re.sub(r"\n```$", "", content, flags=re.MULTILINE)
         return content.strip()
+
+    def _clean_job_titles(self, job_titles: list[str]) -> list[str]:
+        """Clean and normalize job titles."""
+        import re
+
+        cleaned = []
+        for title in job_titles:
+            # Fix common formatting issues
+            clean_title = title.strip()
+            # Remove parentheses and content for snake_case compliance
+            clean_title = re.sub(r"\s*\([^)]*\)", "", clean_title)
+            # Convert to proper title case if needed
+            if clean_title.islower() or "_" in clean_title:
+                clean_title = clean_title.replace("_", " ").title()
+
+            cleaned.append(clean_title)
+        return cleaned
+
+    def _categorize_skills_by_importance(self, skills: list[str], importance: list[float]) -> dict[str, list[str]]:
+        """Categorize skills by importance levels for scoring system integration."""
+        if len(skills) != len(importance):
+            logger.warning(f"Skill count ({len(skills)}) != importance count ({len(importance)})")
+            importance = (
+                importance[: len(skills)]
+                if len(importance) > len(skills)
+                else importance + [0.7] * (len(skills) - len(importance))
+            )
+
+        categorized: dict[str, list[str]] = {"core": [], "secondary": [], "familiar": []}
+
+        for skill, score in zip(skills, importance, strict=False):
+            if score >= 0.85:
+                categorized["core"].append(skill)
+            elif score >= 0.7:
+                categorized["secondary"].append(skill)
+            else:
+                categorized["familiar"].append(skill)
+
+        return categorized
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=False)
     def _call_gemini_api(self, cv_text: str) -> dict | None:

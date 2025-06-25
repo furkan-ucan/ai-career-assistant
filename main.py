@@ -279,21 +279,67 @@ def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
     return ai_metadata, personas_cfg
 
 
-def _configure_scoring_system(ai_metadata: dict) -> bool:
-    """Configure the scoring system with AI metadata."""
-    if ai_metadata.get("key_skills"):
-        # Type safety: key_skills var mı ve iterable mı kontrol et
-        key_skills = ai_metadata["key_skills"]
-        if isinstance(key_skills, list | tuple) and all(isinstance(skill, str) for skill in key_skills):
-            weight = config["scoring_system"].get("dynamic_skill_weight", 10)
-            for skill in key_skills:
-                config["scoring_system"]["description_weights"]["positive"][skill] = weight
-        else:
-            logger.warning("AI metadata key_skills geçersiz format - atlanıyor")
+def _validate_skill_metadata(key_skills: object, skill_importance: object) -> bool:
+    """Validate skill metadata structure and types."""
+    return (
+        isinstance(key_skills, list)
+        and isinstance(skill_importance, list)
+        and len(key_skills) == len(skill_importance)
+        and all(isinstance(skill, str) for skill in key_skills)
+        and all(isinstance(score, int | float) for score in skill_importance)
+    )
 
+
+def _apply_skill_weights(skill: str, importance: float, base_weight: int) -> None:
+    """Apply weight multiplier based on skill importance."""
+    if importance >= 0.85:
+        # Core skills - highest weight
+        weight = int(base_weight * 1.5)
+        config["scoring_system"]["description_weights"]["positive"][skill] = weight
+        logger.debug(f"  🔥 Core skill: {skill} (importance: {importance:.2f}) → weight: {weight}")
+    elif importance >= 0.7:
+        # Secondary skills - standard weight
+        config["scoring_system"]["description_weights"]["positive"][skill] = base_weight
+        logger.debug(f"  ⭐ Secondary skill: {skill} (importance: {importance:.2f}) → weight: {base_weight}")
+    else:
+        # Familiar skills - reduced weight
+        weight = int(base_weight * 0.6)
+        config["scoring_system"]["description_weights"]["positive"][skill] = weight
+        logger.debug(f"  💡 Familiar skill: {skill} (importance: {importance:.2f}) → weight: {weight}")
+
+
+def _configure_scoring_system(ai_metadata: dict) -> bool:
+    """Configure the scoring system with AI metadata and skill importance."""
     global scoring_system
-    scoring_system = IntelligentScoringSystem(config)
-    return True
+
+    try:
+        if not (ai_metadata.get("key_skills") and ai_metadata.get("skill_importance")):
+            logger.info("No AI skill data available - using static scoring")
+            scoring_system = IntelligentScoringSystem(config)
+            return True
+
+        key_skills = ai_metadata["key_skills"]
+        skill_importance = ai_metadata["skill_importance"]
+
+        if not _validate_skill_metadata(key_skills, skill_importance):
+            logger.warning("AI metadata skills format invalid - using static scoring")
+            scoring_system = IntelligentScoringSystem(config)
+            return True
+
+        base_weight = config["scoring_system"].get("dynamic_skill_weight", 10)
+        logger.info(f"🎯 Configuring enhanced scoring with {len(key_skills)} AI-detected skills")
+
+        # Apply weight multipliers based on importance
+        for skill, importance in zip(key_skills, skill_importance, strict=False):
+            _apply_skill_weights(skill, importance, base_weight)
+
+        logger.info("✅ Enhanced AI-driven scoring system configured")
+        scoring_system = IntelligentScoringSystem(config)
+        return True
+
+    except Exception as e:
+        logger.error(f"❌ Scoring system configuration failed: {e}")
+        return False
 
 
 def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold):
