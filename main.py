@@ -4,112 +4,41 @@ Bu dosya, tüm sistem bileşenlerini koordine eder ve uygulamanın giriş noktas
 """
 
 # Standard Library
-import logging
 import os
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
 
 # Third Party
 import pandas as pd
-import yaml  # type: ignore
 from dotenv import load_dotenv
 from tqdm import tqdm
 
+from src.config import load_settings
 from src.cv_analyzer import CVAnalyzer
-
-# Local
 from src.cv_processor import CVProcessor
 from src.data_collector import collect_job_data
 from src.embedding_service import EmbeddingService
 from src.filter import score_jobs
 from src.intelligent_scoring import IntelligentScoringSystem
+from src.logger_config import setup_logging
 from src.persona_builder import build_dynamic_personas
+from src.utils.file_helpers import save_dataframe_csv
 from src.vector_store import VectorStore
 
 # Environment variables yükle
 load_dotenv()
 
 
-# Gelişmiş loglama konfigürasyonu
-def setup_logging():
-    """
-    Gelişmiş logging kurulumu - dosya ve konsol çıktısı ile.
-
-    Returns:
-        logging.Logger: Yapılandırılmış logger nesnesi
-    """
-    # Log directory oluştur
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-
-    # Log formatı
-    formatter = logging.Formatter(
-        "%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    # Root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-
-    # Console handler (terminal çıktısı)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-
-    # File handler (dosya çıktısı)
-    # Standard Library
-    from datetime import datetime
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    file_handler = logging.FileHandler(log_dir / f"kariyer_asistani_{timestamp}.log", encoding="utf-8")
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(formatter)
-
-    # Error file handler (sadece hatalar)
-    error_handler = logging.FileHandler(log_dir / f"errors_{timestamp}.log", encoding="utf-8")
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(formatter)
-
-    # Handler'ları ekle
-    root_logger.addHandler(console_handler)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(error_handler)
-
-    return root_logger
-
-
-# Logging sistemini başlat
 logger = setup_logging()
 
 
-def load_config():
-    """
-    config.yaml dosyasını yükler ve parse eder.
-
-    Returns:
-        dict: Yüklenmiş konfigürasyon verisi
-
-    Raises:
-        FileNotFoundError: Config dosyası bulunamazsa
-        yaml.YAMLError: YAML parse hatası olursa
-    """
-    config_path = Path("config.yaml")
-    try:
-        with open(config_path, encoding="utf-8") as file:
-            config = yaml.safe_load(file)
-        logger.info("✅ config.yaml başarıyla yüklendi")
-        return config
-    except FileNotFoundError:
-        logger.error(f"❌ config.yaml dosyası bulunamadı: {config_path}")
-        raise
-    except yaml.YAMLError as e:
-        logger.error(f"❌ config.yaml dosyası parse edilemedi: {e}")
-        raise
-
-
 # Konfigürasyonu yükle
-config = load_config()
+config = load_settings()
+
+
+def load_config() -> dict:
+    """Backward compatibility wrapper for tests."""
+    return config
 scoring_system: IntelligentScoringSystem | None = None
 
 # Embedding ayarları
@@ -188,28 +117,25 @@ def _deduplicate_and_save_jobs(all_jobs_list: list[pd.DataFrame]) -> str | None:
     logger.info(f"\n📊 Birleştirme öncesi (tüm personalar): {len(final_df)} ilan")
 
     # Son genel deduplication (persona'lar arası tekrarlar için)
-    if "description" in final_df.columns and not final_df.empty:
-        final_df["description_short"] = final_df["description"].astype(str).str[:100]
-        final_df.drop_duplicates(
-            subset=["title", "company", "location", "description_short"],
-            inplace=True,
-            keep="first",
-        )
-        final_df.drop(columns=["description_short"], inplace=True)
-    elif not final_df.empty:
-        final_df.drop_duplicates(subset=["title", "company", "location"], inplace=True, keep="first")
+    if not final_df.empty:
+        subset_cols = ["title", "company"]
+        if "location" in final_df.columns:
+            subset_cols.append("location")
+        if "description" in final_df.columns:
+            final_df["description_short"] = final_df["description"].astype(str).str[:100]
+            subset_cols.append("description_short")
+
+        final_df.drop_duplicates(subset=subset_cols, inplace=True, keep="first")
+        if "description_short" in final_df.columns:
+            final_df.drop(columns=["description_short"], inplace=True)
 
     logger.info(f"✨✨✨ TOPLAM: {len(final_df)} adet BENZERSİZ ilan (JobSpy optimize edilmiş)! ✨✨✨")
 
-    # Optimize edilmiş CSV kaydetme (pathlib ile)
     output_dir = Path(config["paths"]["data_dir"])
-    output_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    final_csv_path = output_dir / f"jobspy_optimize_ilanlar_{timestamp}.csv"
-    final_df.to_csv(final_csv_path, index=False, encoding="utf-8")
-    logger.info(f"📁 JobSpy optimize edilmiş veriler: {final_csv_path}")
+    csv_path = save_dataframe_csv(final_df, output_dir, "jobspy_optimize_ilanlar")
+    logger.info(f"📁 JobSpy optimize edilmiş veriler: {csv_path}")
 
-    return str(final_csv_path)
+    return str(csv_path)
 
 
 def collect_data_for_all_personas(selected_personas=None, results_per_site=None, persona_configs=None):
