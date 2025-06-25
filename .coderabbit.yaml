@@ -1,37 +1,38 @@
-# .coderabbit.yaml - Akıllı Kariyer Asistanı için Gelişmiş ve Optimize Edilmiş Yapılandırma
-# Coderabbit Best Practices v2.1'e göre hazırlanmıştır.
+# .coderabbit.yaml - Advanced and Optimized Configuration for the "Smart Career Assistant"
+# Prepared according to Coderabbit Best Practices v2.1.
 
-# İncelemelerin dilini Türkçe olarak ayarlıyoruz.
-language: "tr"
+# Set the default language for all reviews to English.
+language: "en"
 
-# İnceleme süreci için genel ayarlar
+# General settings for the review process
 reviews:
-  # 'chill' profili, sadece en önemli ve anlamlı konulara odaklanmasını sağlar.
+  # The 'chill' profile ensures that the AI focuses only on the most significant and meaningful issues.
+  # 'meticulous' would comment on every minor detail, which our pre-commit hooks already handle.
   profile: "chill"
 
-  # AI'ın PR'ları bloke etmesini istemiyoruz, sadece yorum yapsın. Karar insanda kalsın.
+  # We don't want the AI to block PRs; it should only make comments. The final decision rests with a human.
   request_changes_workflow: false
 
-  # ⭐ YENİ: Her PR'ın başına, yapılan değişiklikleri özetleyen bir AI yorumu ekle.
+  # NEW: Add an AI-generated summary of the changes to the top of each PR.
   high_level_summary: true
 
-  # Pull Request açıldığında otomatik olarak incelemeyi başlat.
+  # Automatically trigger a review when a Pull Request is opened.
   auto_review:
     enabled: true
-    # ⭐ YENİ: 'base_branches' listesini boş bırakmak, Coderabbit'in
-    # projedeki TÜM dallara yapılan Pull Request'leri incelemesini sağlar.
+    # NEW: Leaving 'base_branches' empty ensures that Coderabbit reviews
+    # Pull Requests targeting ALL branches in the project.
     base_branches: []
 
-    # WIP (Work In Progress) etiketli PR'ları inceleme.
+    # Do not review PRs with these keywords in the title.
     ignore_title_keywords:
       - "WIP"
       - "[skip-review]"
       - "docs:"
 
-    # Taslak (Draft) PR'ları da incele, erken geri bildirim için harika.
+    # Also review Draft PRs, which is great for getting early feedback.
     drafts: true
 
-  # AI'ın incelememesi gereken dosyalar (Gürültüyü Azaltma)
+  # Exclude files that should not be reviewed by the AI to focus its energy.
   path_filters:
     - "!**/*.md"
     - "!docs/**"
@@ -45,30 +46,31 @@ reviews:
     - "!.pre-commit-config.yaml"
     - "!tests/fixtures/**"
 
-  # Dosya yoluna göre özel talimatlar (Projenin Anayasası)
+  # Path-specific instructions for the AI (The project's "Constitution").
   path_instructions:
     - path: "src/**/*.py"
       instructions: |
-        **Rol:** Kıdemli Python Mimarı. Odak noktan: SOLID prensipleri, temiz kod ve sağlamlık.
-        - **Tek Sorumluluk Prensibi (SRP):** Bu modül veya fonksiyon birden fazla iş mi yapıyor? Özellikle `main.py` ve `pipeline.py`'yi bu gözle incele.
-        - **Hata Yönetimi:** Kod, `None` değerlerine veya beklenmedik API yanıtlarına karşı güvenli mi? `logger.exception` doğru kullanılmış mı?
-        - **Proje Standartları:** `pathlib` kullanılmış mı? `print()` var mı? (YASAK!)
+        **Role:** Senior Python Architect. Your focus is on SOLID principles, clean code, and robustness.
+        - **Single Responsibility Principle (SRP):** Is this module or function doing more than one job? Pay close attention to `main.py` and `pipeline.py`.
+        - **Error Handling:** Is the code safe against unexpected `None` values or empty lists? Is `logger.exception` used correctly in `except` blocks?
+        - **Project Standards:** Are file paths handled using `pathlib`? Is the forbidden `print()` function used?
 
     - path: "tests/**/*.py"
       instructions: |
-        **Rol:** Kıdemli QA Mühendisi. Odak noktan: Test kalitesi ve okunabilirlik.
-        - **Pytest Pratikleri:** Testler, `pytest`'in en iyi pratiklerine (fixture kullanımı, `parametrize` vb.) uyuyor mu?
-        - **Anlaşılırlık:** Test fonksiyonunun adı, neyi test ettiğini net bir şekilde anlatıyor mu?
-        - **İzolasyon:** Testler birbirinden bağımsız mı çalışıyor? `mock`'lar doğru şekilde kullanılmış mı?
+        **Role:** Senior QA Engineer. Your focus is on test quality and readability.
+        - **Pytest Best Practices:** Do the tests follow best practices for `pytest` (e.g., use of fixtures, `parametrize`)?
+        - **Clarity:** Does the test function's name clearly describe what it is testing?
+        - **Isolation:** Are the tests independent of each other? Are mocks used correctly?
 
     - path: "main.py"
       instructions: |
-        **Rol:** Sistem Mimarı. Odak noktan: Bu dosyanın basit bir "orkestratör" olarak kalması.
-        - Bu dosyaya yeni bir iş mantığı eklenmiş mi? Eğer evet ise, bu mantığın `src/` altındaki uygun bir modüle taşınmasını öner.
-        - CLI argümanları ve ana akışın başlatılması dışında bir sorumluluğu olmamalı.
+        **Role:** System Architect. Your focus is on ensuring this file remains a simple "orchestrator."
+        - Has new business logic been added to this file? If so, recommend moving it to an appropriate module under `src/`.
+        - It should have no responsibilities other than parsing CLI arguments and initiating the main application workflow.
 
-# Coderabbit'in kendi dahili linter'larını kapalı tutuyoruz, çünkü bu işi zaten
-# bizim pre-commit ve CI pipeline'ımız yapıyor.
+# We are disabling Coderabbit's internal linters because our pre-commit
+# and CI pipeline already handle this. We want Coderabbit to focus its energy
+# on finding logical, architectural, and design issues that other tools cannot.
 tools:
   ruff:
     enabled: false
