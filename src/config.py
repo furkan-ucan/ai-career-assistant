@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 
@@ -10,7 +10,7 @@ from .exceptions import ConfigError
 CONFIG_PATH = Path("config.yaml")
 
 
-def load_settings() -> Dict[str, Any]:
+def load_settings() -> dict[str, Any]:
     """Load configuration from YAML file."""
     try:
         with CONFIG_PATH.open(encoding="utf-8") as f:
