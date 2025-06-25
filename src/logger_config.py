@@ -30,7 +30,9 @@ def setup_logging() -> logging.Logger:
         log_dir.mkdir(exist_ok=True)
     except PermissionError as exc:
         # Fallback to console-only logging if directory creation fails
-        print(f"Warning: Could not create log directory: {exc}")
+        import sys
+
+        sys.stderr.write(f"Warning: Could not create log directory: {exc}\n")
         return _setup_console_only_logging()
 
     formatter = logging.Formatter(

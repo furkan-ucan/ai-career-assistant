@@ -30,13 +30,14 @@ You are an expert career assistant. Candidate summary: {cv_summary}
 JOB TITLE: {title}
 JOB DESCRIPTION: {description}
 
-Return ONLY JSON with fields:\n{
+Return ONLY JSON with fields:
+{{
   "fit_score": int,          # 0-100 suitability
   "is_recommended": bool,    # True if worth applying
   "reasoning": str,          # short reasoning
   "matching_keywords": [str],
   "missing_keywords": [str]
-}
+}}
 """
 
 logger = logging.getLogger(__name__)
@@ -367,8 +368,12 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
         )
     except json.JSONDecodeError as exc:
         logger.warning("Failed to parse AI response for job %s: %s", job.get("title"), exc)
-    except Exception:
-        logger.exception("Unexpected error during AI analysis for job %s", job.get("title"))
+    except Exception as exc:
+        # Handle rate limit and other API errors gracefully
+        if "ResourceExhausted" in str(exc) or "429" in str(exc):
+            logger.warning("API rate limit reached for job %s, skipping AI analysis", job.get("title"))
+        else:
+            logger.exception("Unexpected error during AI analysis for job %s", job.get("title"))
     return job
 
 
