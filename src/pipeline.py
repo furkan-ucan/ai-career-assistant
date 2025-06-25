@@ -116,7 +116,13 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None,
 
 
 def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
-    """Setup AI metadata and personas configuration."""
+    """
+    Extracts AI metadata from the CV and determines the personas configuration.
+    
+    Returns:
+        ai_metadata (dict): Metadata extracted from the CV, including target job titles and skill information.
+        personas_cfg (dict): Persona configuration, dynamically built from AI metadata if available, otherwise static.
+    """
     cv_text = Path(config["paths"]["cv_file"]).read_text(encoding="utf-8")
     analyzer = CVAnalyzer()
     ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
@@ -137,7 +143,12 @@ def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
 
 
 def _validate_skill_metadata(key_skills: object, skill_importance: object) -> bool:
-    """Validate skill metadata structure and types."""
+    """
+    Checks that key skills and their importance scores are lists of equal length with appropriate types.
+    
+    Returns:
+        bool: True if key_skills is a list of strings, skill_importance is a list of numbers, and both lists have the same length; otherwise, False.
+    """
     return (
         isinstance(key_skills, list)
         and isinstance(skill_importance, list)
@@ -148,7 +159,15 @@ def _validate_skill_metadata(key_skills: object, skill_importance: object) -> bo
 
 
 def _apply_skill_weights(skill: str, importance: float, base_weight: int, min_imp: float) -> None:
-    """Apply dynamic weight based on skill importance."""
+    """
+    Assigns a dynamic scoring weight to a skill if its importance meets or exceeds the specified minimum threshold.
+    
+    Parameters:
+        skill (str): The skill to assign a weight to.
+        importance (float): The importance score of the skill.
+        base_weight (int): The base weight used for scaling.
+        min_imp (float): The minimum importance threshold required to assign a weight.
+    """
     if importance >= min_imp:
         weight = int(round(base_weight * importance))
         config["scoring_system"]["description_weights"]["positive"][skill] = weight
@@ -168,7 +187,12 @@ def _apply_skill_weights(skill: str, importance: float, base_weight: int, min_im
 
 
 def _configure_scoring_system(ai_metadata: dict) -> bool:
-    """Configure the scoring system with AI metadata and skill importance."""
+    """
+    Configures the intelligent scoring system using AI-extracted skill importance data if available and valid; otherwise, falls back to static scoring.
+    
+    Returns:
+        bool: True if the scoring system was configured successfully, False if an unexpected error occurred.
+    """
     global scoring_system
     try:
         if not (ai_metadata.get("key_skills") and ai_metadata.get("skill_importance")):
@@ -314,7 +338,15 @@ def _process_and_load_jobs(csv_path: str, vector_store: VectorStore):
 
 
 def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold):
-    """Execute the full analysis pipeline."""
+    """
+    Runs the complete job matching pipeline, including job data collection, CV processing, embedding creation, vector storage, job scoring, result display, and summary statistics logging.
+    
+    Parameters:
+        selected_personas (list[str] | None): List of persona names to process, or None to use all configured personas.
+        results_per_site (int | None): Number of job results to collect per site, or None for default.
+        personas_cfg (dict): Configuration dictionary for personas.
+        threshold (float): Minimum similarity threshold for job matching.
+    """
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
     csv_path = collect_data_for_all_personas(selected_personas, results_per_site, personas_cfg)
     if not csv_path:
@@ -353,7 +385,11 @@ def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, th
 
 
 def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, similarity_threshold=None):
-    """Run full pipeline and print best jobs."""
+    """
+    Runs the complete AI-driven job matching pipeline and displays the best job matches.
+    
+    Coordinates AI metadata extraction, persona setup, scoring system configuration, and execution of the full job analysis workflow. Uses the provided or default similarity threshold and persona selection.
+    """
     logger.info("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
     logger.info("=" * 60)
 

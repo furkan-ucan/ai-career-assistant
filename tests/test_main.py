@@ -86,7 +86,11 @@ def test_apply_skill_weights():
 
 @patch("src.pipeline.IntelligentScoringSystem")
 def test_configure_scoring_system_with_ai_metadata(mock_scoring_class):
-    """Test scoring system configuration with AI metadata."""
+    """
+    Test that the scoring system is configured to apply weights only to skills in AI metadata meeting the minimum importance threshold.
+    
+    Verifies that skills with importance above the configured threshold receive the correct weighted score, while those below the threshold are excluded from scoring.
+    """
     from src.pipeline import _configure_scoring_system, config
 
     # Setup config
@@ -109,7 +113,11 @@ def test_configure_scoring_system_with_ai_metadata(mock_scoring_class):
 
 @patch("src.pipeline.IntelligentScoringSystem")
 def test_configure_scoring_system_without_ai_metadata(mock_scoring_class):
-    """Test scoring system configuration without AI metadata."""
+    """
+    Test that the scoring system is configured correctly when no AI metadata is provided.
+    
+    Asserts that the configuration function returns True and that the scoring system class is instantiated once.
+    """
     from src.pipeline import _configure_scoring_system
 
     ai_metadata = {}
