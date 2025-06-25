@@ -130,7 +130,7 @@ def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
     ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
 
     personas_cfg = persona_search_config
-    if ai_metadata.get("target_job_titles"):
+    if ai_metadata and ai_metadata.get("target_job_titles"):
         target_titles = ai_metadata["target_job_titles"]
         if isinstance(target_titles, list) and all(isinstance(title, str) for title in target_titles):
             personas_cfg = build_dynamic_personas(target_titles)

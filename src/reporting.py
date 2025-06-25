@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import Counter
 
 import pandas as pd
 
@@ -85,8 +86,6 @@ def _log_persona_success(high_quality_jobs: list[dict]) -> None:
     """Log persona success statistics."""
     if not high_quality_jobs:
         return
-
-    from collections import Counter
 
     persona_counts = Counter(job.get("persona_source") for job in high_quality_jobs if job.get("persona_source"))
 
