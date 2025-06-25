@@ -4,6 +4,9 @@ from src.persona_builder import build_dynamic_personas
 
 
 def test_build_dynamic_personas_simple():
+    """
+    Test that `build_dynamic_personas` correctly generates personas for multiple job titles and sets expected fields.
+    """
     titles = ["Business Analyst", "Data Analyst"]
     personas = build_dynamic_personas(titles)
     assert "Business_Analyst" in personas

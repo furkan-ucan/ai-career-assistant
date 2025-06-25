@@ -11,7 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 def display_results(similar_jobs: list[dict], threshold: float) -> None:
-    """Log formatted job search results."""
+    """
+    Log a formatted summary of job search results that meet a specified similarity threshold.
+    
+    If high-quality jobs are found, logs detailed information for up to 15 jobs, including title, company, location, match score, source site, persona, and URL. Also logs the total number of jobs found and a distribution summary by persona if available. If no jobs meet the threshold, logs a warning and suggests adjusting search criteria.
+    """
     if similar_jobs:
         logger.info("✅ %s adet yüksek kaliteli pozisyon bulundu!", len(similar_jobs))
         logger.info("📊 Uygunluk eşiği: %%%.0f ve üzeri", threshold)
@@ -54,7 +58,11 @@ def display_results(similar_jobs: list[dict], threshold: float) -> None:
 def log_summary_statistics(
     all_jobs_df: pd.DataFrame, high_quality_jobs: list[dict], ai_metadata: dict | None = None
 ) -> None:
-    """Log summary statistics about the search process."""
+    """
+    Log summary statistics about the job search results, including site distribution, key skill occurrences, and persona breakdown.
+    
+    If available, logs the number of job postings per source site, the total count of key skill mentions in job descriptions, and the distribution of high-quality jobs by persona source.
+    """
     logger.info("\n📊 Özet İstatistikler:")
 
     if not all_jobs_df.empty and "source_site" in all_jobs_df.columns:
