@@ -12,9 +12,11 @@ from typing import Dict, List, Optional
 
 # Third Party
 import pandas as pd
-import yaml
+import yaml  # type: ignore
 from dotenv import load_dotenv
 from tqdm import tqdm
+
+from src.cv_analyzer import CVAnalyzer
 
 # Local
 from src.cv_processor import CVProcessor
@@ -22,6 +24,7 @@ from src.data_collector import collect_job_data
 from src.embedding_service import EmbeddingService
 from src.filter import score_jobs
 from src.intelligent_scoring import IntelligentScoringSystem
+from src.persona_builder import build_dynamic_personas
 from src.vector_store import VectorStore
 
 # Environment variables yükle
@@ -108,7 +111,7 @@ def load_config():
 
 # Konfigürasyonu yükle
 config = load_config()
-scoring_system = IntelligentScoringSystem(config)
+scoring_system: Optional[IntelligentScoringSystem] = None
 
 # Embedding ayarları
 embedding_settings = config.get("embedding_settings", {})
@@ -124,7 +127,7 @@ DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings["default_results_per_site"]
 persona_search_config = config["persona_search_configs"]
 
 
-def collect_data_for_all_personas(selected_personas=None, results_per_site=None):
+def collect_data_for_all_personas(selected_personas=None, results_per_site=None, persona_configs=None):
     """
     Tüm persona'lar için iş ilanlarını toplar ve CSV yolunu döner.
 
@@ -140,9 +143,10 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
 
     all_collected_jobs_list = []
 
-    personas = persona_search_config.items()
+    cfg = persona_configs or persona_search_config
+    personas = cfg.items()
     if selected_personas:
-        personas = [(p, cfg) for p, cfg in persona_search_config.items() if p in selected_personas]
+        personas = [(p, cfg[p]) for p in selected_personas if p in cfg]
 
     for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
         logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
@@ -211,9 +215,27 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
 
     threshold = similarity_threshold if similarity_threshold is not None else MIN_SIMILARITY_THRESHOLD
 
+    cv_text = Path(config["paths"]["cv_file"]).read_text(encoding="utf-8")
+    analyzer = CVAnalyzer()
+    ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
+
+    personas_cfg = persona_search_config
+    if ai_metadata.get("target_job_titles"):
+        personas_cfg = build_dynamic_personas(ai_metadata["target_job_titles"])
+    else:
+        logger.warning("AI metadata missing - using static personas")
+
+    if ai_metadata.get("key_skills"):
+        weight = config["scoring_system"].get("dynamic_skill_weight", 10)
+        for skill in ai_metadata["key_skills"]:
+            config["scoring_system"]["description_weights"]["positive"][skill] = weight
+
+    global scoring_system
+    scoring_system = IntelligentScoringSystem(config)
+
     # 1. Veri toplama
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
-    csv_path = collect_data_for_all_personas(selected_personas, results_per_site)
+    csv_path = collect_data_for_all_personas(selected_personas, results_per_site, personas_cfg)
     if not csv_path:
         logger.error("❌ Veri toplama başarısız - analiz durduruluyor!")
         return
