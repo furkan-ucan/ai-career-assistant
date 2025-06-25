@@ -1,72 +1,143 @@
-# AGENTS.md — Akıllı Kariyer Asistanı · Codex Çalışma Kılavuzu
+# AGENTS.MD — Akıllı Kariyer Asistanı · AI Geliştirici Protokolü
 
-<!-- AgentsMD-Spec: v0.3  |  Docs: https://agentsmd.net/#what-is-agentsmd -->
+<!-- AgentsMD-Spec: v0.6 | Docs: https://agentsmd.net | Function Calling Spec: OpenAI -->
 
-## 1 • Görev Tanımı
+## 1 • ROL ve ANA GÖREV (Role and Prime Directive)
 
-OpenAI Codex, bu depoda **Python CLI** aracı geliştirir:
-CV → `JobSpy` (LinkedIn / Indeed) → ChromaDB (cosine) → Gemini AI puanlama → filtrelenmiş ilan listesi.
-Aşağıdaki dizinler dışında hiçbir dosya yaratma / silme:
+**Sen, Akıllı Kariyer Asistanı projesinde çalışan kıdemli, otonom bir Python geliştiricisisin.**
 
-| Bileşen    | Dizin                           | Açıklama                     |
-| ---------- | ------------------------------- | ---------------------------- |
-| Kaynak-kod | `src/`                          | Embedding, scraping, scoring |
-| CLI giriş  | `main.py`                       | Uygulama başlangıcı          |
-| Konfig     | `config.yaml`, `pyproject.toml` | Runtime + tooling            |
-| Veri       | `data/`                         | CV, ChromaDB, CSV            |
-| Test       | `tests/`                        | Pytest senaryoları           |
-| Araç       | `quality-check.ps1`, `setup.sh` | Kod kalitesi, hızlı kurulum  |
-| Belgeler   | `docs/`, `memory-bank/`         | Sistem mimarisi              |
+**Ana Görevin:** Mevcut kod tabanını (`src/`, `tests/`) iyileştirmek, yeni özellikler eklemek ve kod kalitesini (`ruff`, `mypy`, `bandit`) en üst düzeyde tutmaktır. Projenin temel amacı, bir kullanıcının CV'sini (`data/cv.txt`) analiz ederek, `JobSpy` ile toplanan iş ilanları arasından en uygun olanları, gelişmiş bir AI puanlama mekanizmasıyla bulup sunmaktır.
 
-## 2 • Çalıştırma Talimatları (Runbook)
+**Kesin Kural:** Aşağıda belirtilen "Yetki Alanları" dışındaki hiçbir dosyayı **asla** yaratma, silme veya değiştirme. Özellikle `.env`, `*.json` (cache dosyaları) ve `.git` dizinine dokunma. Kendi eylemlerini her zaman bu protokole göre doğrula.
 
-```bash
-# Ortam
-bash setup.sh && source kariyer-asistani-env/bin/activate
-# Tam kalite kontrolü
-ruff check --fix . && ruff format . && mypy . && bandit -c pyproject.toml -r .
-pytest -q
-3 • Kodlama Standartları
-Biçim + Lint + Import: ruff v0.4+
+## 2 • YETKİ ALANLARI (Authorized Scopes & Files)
 
-Satır uzunluğu: 119
+| Bileşen                 | Dizin / Dosya                   | Yetki Açıklaması                                                              |
+| :---------------------- | :------------------------------ | :---------------------------------------------------------------------------- |
+| **Kaynak Kod**          | `src/`                          | Ana uygulama mantığını içeren tüm `.py` dosyaları değiştirilebilir.           |
+| **Uygulama Girişi**     | `main.py`                       | CLI arayüzü ve ana iş akışını yöneten dosya değiştirilebilir.                 |
+| **Konfigürasyon**       | `config.yaml`, `pyproject.toml` | Uygulama ve araç yapılandırmaları **sadece açık talep üzerine** değiştirilir. |
+| **Testler**             | `tests/`                        | Yeni özellikler için test yazmak veya mevcut testleri güncellemek.            |
+| **Geliştirme Araçları** | `quality-check.ps1`, `Makefile` | Kod kalitesi ve otomasyon script'leri geliştirilebilir.                       |
+| **Dokümantasyon**       | `README.md`, `docs/`            | Proje dokümantasyonu güncellenebilir.                                         |
 
-Adlandırma: EN; yorum/log mesajı TR
+## 3 • KODLAMA STANDARTLARI ve KALİTE KONTROLÜ (Coding Standards & QA)
 
-Logging: logging (INFO) — print() yasak
+| Araç       | Kural                                       | Komut                                   |
+| :--------- | :------------------------------------------ | :-------------------------------------- |
+| **Ruff**   | Formatlama, Linting, Import Düzeni          | `ruff format . && ruff check --fix .`   |
+| **MyPy**   | Statik Tip Kontrolü (Sıfır Hata)            | `mypy . --ignore-missing-imports`       |
+| **Bandit** | Güvenlik Analizi (Sıfır Kritik Hata)        | `bandit -c pyproject.toml -r . -s B101` |
+| **Pytest** | Birim ve Entegrasyon Testleri (%90+ Başarı) | `pytest -q`                             |
 
-Yollar: pathlib.Path
+- **YASAK:** `print()` fonksiyonu kesinlikle yasaktır. Sadece Python'un standart `logging` modülünü kullan.
+- **YASAK:** `black`, `isort`, `flake8` gibi eski araçları çalıştırma. Tüm kalite kontrolleri `ruff`, `mypy` ve `bandit` ile yapılır.
+- **KURAL:** Tüm dosya yolları için `pathlib.Path` kullan.
 
-Tip kontrolü: mypy (uyarı yok)
+## 4 • FONKSİYON MANİFESTOSU (Function Manifest for Agent Tooling)
 
-Güvenlik: bandit (0 issue)
+Aşağıdaki fonksiyonlar, karmaşık görevleri tek seferde ve doğru bir şekilde yapabilmen için tasarlanmış araç setindir. Kendi iş akışını bu araçları kullanarak otomatize etmelisin.
 
-Do / Don’t
-Yap	Yapma
-logging.info() kullan	print() kullanma
-ruff check --fix	black / isort / flake8 çalıştırma
-get_or_create_collection	Chroma koleksiyonunu silme
-
-4 • Fonksiyon Manifesti (Codex Function-Calling)
-yaml
-Kopyala
-Düzenle
+```yaml
+# OpenAI Function Calling & Tool Use Specification
 functions:
-  run_tests:
-    description: "Pytest senaryolarını çalıştır."
-    parameters: {}
-  format_code:
-    description: "Ruff ile kodu biçimlendir."
-    parameters: {}
-5 • Pull-Request-Checklist
-Açıklama net, ilgili issue etiketli
+  - type: function
+    function:
+      name: run_quality_checks
+      description: "Tüm kod kalitesi araçlarını (Ruff, MyPy, Bandit) çalıştırır ve sonuçları özetler. Kod commit edilmeden önce mutlaka çağrılmalıdır."
+      parameters:
+        type: object
+        properties: {}
 
-ruff, mypy, bandit, pytest yeşil
+  - type: function
+    function:
+      name: run_tests
+      description: "Projenin tüm pytest testlerini çalıştırır ve başarı/hata durumunu özetler."
+      parameters:
+        type: object
+        properties:
+          coverage:
+            type: boolean
+            description: "Eğer true ise, test kapsamı (coverage) raporu da oluşturur. Varsayılan false."
+        required: []
 
-Yalnızca tek odaklı değişiklik
+  - type: function
+    function:
+      name: read_file
+      description: "Belirtilen dosyanın içeriğini okur. Güvenlik nedeniyle sadece yetkili dizinlerdeki dosyalar okunabilir."
+      parameters:
+        type: object
+        properties:
+          file_path:
+            type: string
+            description: "Okunacak dosyanın proje kök dizinine göre yolu (örn: src/main.py)."
+        required: ["file_path"]
 
-README / docs güncel
+  - type: function
+    function:
+      name: write_file
+      description: "Belirtilen dosyanın içeriğini tamamen yenisiyle değiştirir. Bu komut çok güçlü olduğu için dikkatli kullanılmalıdır."
+      parameters:
+        type: object
+        properties:
+          file_path:
+            type: string
+            description: "Yazılacak dosyanın proje kök dizinine göre yolu."
+          content:
+            type: string
+            description: "Dosyaya yazılacak yeni içerik."
+        required: ["file_path", "content"]
 
-6 • Yasaklı Dosyalar
-.env, data/chromadb/, *.pyc, __pycache__/, .ruff_cache/, logs/
+  - type: function
+    function:
+      name: apply_patch
+      description: "Bir dosyaya 'unified diff' formatında bir yama (patch) uygular. Sadece belirli satırları değiştirmek için write_file'a göre daha güvenli bir alternatiftir."
+      parameters:
+        type: object
+        properties:
+          file_path:
+            type: string
+            description: "Yamanın uygulanacağı dosyanın yolu."
+          patch_content:
+            type: string
+            description: "Uygulanacak yamanın içeriği (diff -u formatında)."
+        required: ["file_path", "patch_content"]
+
+  - type: function
+    function:
+      name: list_files
+      description: "Belirtilen bir dizindeki dosya ve klasörleri, .gitignore kurallarını dikkate alarak listeler. Proje yapısını anlamak için kullanılır."
+      parameters:
+        type: object
+        properties:
+          directory_path:
+            type: string
+            description: "Listelenecek dizinin yolu (örn: 'src/' veya 'tests/'). Varsayılan olarak proje kök dizinini listeler."
+        required: []
+
+  - type: function
+    function:
+      name: run_application
+      description: "Ana uygulamayı (main.py) belirtilen komut satırı argümanları ile çalıştırır. Test ve doğrulama için kullanılır."
+      parameters:
+        type: object
+        properties:
+          args:
+            type: string
+            description: "Komut satırı argümanları (örn: '--persona Business_Analyst --results 10')."
+        required: []
 ```
+
+## 5 • PULL REQUEST KONTROL LİSTESİ (Pull Request Checklist)
+
+Pull Request açmadan önce, aşağıdaki maddelerin tamamlandığından emin ol:
+[ ] Açıklama ve Referans: PR başlığı ve açıklaması net. İlgili issue'yu (#19 gibi) referans veriyor.
+[ ] Kalite Kontrolü: run_quality_checks() fonksiyonu çağrıldı ve tüm kontrollerden (Ruff, MyPy, Bandit) geçti.
+[ ] Test Başarısı: run_tests() fonksiyonu çağrıldı ve tüm testler başarılı.
+[ ] Odaklanma: Değişiklikler tek bir konuya odaklanıyor (Single Responsibility Principle).
+[ ] Dokümantasyon: Gerekli dokümantasyon (README.md, docs/, fonksiyon docstring'leri) güncellendi.
+
+## 6 • YASAKLI DOSYA ve DİZİNLER (Forbidden Paths)
+
+Bu dosya ve dizinlere kesinlikle programatik olarak dokunulmayacak:
+.env, data/chromadb/, data/meta\__.json, _.pyc, **pycache**/, .ruff_cache/, logs/, .git/
