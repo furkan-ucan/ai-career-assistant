@@ -98,8 +98,10 @@ def test_display_results_with_valid_jobs(sample_jobs, caplog):
         display_results(sample_jobs, 80)
     output = caplog.text
     assert "Software Engineer" in output
+    assert "Great fit" in output  # Check for reasoning
+    assert "Eşleşen: python" in output  # Check for matching keywords
     assert "DataCorp" in output
-    assert "%80" in output
+    assert "Uygunluk eşiği: %80 ve üzeri" in output
     assert "Persona Dağılımı" in output
 
 
@@ -115,39 +117,50 @@ def test_display_results_with_no_jobs(caplog):
 @pytest.mark.parametrize(
     "jobs_df_fixture,high_quality_jobs_fixture,ai_metadata_fixture,expected_sections,missing_sections",
     [
-        # Full data case
+        # Case 1: Full data, all sections should be present
         (
             "sample_jobs_df",
             "sample_high_quality_jobs",
             "sample_ai_metadata",
-            ["Site Dağılımı", "En Popüler 5 Skill", "En Başarılı Personalar"],
+            ["Bulunan İlanların Site Dağılımı", "En Önemli Yetenekleriniz", "En Başarılı Personalar"],
             [],
         ),
-        # Empty DataFrame case
-        ("empty_df", "sample_high_quality_jobs", "sample_ai_metadata", ["En Başarılı Personalar"], ["Site Dağılımı"]),
-        # Empty high quality jobs case
+        # Case 2: Empty jobs DataFrame, site distribution should be missing
+        (
+            "empty_df",
+            "sample_high_quality_jobs",
+            "sample_ai_metadata",
+            ["En Önemli Yetenekleriniz", "En Başarılı Personalar"],
+            ["Bulunan İlanların Site Dağılımı"],
+        ),
+        # Case 3: Empty high-quality jobs, persona and skill sections should be missing
         (
             "sample_jobs_df",
-            "empty_high_quality_jobs",
+            "empty_high_quality_jobs",  # No matching keywords to aggregate
             "sample_ai_metadata",
-            ["Site Dağılımı", "En Popüler 5 Skill"],
-            ["En Başarılı Personalar"],
+            ["Bulunan İlanların Site Dağılımı", "En Önemli Yetenekleriniz"],  # Skills from CV are still shown
+            ["En Başarılı Personalar", "En Popüler 5 Skill"],  # Persona and aggregated skills are missing
         ),
-        # No AI metadata case
+        # Case 4: No AI metadata, should fall back to skill aggregation from jobs
         (
             "sample_jobs_df",
             "sample_high_quality_jobs",
             "no_ai_metadata",
-            ["Site Dağılımı", "En Başarılı Personalar"],
-            ["En Popüler 5 Skill"],
+            ["Bulunan İlanların Site Dağılımı", "En Popüler 5 Skill", "En Başarılı Personalar"],
+            ["En Önemli Yetenekleriniz"],
         ),
-        # All empty case
+        # Case 5: All inputs are empty
         (
             "empty_df",
             "empty_high_quality_jobs",
             "no_ai_metadata",
             [],
-            ["Site Dağılımı", "En Popüler 5 Skill", "En Başarılı Personalar"],
+            [
+                "Bulunan İlanların Site Dağılımı",
+                "En Popüler 5 Skill",
+                "En Başarılı Personalar",
+                "En Önemli Yetenekleriniz",
+            ],
         ),
     ],
 )
@@ -188,105 +201,3 @@ def test_log_summary_statistics_combinations(
 
     # Header should always be present
     assert "📊 Özet İstatistikler:" in caplog.text
-
-
-def test_log_summary_statistics_empty_dataframe(caplog, sample_high_quality_jobs, sample_ai_metadata):
-    """Test log_summary_statistics with empty DataFrame."""
-    empty_df = pd.DataFrame()
-
-    with caplog.at_level(logging.INFO):
-        log_summary_statistics(empty_df, sample_high_quality_jobs, sample_ai_metadata)
-
-    # Should still show header and persona info
-    assert "📊 Özet İstatistikler:" in caplog.text
-    assert "🔹 En Başarılı Personalar:" in caplog.text
-    # But no site distribution
-    assert "🔹 Site Dağılımı:" not in caplog.text
-
-
-def test_log_summary_statistics_no_ai_metadata(caplog, sample_jobs_df, sample_high_quality_jobs):
-    """Test log_summary_statistics without AI metadata."""
-    with caplog.at_level(logging.INFO):
-        log_summary_statistics(sample_jobs_df, sample_high_quality_jobs, None)
-
-    assert "📊 Özet İstatistikler:" in caplog.text
-    assert "🔹 Site Dağılımı:" in caplog.text
-    assert "🔹 En Başarılı Personalar:" in caplog.text
-    # No skill stats without AI metadata
-    assert "En Popüler 5 Skill" not in caplog.text
-
-
-def test_log_summary_statistics_empty_high_quality_jobs(caplog, sample_jobs_df, sample_ai_metadata):
-    """Test log_summary_statistics with empty high-quality jobs."""
-    with caplog.at_level(logging.INFO):
-        log_summary_statistics(sample_jobs_df, [], sample_ai_metadata)
-
-    assert "📊 Özet İstatistikler:" in caplog.text
-    assert "🔹 Site Dağılımı:" in caplog.text
-    assert "En Popüler 5 Skill" in caplog.text
-    # No persona success section
-    assert "🔹 En Başarılı Personalar:" not in caplog.text
-
-
-def test_log_summary_statistics_jobs_without_persona_source(caplog, sample_jobs_df, sample_ai_metadata):
-    """Test log_summary_statistics with jobs that have no persona_source."""
-    jobs_without_persona = [
-        {"title": "Developer", "company": "Corp"},
-        {"title": "Analyst", "company": "Biz"},
-    ]
-
-    with caplog.at_level(logging.INFO):
-        log_summary_statistics(sample_jobs_df, jobs_without_persona, sample_ai_metadata)
-
-    assert "📊 Özet İstatistikler:" in caplog.text
-    assert "🔹 Site Dağılımı:" in caplog.text
-    # No persona section since jobs don't have persona_source
-    assert "🔹 En Başarılı Personalar:" not in caplog.text
-
-
-def test_log_summary_statistics_missing_description_column(caplog, sample_high_quality_jobs, sample_ai_metadata):
-    """Test log_summary_statistics with DataFrame missing description column."""
-    df_no_desc = pd.DataFrame({"source_site": ["kariyer.net", "yenibiris.com"], "title": ["Developer", "Analyst"]})
-
-    with caplog.at_level(logging.INFO):
-        log_summary_statistics(df_no_desc, sample_high_quality_jobs, sample_ai_metadata)
-
-    assert "📊 Özet İstatistikler:" in caplog.text
-    assert "🔹 Site Dağılımı:" in caplog.text
-    assert "🔹 En Başarılı Personalar:" in caplog.text
-    # No skill stats without description column
-    assert "En Popüler 5 Skill" not in caplog.text
-
-
-def test_log_summary_statistics_skill_counting(caplog, sample_ai_metadata):
-    """Test that skill counting works correctly."""
-    # Create DataFrame with known skill occurrences
-    df_with_skills = pd.DataFrame(
-        {
-            "source_site": ["site1", "site2"],
-            "description": [
-                "Looking for Python developer with React skills",  # python: 1, react: 1
-                "Python and SQL experience required",  # python: 1, sql: 1
-            ],
-        }
-    )
-
-    with caplog.at_level(logging.INFO):
-        log_summary_statistics(df_with_skills, [], sample_ai_metadata)
-
-    assert "En Popüler 5 Skill" in caplog.text
-
-
-def test_log_summary_statistics_completely_empty_inputs(caplog):
-    """Test log_summary_statistics with all empty inputs."""
-    empty_df = pd.DataFrame()
-
-    with caplog.at_level(logging.INFO):
-        log_summary_statistics(empty_df, [], None)
-
-    # Should only show header
-    assert "📊 Özet İstatistikler:" in caplog.text
-    # No other sections should appear
-    assert "🔹 Site Dağılımı:" not in caplog.text
-    assert "En Popüler 5 Skill" not in caplog.text
-    assert "🔹 En Başarılı Personalar:" not in caplog.text

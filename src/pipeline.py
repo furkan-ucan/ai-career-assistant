@@ -16,6 +16,7 @@ from .cv_analyzer import TOKEN_LIMIT, CVAnalyzer
 from .cv_processor import CVProcessor
 from .data_collector import collect_job_data
 from .embedding_service import EmbeddingService
+from .exceptions import CVNotFoundError
 from .filter import score_jobs
 from .intelligent_scoring import IntelligentScoringSystem
 from .persona_builder import build_dynamic_personas
@@ -144,10 +145,17 @@ def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
     Returns:
         ai_metadata (dict): Metadata extracted from the CV, including target job titles and skill information.
         personas_cfg (dict): Persona configuration, dynamically built from AI metadata if available, otherwise static.
+
+    Raises:
+        CVNotFoundError: If CV processing fails.
     """
-    cv_text = Path(config["paths"]["cv_file"]).read_text(encoding="utf-8")
-    analyzer = CVAnalyzer()
-    ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
+    try:
+        cv_text = Path(config["paths"]["cv_file"]).read_text(encoding="utf-8")
+        analyzer = CVAnalyzer()
+        ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
+    except CVNotFoundError as e:
+        logger.error("CV işleme hatası: %s", e)
+        raise
 
     personas_cfg = persona_search_config
     if ai_metadata and ai_metadata.get("target_job_titles"):
@@ -439,17 +447,11 @@ def _execute_full_pipeline(
 
     similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, threshold)
 
-    if (rerank_settings.get("enabled", False) and 
-        ai_metadata.get("cv_summary") and 
-        rerank_flag and 
-        similar_jobs):
+    if rerank_settings.get("enabled", False) and ai_metadata.get("cv_summary") and rerank_flag and similar_jobs:
         pool_size = rerank_settings.get("rerank_pool_size", len(similar_jobs))
         if pool_size <= 0:
             pool_size = len(similar_jobs)
-        similar_jobs = _rerank_with_ai_analysis(
-            similar_jobs[:pool_size],
-            str(ai_metadata.get("cv_summary"))
-        )
+        similar_jobs = _rerank_with_ai_analysis(similar_jobs[:pool_size], str(ai_metadata.get("cv_summary")))
 
     display_results(similar_jobs, threshold)
     try:
@@ -472,7 +474,12 @@ def analyze_and_find_best_jobs(
 
     threshold = similarity_threshold if similarity_threshold is not None else MIN_SIMILARITY_THRESHOLD
 
-    ai_metadata, personas_cfg = _setup_ai_metadata_and_personas()
+    try:
+        ai_metadata, personas_cfg = _setup_ai_metadata_and_personas()
+    except CVNotFoundError as e:
+        logger.error("İşlem durduruldu: %s", e)
+        return None
+
     if not _configure_scoring_system(ai_metadata):
         return
 
