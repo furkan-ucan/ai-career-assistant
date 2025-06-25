@@ -8,7 +8,7 @@ def test_cache_key_generation():
     text = "example cv"
     key = analyzer._get_cache_key(text)
     # Cache key now includes prompt version for invalidation
-    expected = f"v1.1_{hashlib.sha256(text.encode('utf-8')).hexdigest()[:16]}"
+    expected = f"v2.0_{hashlib.sha256(text.encode('utf-8')).hexdigest()[:16]}"
     assert key == expected
 
 
@@ -94,3 +94,20 @@ def test_validate_skill_metadata_mismatch(monkeypatch):
     assert len(skills) == len(importance)
     # Check that the third skill has the default padded importance
     assert len(importance) == 3 and abs(importance[2] - 0.8) < 0.01
+
+
+def test_cv_summary_present(monkeypatch):
+    analyzer = CVAnalyzer()
+
+    def mock_api_call(cv_text: str):
+        return {
+            "key_skills": ["python"],
+            "target_job_titles": ["Dev"],
+            "skill_importance": [0.9],
+            "cv_summary": "Skilled developer",
+        }
+
+    monkeypatch.setattr(analyzer, "_call_gemini_api", mock_api_call)
+    result = analyzer.extract_metadata_from_cv("test cv")
+    assert "cv_summary" in result
+    assert isinstance(result["cv_summary"], str) and result["cv_summary"]
