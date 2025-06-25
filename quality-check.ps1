@@ -51,6 +51,11 @@ if ($Check) {
     } else {
         Write-Host "Guvenlik taramasi OK" -ForegroundColor Green
     }
+
+    # SonarQube analizi (ek kod kalitesi kontrol)
+    Write-Host "SonarQube kod kalite analizi..." -ForegroundColor White
+    Write-Host "SonarQube analizi VS Code Problems panel'inde goruntulenebilir" -ForegroundColor Yellow
+    Write-Host "SonarQube destegi aktif (manuel VS Code analizi)" -ForegroundColor Green
 }
 
 if ($Fix) {

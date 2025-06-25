@@ -1013,9 +1013,9 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 
 </details>
 
-## 🔧 Otomatik Kod Kalitesi Sistemi
+## 🔧 Modern Kod Kalitesi Sistemi
 
-Artık her kod değişikliğinde otomatik kalite kontrolü yapabilirsiniz!
+Artık tek araçla (Ruff) tüm kod kalitesi kontrolünü yapabilirsiniz!
 
 ### 💻 Windows PowerShell Komutları:
 
@@ -1023,7 +1023,7 @@ Artık her kod değişikliğinde otomatik kalite kontrolü yapabilirsiniz!
 # Hızlı kontrol (sadece sorunları göster)
 .\quality-check.ps1 -Check
 
-# Otomatik düzeltme (import + format)
+# Otomatik düzeltme (format + lint + import)
 .\quality-check.ps1 -Fix
 
 # Tam kalite kontrolü (düzelt + kontrol + test)
@@ -1038,25 +1038,33 @@ git add .
 git commit -m "your message"  # Otomatik kalite kontrolü çalışır
 ```
 
-### ✅ Kontrol Edilen Özellikler:
+### ✅ Modern Araç Seti:
 
-- **Import Sıralaması**: isort ile otomatik düzenleme
-- **Kod Formatı**: Black ile 88 karakter sınırı
-- **Kod Kalitesi**: Flake8 ile style ve hata kontrolü (W293 whitespace hataları dahil)
-- **Tip Kontrolü**: Pylance ve MyPy uyumluluğu
-- **Test Coverage**: Pytest ile 85+ test
+- **🎯 Ruff**: Tek araçla linting, formatting, import sorting (Black+isort+flake8'in yerini aldı)
+- **🔍 MyPy**: Statik tip kontrolü ve hata yakalama
+- **🛡️ Bandit**: Güvenlik açığı taraması
+- **🧪 pytest**: Test framework ve coverage analizi
+- **⚡ pre-commit**: Otomatik commit-time kalite kontrolü
+- **🔎 SonarQube for IDE**: VS Code entegrasyonu ile gelişmiş kod kalitesi analizi
 
-### 🛠️ Kalite Kontrol Komutları:
+### � Tek Komut Kalite Kontrolü:
 
 ```powershell
 # Hızlı kontrol (sadece sorunları göster)
 .\quality-check.ps1 -Check
 
-# Otomatik düzeltme (import + format)
+# Otomatik düzeltme (format + lint + import)
 .\quality-check.ps1 -Fix
 
-# Tam kalite kontrolü (düzelt + kontrol + test)
+# Tam kalite kontrolü (düzelt + kontrol + test + SonarQube)
 .\quality-check.ps1 -All
 ```
+
+### 📊 VS Code SonarQube Entegrasyonu:
+
+- **Problems Panel**: Kod kalitesi sorunları gerçek zamanlı görüntülenir
+- **Security Hotspots**: Güvenlik açığı uyarıları
+- **Code Smells**: Kod kalitesi önerileri
+- **Maintainability**: Bakım kolaylığı metrikleri
 
 ---

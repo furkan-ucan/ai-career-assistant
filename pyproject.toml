@@ -136,3 +136,31 @@ skips = [
     "B101",
     "B603",
 ] # Skip assert_used and subprocess_without_shell_equals_true
+
+# ==========================================
+# SonarQube Analysis Configuration
+# ==========================================
+[tool.sonarqube]
+# Project metadata
+project_key = "akilli-kariyer-asistani"
+project_name = "Akıllı Kariyer Asistanı"
+project_version = "1.0.0"
+
+# Source and test paths
+source_dirs = ["src", "main.py"]
+test_dirs = ["tests"]
+
+# Exclusions for SonarQube analysis
+exclusions = [
+    "**/__pycache__/**",
+    "**/.pytest_cache/**",
+    "**/.mypy_cache/**",
+    "**/.ruff_cache/**",
+    "**/kariyer-asistani-env/**",
+    "**/logs/**",
+    "**/data/**"
+]
+
+# Quality gate settings
+quality_gate_wait = false
+coverage_exclusions = ["**/*test*.py", "**/tests/**"]
