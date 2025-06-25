@@ -72,17 +72,16 @@ def test_apply_skill_weights():
     if "scoring_system" not in config:
         config["scoring_system"] = {"description_weights": {"positive": {}}}
 
-    # Test core skill (importance >= 0.85)
-    _apply_skill_weights("python", 0.9, 10)
-    assert config["scoring_system"]["description_weights"]["positive"]["python"] == 15
+    min_imp = 0.75
 
-    # Test secondary skill (importance >= 0.7)
-    _apply_skill_weights("sql", 0.8, 10)
-    assert config["scoring_system"]["description_weights"]["positive"]["sql"] == 10
+    _apply_skill_weights("python", 0.9, 10, min_imp)
+    assert config["scoring_system"]["description_weights"]["positive"]["python"] == 9
 
-    # Test familiar skill (importance < 0.7)
-    _apply_skill_weights("excel", 0.5, 10)
-    assert config["scoring_system"]["description_weights"]["positive"]["excel"] == 6
+    _apply_skill_weights("sql", 0.8, 10, min_imp)
+    assert config["scoring_system"]["description_weights"]["positive"]["sql"] == 8
+
+    _apply_skill_weights("excel", 0.5, 10, min_imp)
+    assert "excel" not in config["scoring_system"]["description_weights"]["positive"]
 
 
 @patch("src.pipeline.IntelligentScoringSystem")
@@ -91,13 +90,21 @@ def test_configure_scoring_system_with_ai_metadata(mock_scoring_class):
     from src.pipeline import _configure_scoring_system, config
 
     # Setup config
-    config["scoring_system"] = {"dynamic_skill_weight": 10, "description_weights": {"positive": {}}}
+    config["scoring_system"] = {
+        "dynamic_skill_weight": 10,
+        "min_importance_for_scoring": 0.75,
+        "description_weights": {"positive": {}},
+    }
 
-    ai_metadata = {"key_skills": ["python", "sql"], "skill_importance": [0.9, 0.8]}
+    ai_metadata = {"key_skills": ["python", "excel"], "skill_importance": [0.9, 0.7]}
 
     result = _configure_scoring_system(ai_metadata)
     assert result is True
     mock_scoring_class.assert_called_once_with(config)
+
+    weights = config["scoring_system"]["description_weights"]["positive"]
+    assert weights["python"] == 9
+    assert "excel" not in weights
 
 
 @patch("src.pipeline.IntelligentScoringSystem")
