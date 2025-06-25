@@ -47,14 +47,15 @@ VS Code `settings.json` dosyanıza eklenmiş (hiçbir ek konfigürasyon gerekmez
 ## 🌐 3. Connected Mode (İleri Düzey - Opsiyonel)
 
 **Connected Mode** yalnızca şu durumlarda gereklidir:
+
 - Takım çalışması ile merkezi kalite kuralları
 - Enterprise güvenlik kuralları
 - Kalite kapıları (quality gates) gereksinimleri
 
-| Kullanım Türü          | Host URL & Token Gerekli? | Kullanım Durumu                                         |
-| ---------------------- | ------------------------- | ------------------------------------------------------- |
-| **Standalone Mode**    | ❌ Hayır                  | Bireysel geliştirme, yerel kalite kontrolü             |
-| **Connected Mode**     | ✅ Evet                   | Takım çalışması, merkezi kalite kuralları, enterprise  |
+| Kullanım Türü       | Host URL & Token Gerekli? | Kullanım Durumu                                       |
+| ------------------- | ------------------------- | ----------------------------------------------------- |
+| **Standalone Mode** | ❌ Hayır                  | Bireysel geliştirme, yerel kalite kontrolü            |
+| **Connected Mode**  | ✅ Evet                   | Takım çalışması, merkezi kalite kuralları, enterprise |
 
 ### 3A. SonarCloud (Ücretsiz, Public Projeler)
 
@@ -76,11 +77,13 @@ VS Code `settings.json` dosyanıza eklenmiş (hiçbir ek konfigürasyon gerekmez
 ```
 
 **SonarCloud için:**
+
 - Connection Type: SonarCloud
 - Organization Key: `your-username`
 - Token: `your_generated_token`
 
 **SonarQube Server için:**
+
 - Connection Type: SonarQube Server
 - Server URL: `https://your-sonar-server.com`
 - Token: `your_server_token`
@@ -108,6 +111,7 @@ python -m pytest --cov=src --cov=main --cov-report=xml --junitxml=test-results.x
 ```
 
 Bu komut şu dosyaları üretir:
+
 - `coverage.xml` → Kod kapsama raporu
 - `test-results.xml` → Test sonuçları
 
@@ -147,9 +151,9 @@ Bu komut şu dosyaları üretir:
 // .vscode/settings.json
 {
   "sonarlint.rules": {
-    "python:S1134": "off",    // FIXME comments
-    "python:S125": "warn",    // Commented code
-    "python:S2068": "error"   // Hard-coded credentials
+    "python:S1134": "off", // FIXME comments
+    "python:S125": "warn", // Commented code
+    "python:S2068": "error" // Hard-coded credentials
   }
 }
 ```
@@ -159,12 +163,14 @@ Bu komut şu dosyaları üretir:
 GitHub Actions workflow hazır: `.github/workflows/quality.yml`
 
 Secrets eklemeyi unutmayın:
+
 - `SONAR_TOKEN`: SonarCloud/Server token'ı
 - `SONAR_HOST_URL`: Server URL'si (SonarCloud için gereksiz)
 
 ## 🆘 7. Sorun Giderme
 
 ### Eklenti Çalışmıyor
+
 ```bash
 # VS Code Command Palette
 > Developer: Reload Window
@@ -172,6 +178,7 @@ Secrets eklemeyi unutmayın:
 ```
 
 ### Connection Sorunları
+
 ```bash
 # Token'ları kontrol edin
 # Firewall/proxy ayarlarını gözden geçirin
@@ -179,14 +186,11 @@ Secrets eklemeyi unutmayın:
 ```
 
 ### Performance Sorunları
+
 ```json
 {
   "sonarlint.analyzeOpenFilesOnly": true,
-  "sonarlint.excludedFiles": [
-    "**/.git/**",
-    "**/__pycache__/**",
-    "**/logs/**"
-  ]
+  "sonarlint.excludedFiles": ["**/.git/**", "**/__pycache__/**", "**/logs/**"]
 }
 ```
 
@@ -199,6 +203,7 @@ Secrets eklemeyi unutmayın:
 ---
 
 **💡 Önerilen Yaklaşım**:
+
 1. **Başlangıç**: Standalone mode ile başlayın (host/token gerekmez)
 2. **Değerlendirme**: Birkaç hafta kullanın, ihtiyaçlarınızı değerlendirin
 3. **Yükseltme**: Takım çalışması gerekiyorsa Connected Mode'a geçin

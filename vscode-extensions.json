@@ -379,6 +379,12 @@
       "description": "React Developer Tools for VS Code"
     },
     {
+      "id": "ms-python.mypy-type-checker",
+      "name": "Mypy Type Checker",
+      "version": "latest",
+      "description": "Type checking support for Python using Mypy"
+    },
+    {
       "id": "sonarsource.sonarlint-vscode",
       "name": "SonarQube for IDE",
       "version": "latest",
@@ -451,7 +457,7 @@
       "description": "All you need to write Markdown (keyboard shortcuts, table of contents, auto preview and more)"
     }
   ],
-  "total_extensions": 72,
+  "total_extensions": 73,
   "categories": {
     "python_development": [
       "ms-python.python",
@@ -521,6 +527,7 @@
       "chakrounanas.turbo-console-log",
       "usernamehw.errorlens",
       "streetsidesoftware.code-spell-checker",
+      "ms-python.mypy-type-checker",
       "sonarsource.sonarlint-vscode",
       "gruntfuggly.todo-tree"
     ],

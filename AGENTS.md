@@ -23,13 +23,13 @@
 
 ## 3 • KODLAMA STANDARTLARI ve KALİTE KONTROLÜ (Coding Standards & QA)
 
-| Araç          | Kural                                       | Komut                                       |
-| :------------ | :------------------------------------------ | :------------------------------------------ |
-| **Ruff**      | Formatlama, Linting, Import Düzeni          | `ruff format . && ruff check --fix .`       |
-| **MyPy**      | Statik Tip Kontrolü (Sıfır Hata)            | `mypy . --ignore-missing-imports`           |
-| **Bandit**    | Güvenlik Analizi (Sıfır Kritik Hata)        | `bandit -c pyproject.toml -r . -s B101`     |
-| **Pytest**   | Birim ve Entegrasyon Testleri (%90+ Başarı) | `pytest -q`                                 |
-| **SonarQube** | Gelişmiş Kod Kalitesi (VS Code Problems)    | `VS Code Problems Panel` (Manuel İnceleme)  |
+| Araç          | Kural                                       | Komut                                      |
+| :------------ | :------------------------------------------ | :----------------------------------------- |
+| **Ruff**      | Formatlama, Linting, Import Düzeni          | `ruff format . && ruff check --fix .`      |
+| **MyPy**      | Statik Tip Kontrolü (Sıfır Hata)            | `mypy . --ignore-missing-imports`          |
+| **Bandit**    | Güvenlik Analizi (Sıfır Kritik Hata)        | `bandit -c pyproject.toml -r . -s B101`    |
+| **Pytest**    | Birim ve Entegrasyon Testleri (%90+ Başarı) | `pytest -q`                                |
+| **SonarQube** | Gelişmiş Kod Kalitesi (VS Code Problems)    | `VS Code Problems Panel` (Manuel İnceleme) |
 
 - **YASAK:** `print()` fonksiyonu kesinlikle yasaktır. Sadece Python'un standart `logging` modülünü kullan.
 - **YASAK:** `black`, `isort`, `flake8` gibi eski araçları çalıştırma. Tüm kalite kontrolleri `ruff`, `mypy` ve `bandit` ile yapılır.
