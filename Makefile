@@ -2,10 +2,10 @@
 
 # Yardım
 help:
-	@echo "Akıllı Kariyer Asistanı - Geliştirme Komutları"
-	@echo "=============================================="
-	@echo "format         : Kodu Black ile formatla"
-	@echo "lint           : Flake8 ile kod kalitesi kontrolü"
+	@echo "Akıllı Kariyer Asistanı - Modern Geliştirme Komutları"
+	@echo "==================================================="
+	@echo "format         : Kodu Ruff ile formatla"
+	@echo "lint           : Ruff ile kod kalitesi kontrolü"
 	@echo "test           : Testleri çalıştır"
 	@echo "run            : Ana uygulamayı çalıştır"
 	@echo "clean          : Geçici dosyaları temizle"
@@ -14,13 +14,13 @@ help:
 
 # Kod formatları
 format:
-	isort main.py src/ --profile black
-	black main.py src/ --line-length=88
-	@echo "✅ Kod formatlaması tamamlandı"
+	ruff check main.py src/ tree_generator.py --fix
+	ruff format main.py src/ tree_generator.py
+	@echo "✅ Ruff kod formatlaması tamamlandı"
 
 lint:
-	flake8 main.py src/
-	@echo "✅ Kod kalitesi kontrolü tamamlandı"
+	ruff check main.py src/ tree_generator.py
+	@echo "✅ Ruff kod kalitesi kontrolü tamamlandı"
 
 # Kod kalitesi (Windows için PowerShell script kullan)
 check-quality:

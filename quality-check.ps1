@@ -1,132 +1,102 @@
-﻿# Akilli Kariyer Asistani - Otomatik Kod Kalitesi Scripti
-# Bu script her calistirildiginda kodu kontrol eder ve duzeltir
+﻿# Akilli Kariyer Asistani - Modern Kod Kalitesi Otomasyonu
+# =========================================================
+# Modern Python tooling: Ruff + MyPy + Bandit
 
 param(
-    [switch]$Check,      # Sadece kontrol et
-    [switch]$Fix,        # Duzelt
-    [switch]$All         # Kontrol + test + duzelt
+    [switch]$Check,
+    [switch]$Fix,
+    [switch]$All
 )
 
+# Ana Baslik
+Write-Host ""
 Write-Host "Akilli Kariyer Asistani - Kod Kalitesi Otomasyonu" -ForegroundColor Green
 Write-Host "=================================================" -ForegroundColor Green
 
-# Sanal ortam aktif mi kontrol et
-if (-not (Test-Path "kariyer-asistani-env\Scripts\python.exe")) {
-    Write-Host "Sanal ortam bulunamadi! Once 'make setup-env' calistirin." -ForegroundColor Red
-    exit 1
-}
-
-# Sanal ortami aktiflestir
-Write-Host "Sanal ortam aktiflestiiriliyor..." -ForegroundColor Yellow
-& ".\kariyer-asistani-env\Scripts\Activate.ps1"
-
 if ($Check) {
-    Write-Host "🔍 Kod kalitesi kontrol ediliyor..." -ForegroundColor Cyan
+    Write-Host "Kod kalitesi kontrol ediliyor..." -ForegroundColor Cyan
 
-    # Ruff kontrolü (linting + formatting)
-    Write-Host "⚡ Ruff kod kalitesi kontrolü..." -ForegroundColor White
+    # Ruff kontrolu (linting + formatting)
+    Write-Host "Ruff kod kalitesi kontrolu..." -ForegroundColor White
     ruff check main.py src/ tree_generator.py --diff
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Ruff kod kalitesi sorunları bulundu!" -ForegroundColor Red
+        Write-Host "Ruff kod kalitesi sorunlari bulundu!" -ForegroundColor Red
     } else {
-        Write-Host "✅ Ruff kod kalitesi OK" -ForegroundColor Green
+        Write-Host "Ruff kod kalitesi OK" -ForegroundColor Green
     }
 
-    # Ruff format kontrolü
-    Write-Host "🎨 Ruff format kontrolü..." -ForegroundColor White
+    # Ruff format kontrolu
+    Write-Host "Ruff format kontrolu..." -ForegroundColor White
     ruff format main.py src/ tree_generator.py --check --diff
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Format düzeltilmeli!" -ForegroundColor Red
+        Write-Host "Format duzeltilmeli!" -ForegroundColor Red
     } else {
-        Write-Host "✅ Format OK" -ForegroundColor Green
+        Write-Host "Format OK" -ForegroundColor Green
     }
 
-    # MyPy tip kontrolü
-    Write-Host "🔍 MyPy tip kontrolü..." -ForegroundColor White
+    # MyPy tip kontrolu
+    Write-Host "MyPy tip kontrolu..." -ForegroundColor White
     mypy main.py src/ tree_generator.py --config-file=pyproject.toml
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "⚠️ MyPy tip uyarıları var (kritik değil)" -ForegroundColor Yellow
+        Write-Host "MyPy tip uyarilari var (kritik degil)" -ForegroundColor Yellow
     } else {
-        Write-Host "✅ MyPy OK" -ForegroundColor Green
+        Write-Host "MyPy OK" -ForegroundColor Green
     }
 
-    # Bandit güvenlik taraması
-    Write-Host "🔒 Bandit güvenlik taraması..." -ForegroundColor White
+    # Bandit guvenlik taramasi
+    Write-Host "Bandit guvenlik taramasi..." -ForegroundColor White
     bandit -c pyproject.toml -r main.py src/ tree_generator.py
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "⚠️ Güvenlik uyarıları var (kontrol edin)" -ForegroundColor Yellow
+        Write-Host "Guvenlik uyarilari var (kontrol edin)" -ForegroundColor Yellow
     } else {
-        Write-Host "✅ Güvenlik taraması OK" -ForegroundColor Green
-    }
-
-    # Geleneksel araçlar (yedek olarak)
-    Write-Host "� Geleneksel araç kontrolü..." -ForegroundColor White
-
-    # Flake8 kontrol (cognitive complexity dahil)
-    $lintResult = flake8 main.py src/ tree_generator.py --show-source 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "⚠️ Flake8 uyarıları var:" -ForegroundColor Yellow
-        Write-Host $lintResult -ForegroundColor Gray
-    } else {
-        Write-Host "✅ Flake8 OK" -ForegroundColor Green
+        Write-Host "Guvenlik taramasi OK" -ForegroundColor Green
     }
 }
 
 if ($Fix) {
-    Write-Host "🔧 Kod kalitesi sorunları düzeltiliyor..." -ForegroundColor Cyan
+    Write-Host "Kod kalitesi sorunlari duzeltiliyor..." -ForegroundColor Cyan
 
-    # Ruff ile otomatik düzeltme
-    Write-Host "⚡ Ruff otomatik düzeltmeler..." -ForegroundColor White
+    # Ruff ile otomatik duzeltme
+    Write-Host "Ruff otomatik duzeltmeler..." -ForegroundColor White
     ruff check main.py src/ tree_generator.py --fix
-    Write-Host "✅ Ruff lint sorunları düzeltildi" -ForegroundColor Green
+    Write-Host "Ruff lint sorunlari duzeltildi" -ForegroundColor Green
 
-    # Ruff ile format düzeltme
-    Write-Host "🎨 Ruff format düzeltiliyor..." -ForegroundColor White
+    # Ruff ile format duzeltme
+    Write-Host "Ruff format duzeltiliyor..." -ForegroundColor White
     ruff format main.py src/ tree_generator.py
-    Write-Host "✅ Format düzeltildi" -ForegroundColor Green
+    Write-Host "Format duzeltildi" -ForegroundColor Green
 
-    # Geleneksel araçlarla yedek düzeltme
-    Write-Host "🔧 Geleneksel araçlarla ek düzeltmeler..." -ForegroundColor White
-
-    # Import düzelt (isort)
-    isort main.py src/ tree_generator.py --profile black
-    Write-Host "✅ Import'lar düzeltildi" -ForegroundColor Green
-
-    # Black format (Ruff'a ek olarak)
-    black main.py src/ tree_generator.py --line-length=119
-    Write-Host "✅ Black format uygulandı" -ForegroundColor Green
-
-    Write-Host "🎉 Tüm kod kalitesi sorunları düzeltildi!" -ForegroundColor Green
+    Write-Host "Modern Ruff ile tum duzeltmeler tamamlandi!" -ForegroundColor Green
 }
 
 if ($All) {
-    Write-Host "🚀 Tam kalite kontrolü başlatılıyor..." -ForegroundColor Cyan
+    Write-Host "Tam kalite kontrolu baslatiliyor..." -ForegroundColor Cyan
 
-    # Önce düzelt
+    # Once duzelt
     & $PSScriptRoot\quality-check.ps1 -Fix
 
     # Sonra kontrol et
     & $PSScriptRoot\quality-check.ps1 -Check
 
-    # Testleri çalıştır
-    Write-Host "🧪 Testler çalıştırılıyor..." -ForegroundColor White
+    # Testleri calistir
+    Write-Host "Testler calistiriliyor..." -ForegroundColor White
     python -m pytest tests/ -v
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ Tüm testler başarılı!" -ForegroundColor Green
+        Write-Host "Tum testler basarili!" -ForegroundColor Green
     } else {
-        Write-Host "❌ Bazı testler başarısız!" -ForegroundColor Red
+        Write-Host "Bazi testler basarisiz!" -ForegroundColor Red
     }
 
-    Write-Host "🏆 Tam kalite kontrolü tamamlandı!" -ForegroundColor Green
+    Write-Host "Tam kalite kontrolu tamamlandi!" -ForegroundColor Green
 }
 
-# Parametresiz çalışırsa yardım göster
+# Parametresiz calisirsa yardim goster
 if (-not ($Check -or $Fix -or $All)) {
     Write-Host ""
-    Write-Host "💡 Kullanım:" -ForegroundColor Yellow
+    Write-Host "Kullanim:" -ForegroundColor Yellow
     Write-Host "  .\quality-check.ps1 -Check    # Sadece kontrol et" -ForegroundColor White
-    Write-Host "  .\quality-check.ps1 -Fix      # Sorunları düzelt" -ForegroundColor White
-    Write-Host "  .\quality-check.ps1 -All      # Düzelt + kontrol + test" -ForegroundColor White
+    Write-Host "  .\quality-check.ps1 -Fix      # Sorunlari duzelt" -ForegroundColor White
+    Write-Host "  .\quality-check.ps1 -All      # Duzelt + kontrol + test" -ForegroundColor White
     Write-Host ""
-    Write-Host "🎯 Hızlı kullanım: .\quality-check.ps1 -All" -ForegroundColor Cyan
+    Write-Host "Hizli kullanim: .\quality-check.ps1 -All" -ForegroundColor Cyan
 }
