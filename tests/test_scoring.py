@@ -11,7 +11,7 @@ from src.intelligent_scoring import IntelligentScoringSystem
 
 
 def load_scoring_system():
-    with open("config.yaml", "r", encoding="utf-8") as f:
+    with open("config.yaml", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     return IntelligentScoringSystem(cfg)
 
@@ -100,9 +100,7 @@ def test_experience_penalty_thresholds(description, expected_penalty):
     scoring = load_scoring_system()
     job = {"title": "Developer", "description": description}
     _, details = scoring.score_job(job)
-    assert (
-        details["experience"] == expected_penalty
-    ), f"Expected {expected_penalty} for: {description}"
+    assert details["experience"] == expected_penalty, f"Expected {expected_penalty} for: {description}"
 
 
 def test_experience_multiple_years_max():
@@ -322,9 +320,7 @@ def test_regression_protection():
 
         # Test inclusion decision
         include_decision = scoring.should_include(total)
-        assert (
-            include_decision == test_case["should_include"]
-        ), f"Inclusion failed for: {job['title']}"
+        assert include_decision == test_case["should_include"], f"Inclusion failed for: {job['title']}"
 
         # Test title scoring direction
         if test_case["title_positive"]:
@@ -334,13 +330,9 @@ def test_regression_protection():
 
         # Test description scoring direction
         if test_case["desc_positive"]:
-            assert (
-                details["description"] > 0
-            ), f"Description should be positive for: {job['title']}"
+            assert details["description"] > 0, f"Description should be positive for: {job['title']}"
         else:
-            assert (
-                details["description"] <= 0
-            ), f"Description should be non-positive for: {job['title']}"
+            assert details["description"] <= 0, f"Description should be non-positive for: {job['title']}"
 
 
 def test_comprehensive_integration():
@@ -370,9 +362,7 @@ def test_comprehensive_integration():
     assert details["title"] > 0, "Title score should be positive for Junior"
 
     # Description should be positive (many positive keywords)
-    assert (
-        details["description"] > 0
-    ), "Description should be positive with tech keywords"
+    assert details["description"] > 0, "Description should be positive with tech keywords"
 
     # Experience should be neutral (2 years is below 3-year threshold)
     assert details["experience"] == 0, "2 years should not trigger penalty"
@@ -406,9 +396,7 @@ def test_description_scoring_edge_cases(description, expected_positive):
     if expected_positive:
         assert details["description"] > 0, f"Expected positive score for: {description}"
     else:
-        assert (
-            details["description"] <= 0
-        ), f"Expected non-positive score for: {description}"
+        assert details["description"] <= 0, f"Expected non-positive score for: {description}"
 
 
 @pytest.mark.parametrize(
@@ -423,9 +411,7 @@ def test_description_scoring_edge_cases(description, expected_positive):
         (None, None, None, True),  # All None but score=0 >= threshold(-20)
     ],
 )
-def test_comprehensive_job_scoring(
-    title, description, experience_text, expected_include
-):
+def test_comprehensive_job_scoring(title, description, experience_text, expected_include):
     """Test comprehensive job scoring with realistic job combinations."""
     scoring = load_scoring_system()
     job_desc = f"{description or ''} {experience_text or ''}".strip()
@@ -478,9 +464,7 @@ def test_regex_pattern_word_boundaries():
     total2, _ = scoring.score_job(job2)
 
     # Manager should be more negative than Engineering (partial match)
-    assert (
-        total2 < total1
-    ), f"Manager ({total2}) should be more negative than Engineering partial match ({total1})"
+    assert total2 < total1, f"Manager ({total2}) should be more negative than Engineering partial match ({total1})"
 
 
 def test_hyphenated_word_matching():
@@ -497,9 +481,7 @@ def test_hyphenated_word_matching():
     total2, _ = scoring.score_job(job2)
 
     # Both should have similar positive scores
-    assert (
-        abs(total1 - total2) <= 10
-    ), f"Hyphenated and non-hyphenated should score similarly: {total1} vs {total2}"
+    assert abs(total1 - total2) <= 10, f"Hyphenated and non-hyphenated should score similarly: {total1} vs {total2}"
 
 
 def test_case_insensitive_matching():
@@ -516,9 +498,7 @@ def test_case_insensitive_matching():
     scores = [scoring.score_job(job)[0] for job in jobs]
 
     # All scores should be identical
-    assert all(
-        score == scores[0] for score in scores
-    ), f"Case variations should score identically: {scores}"
+    assert all(score == scores[0] for score in scores), f"Case variations should score identically: {scores}"
 
 
 def test_multiple_keyword_matches():
@@ -536,12 +516,8 @@ def test_multiple_keyword_matches():
     job_negative = {"title": "Senior Lead Manager", "description": ""}
     total_neg, _ = scoring.score_job(job_negative)
 
-    assert (
-        total_pos > 50
-    ), f"Multiple positive keywords should give high score: {total_pos}"
-    assert (
-        total_neg < -50
-    ), f"Multiple negative keywords should give very negative score: {total_neg}"
+    assert total_pos > 50, f"Multiple positive keywords should give high score: {total_pos}"
+    assert total_neg < -50, f"Multiple negative keywords should give very negative score: {total_neg}"
 
 
 def test_config_driven_thresholds():
@@ -549,21 +525,13 @@ def test_config_driven_thresholds():
     scoring = load_scoring_system()
 
     # Test that threshold from config is used
-    assert hasattr(
-        scoring, "threshold"
-    ), "Scoring system should have threshold attribute"
-    assert isinstance(scoring.threshold, (int, float)), "Threshold should be numeric"
+    assert hasattr(scoring, "threshold"), "Scoring system should have threshold attribute"
+    assert isinstance(scoring.threshold, int | float), "Threshold should be numeric"
 
     # Test should_include logic
-    assert not scoring.should_include(
-        float(scoring.threshold - 1)
-    ), "Score below threshold should be excluded"
-    assert scoring.should_include(
-        float(scoring.threshold)
-    ), "Score at threshold should be included"
-    assert scoring.should_include(
-        float(scoring.threshold + 1)
-    ), "Score above threshold should be included"
+    assert not scoring.should_include(float(scoring.threshold - 1)), "Score below threshold should be excluded"
+    assert scoring.should_include(float(scoring.threshold)), "Score at threshold should be included"
+    assert scoring.should_include(float(scoring.threshold + 1)), "Score above threshold should be included"
 
 
 def test_performance_with_large_description():
@@ -578,12 +546,8 @@ def test_performance_with_large_description():
     _, details = scoring.score_job(job)
     processing_time = time.time() - start_time
 
-    assert (
-        processing_time < 0.1
-    ), f"Large description processing should be fast: {processing_time:.3f}s"
-    assert (
-        details["description"] > 0
-    ), "Large description with positive keywords should score positively"
+    assert processing_time < 0.1, f"Large description processing should be fast: {processing_time:.3f}s"
+    assert details["description"] > 0, "Large description with positive keywords should score positively"
 
 
 def test_empty_and_none_handling():
@@ -604,9 +568,7 @@ def test_empty_and_none_handling():
             # Should not crash and should return valid scores
             assert isinstance(total, int), f"Total score should be int for {job}"
             assert isinstance(details, dict), f"Details should be dict for {job}"
-            assert all(
-                isinstance(v, int) for v in details.values()
-            ), f"All detail values should be int for {job}"
+            assert all(isinstance(v, int) for v in details.values()), f"All detail values should be int for {job}"
         except Exception as e:
             pytest.fail(f"Scoring failed for {job}: {e}")
 
@@ -641,6 +603,6 @@ def test_regression_protection_basic_scores():
 
     for case in regression_cases:
         total, _ = scoring.score_job(case["job"])
-        assert (
-            case["min_score"] <= total <= case["max_score"]
-        ), f"Regression test failed for {case['job']}: expected {case['min_score']}-{case['max_score']}, got {total}"
+        assert case["min_score"] <= total <= case["max_score"], (
+            f"Regression test failed for {case['job']}: expected {case['min_score']}-{case['max_score']}, got {total}"
+        )

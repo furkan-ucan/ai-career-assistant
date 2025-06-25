@@ -164,7 +164,7 @@ def _filter_items(items: list) -> list:
 def _print_tree_level(items: list, prefix: str, output_file=None):
     """Bir seviyedeki öğeleri yazdırır ve alt seviyeye geçer"""
     pointers = ["├── "] * (len(items) - 1) + ["└── "]
-    for pointer, path in zip(pointers, items):
+    for pointer, path in zip(pointers, items, strict=False):
         icon = FOLDER_ICON if path.is_dir() else _get_file_icon(path)
 
         line = f"{prefix}{pointer}{icon} {path.name}"

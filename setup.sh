@@ -18,6 +18,19 @@ python -m pip install --requirement requirements.txt --quiet
 if [[ "${DEV_MODE}" == "true" ]]; then
   echo "🛠️ [3b] Installing dev dependencies"
   python -m pip install --editable ".[dev]" --quiet
+
+  echo "🏃 [3c] Warm-up: initial code quality check"
+  if command -v ruff >/dev/null; then
+    echo "  - Running Ruff format..."
+    ruff format src main.py tree_generator.py --quiet
+    echo "  - Running Ruff check..."
+    ruff check src main.py tree_generator.py --quiet --fix
+  fi
+
+  if command -v mypy >/dev/null; then
+    echo "  - Running MyPy check..."
+    mypy src main.py tree_generator.py --config-file=pyproject.toml --quiet || true
+  fi
 fi
 
 echo "🔐 [4/5] Writing placeholder .env"

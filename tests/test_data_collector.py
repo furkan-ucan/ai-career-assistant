@@ -26,9 +26,7 @@ def test_concurrent_scraping(monkeypatch):
 
     monkeypatch.setattr("src.data_collector.scrape_jobs", fake_scrape_jobs)
     start = time.time()
-    df = collect_job_data(
-        "x", site_names=["a", "b"], max_results_per_site=1, hours_old=1
-    )
+    df = collect_job_data("x", site_names=["a", "b"], max_results_per_site=1, hours_old=1)
     duration = time.time() - start
     assert len(df) == 2
     assert duration < 0.4

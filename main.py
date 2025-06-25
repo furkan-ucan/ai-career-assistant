@@ -8,7 +8,6 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 # Third Party
 import pandas as pd
@@ -256,7 +255,7 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
     _display_results(similar_jobs, threshold)
 
 
-def _load_and_validate_csv(csv_path: str) -> Optional[pd.DataFrame]:
+def _load_and_validate_csv(csv_path: str) -> pd.DataFrame | None:
     """CSV dosyasını yükle ve doğrula"""
     try:
         csv_path_obj = Path(csv_path)
@@ -274,7 +273,7 @@ def _load_and_validate_csv(csv_path: str) -> Optional[pd.DataFrame]:
         return None
 
 
-def _setup_cv_processor() -> Optional[CVProcessor]:
+def _setup_cv_processor() -> CVProcessor | None:
     """CV processor'ı kurulum yap"""
     logger.info("\n📄 2/6: CV analizi...")
     cv_processor = CVProcessor(embedding_settings=embedding_settings)
@@ -291,7 +290,7 @@ def _setup_cv_processor() -> Optional[CVProcessor]:
     return cv_processor
 
 
-def _setup_vector_store() -> Optional[VectorStore]:
+def _setup_vector_store() -> VectorStore | None:
     """Vector store'u kurulum yap"""
     logger.info("\n🗃️ 3/6: Vector store hazırlığı...")
     vector_store = VectorStore(
@@ -306,12 +305,12 @@ def _setup_vector_store() -> Optional[VectorStore]:
     return vector_store
 
 
-def _process_job_embeddings(jobs_df: pd.DataFrame, vector_store: VectorStore) -> List[Optional[List[float]]]:
+def _process_job_embeddings(jobs_df: pd.DataFrame, vector_store: VectorStore) -> list[list[float] | None]:
     """İş ilanları için embeddings oluştur"""
     embedding_service = EmbeddingService(**embedding_settings)
     logger.info("🔄 5/6: İş ilanları için AI embeddings oluşturuluyor...")
 
-    job_embeddings: List[Optional[List[float]]] = []
+    job_embeddings: list[list[float] | None] = []
     for _, job in tqdm(jobs_df.iterrows(), total=len(jobs_df), desc="İlan Embeddings"):
         job_dict = job.to_dict()
 
@@ -332,7 +331,7 @@ def _process_job_embeddings(jobs_df: pd.DataFrame, vector_store: VectorStore) ->
     return job_embeddings
 
 
-def _search_and_score_jobs(cv_embedding: List[float], vector_store: VectorStore, threshold: float) -> List[dict]:
+def _search_and_score_jobs(cv_embedding: list[float], vector_store: VectorStore, threshold: float) -> list[dict]:
     """Benzer işleri bul ve puanla"""
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
 
@@ -341,7 +340,9 @@ def _search_and_score_jobs(cv_embedding: List[float], vector_store: VectorStore,
 
     similar_jobs = [
         dict(metadata, similarity_score=(1 - dist) * 100)
-        for metadata, dist in zip(search_results.get("metadatas", []), search_results.get("distances", []))
+        for metadata, dist in zip(
+            search_results.get("metadatas", []), search_results.get("distances", []), strict=False
+        )
     ]
 
     if not similar_jobs:
@@ -352,7 +353,7 @@ def _search_and_score_jobs(cv_embedding: List[float], vector_store: VectorStore,
     return [job for job in scored_jobs if job["similarity_score"] >= threshold]
 
 
-def _display_results(similar_jobs: List[dict], threshold: float) -> None:
+def _display_results(similar_jobs: list[dict], threshold: float) -> None:
     """Sonuçları görüntüle"""
     if similar_jobs:
         logger.info(f"✅ {len(similar_jobs)} adet yüksek kaliteli pozisyon bulundu!")
@@ -378,7 +379,7 @@ def _display_results(similar_jobs: List[dict], threshold: float) -> None:
         logger.info(f"\n🎯 Analiz tamamlandı! {len(similar_jobs)} yüksek kaliteli pozisyon listelendi.")
 
         if similar_jobs and ("persona_source" in similar_jobs[0] or "persona" in similar_jobs[0]):
-            persona_counts: Dict[str, int] = {}
+            persona_counts: dict[str, int] = {}
             for job in similar_jobs:
                 persona = job.get("persona_source", job.get("persona", "Unknown"))
                 persona_counts[persona] = persona_counts.get(persona, 0) + 1

@@ -6,13 +6,12 @@ and similarity thresholds."""
 # Standard Library
 import argparse
 from pathlib import Path
-from typing import List
 
 # Third Party
 import yaml
 
 
-def load_persona_choices(config_path: Path = Path("config.yaml")) -> List[str]:
+def load_persona_choices(config_path: Path = Path("config.yaml")) -> list[str]:
     """Return available persona names from the configuration."""
     try:
         with open(config_path, encoding="utf-8") as f:
@@ -22,7 +21,7 @@ def load_persona_choices(config_path: Path = Path("config.yaml")) -> List[str]:
         return []
 
 
-def build_parser(personas: List[str]) -> argparse.ArgumentParser:
+def build_parser(personas: list[str]) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Akilli Kariyer Asistani komut satiri arayuzu")
     parser.add_argument(
         "-p",

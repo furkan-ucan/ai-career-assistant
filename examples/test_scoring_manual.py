@@ -8,7 +8,7 @@ import yaml
 from src.intelligent_scoring import IntelligentScoringSystem
 
 # Load config
-with open("config.yaml", "r", encoding="utf-8") as f:
+with open("config.yaml", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
 # Create scoring system

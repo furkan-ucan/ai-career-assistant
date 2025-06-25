@@ -7,7 +7,6 @@ Google Gemini API kullanarak metin embeddings'leri oluşturur.
 import logging
 import os
 import time
-from typing import List, Optional
 
 # Third Party
 import google.generativeai as genai
@@ -32,9 +31,7 @@ class EmbeddingService:
         self.rate_limit_delay = rate_limit_delay
         logger.info("✅ Gemini API bağlantısı kuruldu")
 
-    def create_embedding(
-        self, text: str, retry_count: Optional[int] = None, max_chars: int = 8000
-    ) -> Optional[List[float]]:
+    def create_embedding(self, text: str, retry_count: int | None = None, max_chars: int = 8000) -> list[float] | None:
         """
         Tek bir metin için embedding oluştur - Token limit kontrolü ile
         Args:
@@ -67,12 +64,12 @@ class EmbeddingService:
 
     def create_embeddings_batch(
         self,
-        texts: List[str],
-        batch_size: Optional[int] = None,
-        retry_count: Optional[int] = None,
-        rate_limit_delay: Optional[float] = None,
+        texts: list[str],
+        batch_size: int | None = None,
+        retry_count: int | None = None,
+        rate_limit_delay: float | None = None,
         max_chars: int = 8000,
-    ) -> List[Optional[List[float]]]:
+    ) -> list[list[float] | None]:
         """
         Birden fazla metin için batch embedding oluştur - Token limit kontrolü ile
         Args:

@@ -6,7 +6,6 @@ Kullanıcının CV'sini okur ve embedding oluşturur.
 # Standard Library
 import logging
 from pathlib import Path
-from typing import List, Optional
 
 from .embedding_service import EmbeddingService
 
@@ -14,15 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 class CVProcessor:
-    def __init__(self, cv_path: Optional[str] = None, embedding_settings: Optional[dict] = None):
+    def __init__(self, cv_path: str | None = None, embedding_settings: dict | None = None):
         """CV işleyici başlat"""
         if embedding_settings:
             self.embedding_service = EmbeddingService(**embedding_settings)
         else:
             self.embedding_service = EmbeddingService()
         self.cv_path = Path(cv_path) if cv_path else Path("data") / "cv.txt"
-        self.cv_text: Optional[str] = None
-        self.cv_embedding: Optional[List[float]] = None
+        self.cv_text: str | None = None
+        self.cv_embedding: list[float] | None = None
 
     def load_cv(self) -> bool:
         """CV dosyasını yükle"""
@@ -71,14 +70,14 @@ class CVProcessor:
             logger.error("❌ CV embedding oluşturulamadı")
             return False
 
-    def get_cv_embedding(self) -> Optional[List[float]]:
+    def get_cv_embedding(self) -> list[float] | None:
         """CV embedding'ini döndür"""
         if not self.cv_embedding and not self.create_cv_embedding():
             return None
 
         return self.cv_embedding
 
-    def get_cv_text(self) -> Optional[str]:
+    def get_cv_text(self) -> str | None:
         """CV metnini döndür"""
         if not self.cv_text and not self.load_cv():
             return None

@@ -64,7 +64,7 @@ include = ["src", "src.*"]
 
 [tool.ruff]
 line-length = 119
-target-version = "py38"
+target-version = "py312" # Python 3.12 features desteklenir
 
 [tool.ruff.lint]
 select = [
@@ -101,12 +101,6 @@ exclude = [
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-
-[tool.pytest.ini_options]
-minversion = "6.0"
-addopts = "-ra -q --strict-markers"
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -158,9 +152,75 @@ exclusions = [
     "**/.ruff_cache/**",
     "**/kariyer-asistani-env/**",
     "**/logs/**",
-    "**/data/**"
+    "**/data/**",
 ]
 
 # Quality gate settings
 quality_gate_wait = false
 coverage_exclusions = ["**/*test*.py", "**/tests/**"]
+
+# ==========================================
+# Pytest & Coverage Configuration
+# ==========================================
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "--cov=src",
+    "--cov=main",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+    "--cov-fail-under=75",
+    "--junitxml=test-results.xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src", "main.py", "tree_generator.py"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/.*",
+    "setup.py",
+    "venv/*",
+    "kariyer-asistani-env/*",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+ignore_errors = true
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"

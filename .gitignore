@@ -98,6 +98,7 @@ logs/
 .vscode/
 .idea/
 .DS_Store
+.sonarlint/
 
 # Memory Bank MCP (ayrı repo)
 memory-bank-mcp/

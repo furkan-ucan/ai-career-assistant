@@ -13,6 +13,13 @@ Write-Host ""
 Write-Host "Akilli Kariyer Asistani - Kod Kalitesi Otomasyonu" -ForegroundColor Green
 Write-Host "=================================================" -ForegroundColor Green
 
+# Virtual environment kontrolu
+if ($env:VIRTUAL_ENV) {
+    Write-Host "Virtual Environment: $env:VIRTUAL_ENV" -ForegroundColor Cyan
+} else {
+    Write-Host "UYARI: Virtual environment aktif degil! Lutfen env aktive edin." -ForegroundColor Yellow
+}
+
 if ($Check) {
     Write-Host "Kod kalitesi kontrol ediliyor..." -ForegroundColor Cyan
 
@@ -83,11 +90,17 @@ if ($All) {
     # Sonra kontrol et
     & $PSScriptRoot\quality-check.ps1 -Check
 
-    # Testleri calistir
-    Write-Host "Testler calistiriliyor..." -ForegroundColor White
-    python -m pytest tests/ -v
+    # Testleri calistir (coverage ve JUnit XML raporu ile)
+    Write-Host "Testler calistiriliyor (coverage raporu ile)..." -ForegroundColor White
+    python -m pytest tests/ -v --cov=src --cov=main --cov-report=xml --cov-report=term --junitxml=test-results.xml
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Tum testler basarili!" -ForegroundColor Green
+        if (Test-Path "coverage.xml") {
+            Write-Host "Coverage raporu olusturuldu: coverage.xml" -ForegroundColor Green
+        }
+        if (Test-Path "test-results.xml") {
+            Write-Host "Test raporu olusturuldu: test-results.xml" -ForegroundColor Green
+        }
     } else {
         Write-Host "Bazi testler basarisiz!" -ForegroundColor Red
     }

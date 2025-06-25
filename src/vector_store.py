@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Third Party
 import chromadb
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 class VectorStore:
     def __init__(
         self,
-        persist_directory: Optional[str] = None,
-        collection_name: Optional[str] = None,
+        persist_directory: str | None = None,
+        collection_name: str | None = None,
     ):
         """ChromaDB istemcisini başlat"""
         try:
@@ -43,7 +43,7 @@ class VectorStore:
                 except Exception as cfg_err:
                     logger.warning(f"Config load failed: {cfg_err}; using default collection name")
             self.collection_name = collection_name or "job_embeddings"
-            self.collection: Optional[Any] = None
+            self.collection: Any | None = None
             logger.info("VectorStore başarıyla başlatıldı")
 
         except Exception as e:
@@ -51,7 +51,7 @@ class VectorStore:
             raise
 
     @staticmethod
-    def _stable_job_id(job_dict: Dict[str, Any]) -> str:
+    def _stable_job_id(job_dict: dict[str, Any]) -> str:
         """Create a deterministic job ID using URL if available."""
         url = job_dict.get("url") or job_dict.get("job_url")
         if url:
@@ -96,7 +96,7 @@ class VectorStore:
 
         return self.collection
 
-    def job_exists(self, job_dict: Dict[str, Any]) -> bool:
+    def job_exists(self, job_dict: dict[str, Any]) -> bool:
         """İş ilanının zaten mevcut olup olmadığını kontrol eder."""
         collection = self.get_collection()
         if not collection:
@@ -109,7 +109,7 @@ class VectorStore:
         except Exception:
             return False
 
-    def add_jobs(self, jobs_df: pd.DataFrame, embeddings: List[Optional[List[float]]]) -> bool:
+    def add_jobs(self, jobs_df: pd.DataFrame, embeddings: list[list[float] | None]) -> bool:
         """
         İş ilanlarını ve embeddings'lerini koleksiyona ekle - Tekrar eklemeyi önler
         """
@@ -155,10 +155,10 @@ class VectorStore:
 
     def search_jobs(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         n_results: int = 10,
-        filter_metadata: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, List]:
+        filter_metadata: dict[str, Any] | None = None,
+    ) -> dict[str, list]:
         """Vektör benzerliği ile iş ilanı ara"""
         collection = self.get_collection()
         if not collection:
@@ -179,7 +179,7 @@ class VectorStore:
             logger.error(f"❌ Vektör arama hatası: {str(e)}", exc_info=True)
             return {"matches": [], "distances": [], "metadatas": []}
 
-    def _extract_search_results(self, results: Optional[dict]) -> Dict[str, List]:
+    def _extract_search_results(self, results: dict | None) -> dict[str, list]:
         """Search sonuçlarını güvenli şekilde çıkar"""
         if not results:
             return {"matches": [], "distances": [], "metadatas": []}
@@ -203,7 +203,7 @@ class VectorStore:
             logger.info("ℹ️ Arama kriterlerine uygun iş ilanı bulunamadı")
             return {"matches": [], "distances": [], "metadatas": []}
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Koleksiyon istatistiklerini getir"""
         collection = self.get_collection()
         if not collection:
@@ -240,8 +240,8 @@ class VectorStore:
 
 # Yardımcı fonksiyonlar
 def create_vector_store(
-    persist_directory: Optional[str] = None, collection_name: Optional[str] = None
-) -> Optional[VectorStore]:
+    persist_directory: str | None = None, collection_name: str | None = None
+) -> VectorStore | None:
     """VectorStore örneği oluştur"""
     try:
         return VectorStore(persist_directory=persist_directory, collection_name=collection_name)

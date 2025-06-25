@@ -1,0 +1,101 @@
+name: "🚀 Code Quality & Testing"
+
+on:
+  push:
+    branches: [main, feature/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality-check:
+    name: "🔍 Quality Assurance"
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: "📥 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Setup Python ${{ matrix.python-version }}"
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: "📦 Install Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: "🎯 Ruff Linting & Formatting"
+        run: |
+          echo "🔍 Running Ruff lint check..."
+          ruff check . --diff
+          echo "🎨 Running Ruff format check..."
+          ruff format . --check --diff
+
+      - name: "🔍 MyPy Type Checking"
+        run: |
+          echo "📊 Running MyPy type analysis..."
+          mypy . --config-file=pyproject.toml
+
+      - name: "🛡️ Bandit Security Analysis"
+        run: |
+          echo "🔒 Running Bandit security scan..."
+          bandit -c pyproject.toml -r . -f json -o bandit-report.json
+          bandit -c pyproject.toml -r . # Human readable output
+
+      - name: "🧪 Pytest with Coverage"
+        run: |
+          echo "🧪 Running tests with coverage..."
+          pytest -v --cov=src --cov=main --cov-report=xml --cov-report=term --junitxml=test-results.xml
+
+      - name: "📊 Upload Coverage to Codecov"
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.12'
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: "📋 Upload Test Results"
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: |
+            test-results.xml
+            coverage.xml
+            bandit-report.json
+          retention-days: 30
+
+  # SonarQube Analysis (Optional - Standalone Mode)
+  # SonarQube for IDE çalışıyor standalone modda, CI'da ayrı analiz gerekmez
+  # Eğer merkezi SonarQube sunucusu kurulursa bu job aktive edilebilir
+
+  pre-commit-check:
+    name: "⚡ Pre-commit Hooks"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "📥 Checkout Repository"
+        uses: actions/checkout@v4
+
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: "📦 Install Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: "⚡ Run Pre-commit Hooks"
+        run: |
+          pre-commit run --all-files --show-diff-on-failure
