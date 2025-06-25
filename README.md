@@ -24,6 +24,7 @@ Akıllı Kariyer Asistanı, geleneksel iş arama sürecini devrim niteliğinde d
 ## 🚀 Hızlı Başlangıç
 
 ### Ön Koşullar
+
 - Python 3.11+
 - Google Gemini API Key ([Ücretsiz alın](https://aistudio.google.com/app/apikey))
 - 8GB+ RAM (ChromaDB için)
@@ -65,11 +66,13 @@ mkdir data
 ### 1️⃣ Temel Kurulum Sonrası Ayarlar
 
 #### CV Hazırlama
+
 ```bash
 # data/cv.txt dosyasını oluşturun ve aşağıdaki bilgileri ekleyin:
 ```
 
 **CV formatı örneği** (`data/cv.txt`):
+
 ```text
 İsim: Furkan Uçan
 Pozisyon: Yazılım Geliştirici / Veri Analisti
@@ -101,23 +104,27 @@ HEDEFLER:
 ```
 
 #### API Key Alma
+
 1. [Google AI Studio](https://aistudio.google.com/app/apikey)'ya gidin
 2. "Create API Key" butonuna tıklayın
 3. API key'i kopyalayın
 4. `.env` dosyasına ekleyin:
+
 ```bash
 GEMINI_API_KEY=AIzaSyC... (gerçek key'iniz)
 ```
 
 #### `config.yaml` Ayarları
+
 Embedding parametreleri bu dosyada tanımlıdır:
 
 ```yaml
 embedding_settings:
-  batch_size: 10       # Batch boyutu
-  retry_count: 3       # Hata durumunda deneme sayısı
-  rate_limit_delay: 0.1  # Saniye cinsinden bekleme
+  batch_size: 10 # Batch boyutu
+  retry_count: 3 # Hata durumunda deneme sayısı
+  rate_limit_delay: 0.1 # Saniye cinsinden bekleme
 ```
+
 Bu değerleri ihtiyacınıza göre değiştirebilirsiniz.
 
 ### 2️⃣ İlk Çalıştırma
@@ -136,6 +143,7 @@ python main.py --persona Data_Analyst --results 10 --threshold 50
 - `--threshold`: Benzerlik eşiği (%). Varsayılan değeri geçersiz kılar.
 
 **Beklenen çıktı:**
+
 ```
 🚀 Akıllı Kariyer Asistanı - Böl ve Fethet Stratejisi
 ============================================================
@@ -358,6 +366,7 @@ Sistem çalıştıktan sonra "Persona Dağılımı" bölümünü inceleyin:
 ```
 
 **Optimizasyon önerileri:**
+
 - `React_Developer: 0 ilan` görüyorsanız → "React" yerine "Frontend Developer" deneyin
 - Belirli persona çok fazla sonuç veriyorsa → arama terimini daha spesifik yapın
 - Hiç sonuç alamayan personalar → tamamen farklı terimler deneyin
@@ -371,6 +380,7 @@ Sistem çalıştıktan sonra "Persona Dağılımı" bölümünü inceleyin:
 ```
 
 **Skor düşükse yapılacaklar:**
+
 1. **CV'nizi geliştirin:** Daha fazla teknik detay ekleyin
 2. **İş ilanlarını manuel kontrol edin:** Belki sizin için uygun ama sistem algılamıyor
 3. **Eşiği düşürün:** `MIN_SIMILARITY_THRESHOLD = 40` yapın
@@ -384,6 +394,7 @@ Sistem çalıştıktan sonra "Persona Dağılımı" bölümünü inceleyin:
 ```
 
 **Sayılar düşükse:**
+
 - `max_results_per_site` değerini artırın (20 → 50)
 - Daha fazla persona ekleyin
 - Tarih filtresini genişletin (3 → 7 gün)
@@ -393,19 +404,25 @@ Sistem çalıştıktan sonra "Persona Dağılımı" bölümünü inceleyin:
 ### 6️⃣ Sık Karşılaşılan Sorunlar
 
 #### Problem: "API key bulunamadı" hatası
+
 ```bash
 ❌ HATA: Gemini API key bulunamadı!
 ```
+
 **Çözüm:**
+
 1. `.env` dosyasının var olduğundan emin olun
 2. Dosya içeriğini kontrol edin: `GEMINI_API_KEY=AIzaSyC...`
 3. API key'in çalıştığını test edin: [AI Studio](https://aistudio.google.com/) üzerinden
 
 #### Problem: "CV dosyası bulunamadı" hatası
+
 ```bash
 ❌ HATA: CV dosyası bulunamadı: data/cv.txt
 ```
+
 **Çözüm:**
+
 ```bash
 # data klasörünü oluşturun
 mkdir data
@@ -416,12 +433,16 @@ mkdir data
 ```
 
 #### Problem: "Hiçbir ilan bulunamadı" durumu
+
 ```bash
 ❌ Hiçbir persona için ilan bulunamadı. Genel bir sorun olabilir.
 ```
+
 **Çözüm:**
+
 1. İnternet bağlantınızı kontrol edin
 2. JobSpy'ın çalıştığını test edin:
+
 ```python
 from jobspy import scrape_jobs
 jobs = scrape_jobs(site_name="indeed", search_term="yazılım", country_indeed="Turkey")
@@ -429,20 +450,26 @@ print(len(jobs))
 ```
 
 #### Problem: Çok az sonuç (1-2 ilan)
+
 **Çözüm:**
+
 1. Benzerlik eşiğini düşürün: `MIN_SIMILARITY_THRESHOLD = 40`
 2. Tarih filtresini genişletin: `DATE_FILTER_DAYS = 7`
 3. Daha fazla persona ekleyin
 4. `max_results_per_site` değerini artırın
 
 #### Problem: Çok fazla alakasız sonuç
+
 **Çözüm:**
+
 1. Benzerlik eşiğini yükseltin: `MIN_SIMILARITY_THRESHOLD = 60`
 2. CV'nizi daha spesifik hale getirin
 3. Persona arama terimlerini daha dar yapın
 
 #### Problem: Sistem çok yavaş çalışıyor
+
 **Çözüm:**
+
 1. `max_results_per_site` değerini düşürün (20 → 10)
 2. Daha az persona kullanın
 3. Sadece Indeed kullanın: `sites = ['indeed']`
@@ -452,6 +479,7 @@ print(len(jobs))
 ### 7️⃣ Uzman Seviye Ayarlar
 
 #### A) Çoklu Dil Desteği
+
 CV'nizi hem Türkçe hem İngilizce hazırlayın:
 
 ```text
@@ -470,6 +498,7 @@ Skills: Python, JavaScript, React...
 #### B) Sektör Odaklı Özelleştirme
 
 **Fintech için:**
+
 ```python
 persona_search_terms = {
     "Blockchain_Developer": "Blockchain Developer",
@@ -481,6 +510,7 @@ persona_search_terms = {
 ```
 
 **E-ticaret için:**
+
 ```python
 persona_search_terms = {
     "Ecommerce_Developer": "E-commerce Developer",
@@ -540,6 +570,7 @@ Kalite Skoru: %17.8 (8/45 filtre)
 ### 9️⃣ Uzman Tavsiyeleri
 
 #### En İyi Sonuçlar İçin:
+
 - **CV'nizi düzenli güncelleyin** (yeni projeler, beceriler)
 - **Farklı persona kombinasyonları deneyin**
 - **Manuel doğrulama yapmayı ihmal etmeyin**
@@ -547,20 +578,22 @@ Kalite Skoru: %17.8 (8/45 filtre)
 - **Aynı şirketten çok başvuru yapmayın** (filtre ekleyin)
 
 #### Zaman Optimizasyonu:
+
 - **Sabah 08:00:** Yeni ilanlar için ideal saat
 - **Akşam 18:00:** Günlük güncellemeler için
 - **Hafta sonu:** Haftalık optimizasyon çalışması
 
 #### Başvuru Stratejisi:
+
 - Top 3 ilanı öncelikle değerlendirin
 - %60+ skorlu ilanlar için özel kapak mektubu yazın
 - %40-60 arası ilanlar için standart başvuru yapın
 - %40 altı ilanları manuel kontrol edin
 
-
 ## 🏗️ Teknik Mimari
 
 ### Sistem Bileşenleri
+
 ```
 ┌─────────────────────────────────────┐
 │         Ana Uygulama (main.py)      │
@@ -576,12 +609,14 @@ Kalite Skoru: %17.8 (8/45 filtre)
 ```
 
 ### Teknoloji Yığını
+
 - **AI/ML:** Google Gemini (Embedding), ChromaDB (Vector DB)
 - **Veri Toplama:** JobSpy (LinkedIn + Indeed scraping)
 - **Veri İşleme:** Pandas, NumPy
 - **Backend:** Python 3.12+
 
 ### Veri Akışı
+
 1. **Toplama:** JobSpy → LinkedIn/Indeed → Ham CSV
 2. **Temizleme:** Deduplication → Tarih filtresi → Temiz CSV
 3. **Analiz:** Gemini AI → CV + İlanlar → Embeddings
@@ -591,6 +626,7 @@ Kalite Skoru: %17.8 (8/45 filtre)
 ## 📊 Gerçek Test Sonuçları
 
 ### Son Test Metrikleri (Çoklu Platform)
+
 - **Platform:** LinkedIn + Indeed
 - **Toplanan İlan:** 284 adet (12 persona)
 - **Benzersiz İlan:** 234 adet (deduplication sonrası)
@@ -599,12 +635,14 @@ Kalite Skoru: %17.8 (8/45 filtre)
 - **Başarı Oranı:** %100 (tüm adımlar başarılı)
 
 ### Platform Karşılaştırması
-| Platform | Ortalama İlan/Arama | Açıklama Kalitesi | Hız | Doğruluk |
-|----------|--------------------|--------------------|-----|----------|
-| LinkedIn | 15-20 ilan | Çok yüksek (detaylı) | Yavaş | %95 |
-| Indeed | 18-25 ilan | Yüksek (özet) | Hızlı | %90 |
+
+| Platform | Ortalama İlan/Arama | Açıklama Kalitesi    | Hız   | Doğruluk |
+| -------- | ------------------- | -------------------- | ----- | -------- |
+| LinkedIn | 15-20 ilan          | Çok yüksek (detaylı) | Yavaş | %95      |
+| Indeed   | 18-25 ilan          | Yüksek (özet)        | Hızlı | %90      |
 
 ### Keşfedilen Değerli Pozisyonlar
+
 1. **Yazılım Uzmanı** (MİA Teknoloji) - %63.9 ✨ [LinkedIn]
 2. **Full Stack Developer** (Pratik İK) - %63.8 ✨ [Indeed]
 3. **Veri Analiz Elemanı** (Rasyonel Kurumsal) - %63.4 ✨ [LinkedIn]
@@ -612,6 +650,7 @@ Kalite Skoru: %17.8 (8/45 filtre)
 5. **Python Developer** (Tech Startup) - %58.5 ✨ [LinkedIn]
 
 ### Persona Başarı Oranları
+
 ```
 📈 En Başarılı Personalar:
 1. Full_Stack: 35% (3/8 ilan)
@@ -653,13 +692,13 @@ kariyer-asistani/
 
 ### 📋 Dosya Sorumluluğu Rehberi
 
-| Dosya | Ne Zaman Düzenlersiniz | Amaç |
-|-------|------------------------|------|
-| `main.py` | Persona eklemek/konfigürasyon değiştirmek | Ana sistem ayarları |
-| `.env` | İlk kurulum | API key güvenliği |
-| `data/cv.txt` | CV'niz değiştiğinde | Sistem size daha iyi eşleştirme yapabilir |
-| `src/filter.py` | Çok az/çok fazla sonuç alıyorsanız | Filtreleme kurallarını ayarlama |
-| `requirements.txt` | Yeni paket eklediğinizde | Bağımlılık yönetimi |
+| Dosya              | Ne Zaman Düzenlersiniz                    | Amaç                                      |
+| ------------------ | ----------------------------------------- | ----------------------------------------- |
+| `main.py`          | Persona eklemek/konfigürasyon değiştirmek | Ana sistem ayarları                       |
+| `.env`             | İlk kurulum                               | API key güvenliği                         |
+| `data/cv.txt`      | CV'niz değiştiğinde                       | Sistem size daha iyi eşleştirme yapabilir |
+| `src/filter.py`    | Çok az/çok fazla sonuç alıyorsanız        | Filtreleme kurallarını ayarlama           |
+| `requirements.txt` | Yeni paket eklediğinizde                  | Bağımlılık yönetimi                       |
 
 ### 🎯 Hızlı Başlangıç Kontrol Listesi
 
@@ -677,6 +716,7 @@ kariyer-asistani/
 ## 🚧 Gelecek Özellikler (Roadmap)
 
 ### 🎯 Faz 3: Web Arayüzü (Bu Ay)
+
 - 🌐 **Flask Web Uygulaması**
   - Modern, responsive tasarım
   - Gerçek zamanlı sonuç görüntüleme
@@ -686,7 +726,9 @@ kariyer-asistani/
   - Touch-friendly arayüz
 
 ### 🤖 Faz 4: Otomasyon (Gelecek Ay)
+
 - ⏰ **Zamanlanmış Çalışma**
+
   ```bash
   # Günlük otomatik tarama
   python main.py --schedule daily --time 08:00
@@ -694,6 +736,7 @@ kariyer-asistani/
   # Haftalık rapor
   python main.py --schedule weekly --day monday
   ```
+
 - 📱 **Bildirim Sistemi**
   - Telegram bot entegrasyonu
   - Email bildirimleri
@@ -704,6 +747,7 @@ kariyer-asistani/
   - Başvuru takip yönetimi
 
 ### 📊 Faz 5: Gelişmiş Analitik (Sonraki Ay)
+
 - 📈 **Dashboard & Raporlama**
   - Haftalık/aylık performans raporları
   - Trend analizi (hangi beceriler popüler?)
@@ -714,6 +758,7 @@ kariyer-asistani/
   - Maaş benchmark analizi
 
 ### 🌍 Faz 6: Platform Genişletme (Uzun Vadeli)
+
 - 🔗 **Yeni İş Platformları**
   - Glassdoor entegrasyonu
   - Monster.com desteği
@@ -725,6 +770,7 @@ kariyer-asistani/
   - Genel: Glassdoor, Monster
 
 ### 🤝 Faz 7: Topluluk Özellikleri (Gelecek Vizyon)
+
 - 👥 **Kullanıcı Topluluğu**
   - İlan paylaşım sistemi
   - Başarı hikayeleri
@@ -739,6 +785,7 @@ kariyer-asistani/
 ### 💎 Şimdi Kullanabileceğiniz Gizli Özellikler
 
 #### 1. Özel Filtreleme
+
 ```python
 # main.py içinde
 def custom_company_filter(jobs):
@@ -748,6 +795,7 @@ def custom_company_filter(jobs):
 ```
 
 #### 2. Maaş Tahmin Sistemi
+
 ```python
 # CV'nizde maaş beklentisi belirtin
 """
@@ -758,6 +806,7 @@ SEKTÖR TERCİHİ: Fintech, E-ticaret, SaaS
 ```
 
 #### 3. Başvuru Takip Sistemi
+
 ```python
 # Başvuru yaptığınız ilanları takip edin
 applied_jobs = {
@@ -769,11 +818,13 @@ applied_jobs = {
 ## 🎓 Öğrenme Kaynakları
 
 ### 📚 Sistem Nasıl Çalışıyor?
+
 - **AI Embeddings:** [Gemini AI Documentation](https://ai.google.dev/docs)
 - **Vector Databases:** [ChromaDB Tutorial](https://docs.trychroma.com/)
 - **Web Scraping:** [JobSpy GitHub](https://github.com/speedyapply/jobspy)
 
 ### 🛠️ Geliştirme Rehberi
+
 - **Python Best Practices:** PEP 8, Type Hints
 - **Git Workflow:** Feature branches, PR reviews
 - **Testing:** Unit tests, Integration tests
@@ -781,6 +832,7 @@ applied_jobs = {
 - **Örnek Scriptler:** `examples/test_scoring_manual.py` ve `examples/test_scores.py` dosyalarıyla manuel puanlama yapabilirsiniz
 
 ### 🎯 Kariyer Tavsiyeleri
+
 - **CV Optimizasyonu:** ATS-friendly formatlar
 - **Başvuru Stratejileri:** Quality over quantity
 - **Mülakat Hazırlığı:** Teknik + behavioral sorular
@@ -793,6 +845,7 @@ applied_jobs = {
 Bu proje açık kaynaklıdır ve topluluğun katkılarıyla büyür. Her seviyeden geliştirici katkıda bulunabilir:
 
 #### 🎯 Katkı Alanları
+
 - **🐛 Bug Reports:** Sorunları bildirin
 - **💡 Feature Requests:** Yeni özellik önerileri
 - **📝 Documentation:** Rehber ve dokümantasyon iyileştirmeleri
@@ -803,12 +856,14 @@ Bu proje açık kaynaklıdır ve topluluğun katkılarıyla büyür. Her seviyed
 #### 🚀 Nasıl Başlarsınız?
 
 1. **🍴 Fork edin**
+
    ```bash
    # GitHub'da "Fork" butonuna tıklayın
    git clone https://github.com/YOURUSERNAME/akilli-kariyer-asistani.git
    ```
 
 2. **🌿 Feature branch oluşturun**
+
    ```bash
    git checkout -b feature/amazing-new-feature
    # veya
@@ -818,15 +873,17 @@ Bu proje açık kaynaklıdır ve topluluğun katkılarıyla büyür. Her seviyed
    ```
 
 3. **💻 Geliştirme yapın**
+
    ```bash
    # Kodunuzu yazın
    # Geliştirme bagimliliklarini kurmak icin
-pip install -e .[dev]
+   pip install -e .[dev]
    # Testlerinizi çalıştırın
    python -m pytest tests/
    ```
 
 4. **📝 Commit atın**
+
    ```bash
    git add .
    git commit -m "feat: LinkedIn API rate limit handling eklendi"
@@ -837,6 +894,7 @@ pip install -e .[dev]
    ```
 
 5. **🚀 Push edin**
+
    ```bash
    git push origin feature/amazing-new-feature
    ```
@@ -865,12 +923,14 @@ Bu projeye katkıda bulunan herkese teşekkürler:
 ## 📞 İletişim ve Destek
 
 ### 👨‍💻 Proje Sahibi
+
 **Furkan Uçan**
 📧 **Email:** furkan.ucann@yandex.com
 💼 **LinkedIn:** [linkedin.com/in/furkan-ucan](https://linkedin.com/in/furkan-ucan)
 🐙 **GitHub:** [github.com/furkan-ucan](https://github.com/furkan-ucan)
 
 ### 💬 Topluluk Desteği
+
 - **🐛 Bug Report:** [GitHub Issues](https://github.com/furkan-ucan/akilli-kariyer-asistani/issues)
 - **💡 Feature Request:** [GitHub Discussions](https://github.com/furkan-ucan/akilli-kariyer-asistani/discussions)
 - **❓ Sorular:** README.md'de cevabı yoksa issue açın
@@ -891,6 +951,7 @@ python main.py > debug.log 2>&1
 ```
 
 **Hızlı çözüm için:**
+
 1. ✅ `.env` dosyasındaki API key'i kontrol edin
 2. ✅ `data/cv.txt` dosyasının var olduğundan emin olun
 3. ✅ İnternet bağlantınızın stabil olduğunu test edin
@@ -902,9 +963,9 @@ python main.py > debug.log 2>&1
 
 ## 🌟 Proje Beğendiniz mi?
 
-[![GitHub stars](https://img.shields.io/github/stars/furkan-ucan/akilli-kariyer-asistani?style=social)](https://github.com/furkan-ucan/akilli-kariyer-asistani/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/furkan-ucan/akilli-kariyer-asistani?style=social)](https://github.com/furkan-ucan/akilli-kariyer-asistani/network/members)
-[![GitHub watchers](https://img.shields.io/github/watchers/furkan-ucan/akilli-kariyer-asistani?style=social&label=Watch)](https://github.com/furkan-ucan/akilli-kariyer-asistani/watchers)
+[![GitHub stars](https://img.shields.io/github/stars/furkan-ucan/akilli-kariyer-asistani?style=social)](https://github.com/furkan-ucan/ai-career-assistant/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/furkan-ucan/ai-career-assistant?style=social)](https://github.com/furkan-ucan/ai-career-assistant/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/furkan-ucan/ai-career-assistant?style=social&label=Watch)](https://github.com/furkan-ucan/ai-career-assistant/watchers)
 
 ### ⭐ **Star vermeyi unutmayın!** ⭐
 
@@ -913,8 +974,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 
 ### 💝 Teşekkürler
 
-> *"Hayallerinizdeki işi bulmak artık hayallerinizdan daha kolay!"*
-> *"AI destekli kariyer planlaması artık herkesin elinde!"*
+> _"Hayallerinizdeki işi bulmak artık hayallerinizdan daha kolay!"_ > _"AI destekli kariyer planlaması artık herkesin elinde!"_
 
 **🚀 Başarılı bir kariyer yolculuğu dileriz!**
 
@@ -926,6 +986,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 <summary>📋 Değişiklik Geçmişi (Changelog)</summary>
 
 ### 🔄 v2.1.0 (Mevcut)
+
 - ✅ **Otomatik Kod Kalitesi:** Pre-commit hooks ile otomatik format ve lint kontrolü
 - ✅ **Türkçe Açıklamalar:** Değişkenler İngilizce, docstring/yorumlar Türkçe
 - ✅ **Quality Tools:** Black, isort, flake8 entegrasyonu ve PowerShell scriptleri
@@ -938,12 +999,14 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 - ✅ **Production Ready:** Paket yapısı ve kodlama standartları optimize edildi
 
 ### 🔄 v2.0.0 (Önceki)
+
 - ✅ Çoklu platform desteği (LinkedIn + Indeed)
 - ✅ 12 persona sistemi
 - ✅ Gelişmiş filtreleme
 - ✅ Çok dilli README
 
 ### 🔄 v1.0.0 (Önceki)
+
 - ✅ Tek platform (Indeed)
 - ✅ Temel AI eşleştirme
 - ✅ ChromaDB entegrasyonu
@@ -955,6 +1018,7 @@ Arkadaşlarınızla paylaşarak daha fazla kişinin faydalanmasını sağlayabil
 Artık her kod değişikliğinde otomatik kalite kontrolü yapabilirsiniz!
 
 ### 💻 Windows PowerShell Komutları:
+
 ```powershell
 # Hızlı kontrol (sadece sorunları göster)
 .\quality-check.ps1 -Check
@@ -967,6 +1031,7 @@ Artık her kod değişikliğinde otomatik kalite kontrolü yapabilirsiniz!
 ```
 
 ### 🎯 Pre-commit Hook Sistemi:
+
 ```bash
 # Git commit öncesi otomatik kontrol
 git add .
@@ -974,6 +1039,7 @@ git commit -m "your message"  # Otomatik kalite kontrolü çalışır
 ```
 
 ### ✅ Kontrol Edilen Özellikler:
+
 - **Import Sıralaması**: isort ile otomatik düzenleme
 - **Kod Formatı**: Black ile 88 karakter sınırı
 - **Kod Kalitesi**: Flake8 ile style ve hata kontrolü (W293 whitespace hataları dahil)
@@ -981,6 +1047,7 @@ git commit -m "your message"  # Otomatik kalite kontrolü çalışır
 - **Test Coverage**: Pytest ile 85+ test
 
 ### 🛠️ Kalite Kontrol Komutları:
+
 ```powershell
 # Hızlı kontrol (sadece sorunları göster)
 .\quality-check.ps1 -Check
