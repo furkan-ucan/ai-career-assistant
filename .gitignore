@@ -127,3 +127,5 @@ Thumbs.db
 
 .github/workflows/# GitHub Actions
 .github/workflows/*.yml
+
+bandit-report.json

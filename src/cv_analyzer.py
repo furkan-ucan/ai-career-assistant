@@ -107,8 +107,9 @@ class CVAnalyzer:
     def __init__(self) -> None:
         load_dotenv()
         api_key = os.getenv("GEMINI_API_KEY")
-        if api_key:
-            genai.configure(api_key=api_key)
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY environment variable is required")
+        genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel("gemini-2.5-flash")
         self.cache_dir = Path("data")
         self.cache_dir.mkdir(exist_ok=True)
@@ -131,8 +132,8 @@ class CVAnalyzer:
                 generated_at = datetime.fromisoformat(ts)
                 if datetime.now(UTC) - generated_at <= timedelta(days=7):
                     return cast(dict[str, object], data.get("metadata", data))
-        except Exception:  # noqa: BLE001
-            logger.exception("Cache load failed")
+        except (OSError, json.JSONDecodeError, KeyError) as e:
+            logger.exception("Cache load failed: %s", e)
         return None
 
     def _cache_metadata(self, cv_text: str, metadata: dict) -> None:
@@ -146,8 +147,8 @@ class CVAnalyzer:
         try:
             with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
-        except Exception:  # noqa: BLE001
-            logger.exception("Cache write failed")
+        except (OSError, TypeError) as e:
+            logger.exception("Cache write failed: %s", e)
 
     def _normalize_skills(self, skills: list[str]) -> list[str]:
         normalized = []
@@ -167,8 +168,6 @@ class CVAnalyzer:
 
     def _clean_job_titles(self, job_titles: list[str]) -> list[str]:
         """Clean and normalize job titles."""
-        import re
-
         cleaned = []
         for title in job_titles:
             # Fix common formatting issues
@@ -194,7 +193,7 @@ class CVAnalyzer:
 
         categorized: dict[str, list[str]] = {"core": [], "secondary": [], "familiar": []}
 
-        for skill, score in zip(skills, importance, strict=False):
+        for skill, score in zip(skills, importance, strict=True):
             if score >= 0.85:
                 categorized["core"].append(skill)
             elif score >= 0.7:

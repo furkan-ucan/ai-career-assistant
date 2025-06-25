@@ -9,6 +9,9 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# Constants
+SITE_COUNT_FORMAT = "   %s: %s ilan"
+
 
 def display_results(similar_jobs: list[dict], threshold: float) -> None:
     """Log formatted job search results."""
@@ -29,7 +32,7 @@ def display_results(similar_jobs: list[dict], threshold: float) -> None:
             )
             logger.info("   📍 %s", job.get("location", "Lokasyon belirtilmemiş"))
             score = job.get("match_score", job.get("similarity_score", 0))
-            logger.info("   📊 Uygunluk: %%.1f", score)
+            logger.info("   📊 Uygunluk: %.1f", score)
             logger.info("   💼 Site: %s", job.get("source_site", job.get("site", "Site belirtilmemiş")))
             logger.info("   👤 Persona: %s", job.get("persona_source", job.get("persona", "Persona belirtilmemiş")))
             logger.info("   🔗 %s", job.get("url", job.get("job_url", "URL bulunamadı")))
@@ -57,26 +60,40 @@ def log_summary_statistics(
     """Log summary statistics about the search process."""
     logger.info("\n📊 Özet İstatistikler:")
 
+    _log_site_distribution(all_jobs_df)
+    _log_skill_mentions(all_jobs_df, ai_metadata)
+    _log_persona_success(high_quality_jobs)
+
+
+def _log_site_distribution(all_jobs_df: pd.DataFrame) -> None:
+    """Log site distribution statistics."""
     if not all_jobs_df.empty and "source_site" in all_jobs_df.columns:
         logger.info("\n🔹 Site Dağılımı:")
         for site, count in all_jobs_df["source_site"].value_counts().items():
-            logger.info("   %s: %s ilan", site, count)
+            logger.info(SITE_COUNT_FORMAT, site, count)
 
+
+def _log_skill_mentions(all_jobs_df: pd.DataFrame, ai_metadata: dict | None) -> None:
+    """Log skill mentions statistics."""
     if ai_metadata and ai_metadata.get("key_skills") and "description" in all_jobs_df.columns:
         skills_pattern = "|".join(map(re.escape, ai_metadata["key_skills"]))
-        total = int(all_jobs_df["description"].str.count(skills_pattern, case=False).sum())
+        total = int(all_jobs_df["description"].str.count(skills_pattern, flags=re.IGNORECASE).sum())
         logger.info("\n🔹 Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı: %s", total)
 
-    if high_quality_jobs:
-        persona_counts: dict[str, int] = {}
-        for job in high_quality_jobs:
-            persona = job.get("persona_source")
-            if persona:
-                persona_counts[persona] = persona_counts.get(persona, 0) + 1
-        if persona_counts:
-            logger.info("\n🔹 En Başarılı Personalar:")
-            for persona, count in sorted(persona_counts.items(), key=lambda x: x[1], reverse=True):
-                logger.info("   %s: %s ilan", persona, count)
+
+def _log_persona_success(high_quality_jobs: list[dict]) -> None:
+    """Log persona success statistics."""
+    if not high_quality_jobs:
+        return
+
+    from collections import Counter
+
+    persona_counts = Counter(job.get("persona_source") for job in high_quality_jobs if job.get("persona_source"))
+
+    if persona_counts:
+        logger.info("\n🔹 En Başarılı Personalar:")
+        for persona, count in persona_counts.most_common():
+            logger.info(SITE_COUNT_FORMAT, persona, count)
 
 
 __all__ = ["display_results", "log_summary_statistics"]

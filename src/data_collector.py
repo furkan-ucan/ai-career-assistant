@@ -29,7 +29,7 @@ def collect_job_data(
     max_results_per_site=DEFAULT_MAX_RESULTS_PER_SITE,
     site_names=TARGET_SITES,
     hours_old=72,  # JobSpy native tarih filtresi (varsayılan: 3 gün)
-):
+) -> pd.DataFrame | None:
     """
     JobSpy'ın gelişmiş özelliklerini kullanarak optimize edilmiş iş ilanı toplama.
 
@@ -91,7 +91,7 @@ def collect_job_data(
         return None
 
     # Tüm sitelerden gelen DataFrame'leri birleştir
-    combined_df = pd.concat(all_jobs_list, ignore_index=True)  # Zaman damgası ekle
+    combined_df: pd.DataFrame = pd.concat(all_jobs_list, ignore_index=True)  # Zaman damgası ekle
     combined_df["collected_at"] = datetime.now()  # Gelişmiş deduplication (farklı sitelerden aynı ilan gelebilir)
     logger.info("\n🔄 Deduplication başlatılıyor...")
     initial_count = len(combined_df)

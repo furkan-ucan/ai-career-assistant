@@ -25,7 +25,6 @@ logger = logging.getLogger(__name__)
 config = load_settings()
 
 scoring_system: IntelligentScoringSystem | None = None
-ai_metadata_global: dict | None = None
 
 embedding_settings = config.get("embedding_settings", {})
 
@@ -62,9 +61,12 @@ def _collect_jobs_for_persona(
             return jobs_df_for_persona
         logger.info("ℹ️ Persona '%s' için hiçbir siteden ilan bulunamadı.", persona_name)
         return None
-    except Exception as e:  # pragma: no cover - unexpected errors
+    except (ValueError, TypeError, KeyError) as e:
         logger.error("❌ Persona '%s' için hata: %s", persona_name, e, exc_info=True)
         return None
+    except Exception:
+        logger.exception("❌ Unexpected error for persona '%s'", persona_name)
+        raise
 
 
 def _deduplicate_and_save_jobs(all_jobs_list: list[pd.DataFrame]) -> str | None:
@@ -116,12 +118,16 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None,
 
 
 def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
-    """Setup AI metadata and personas configuration."""
+    """
+    Extracts AI metadata from the CV and determines the personas configuration.
+
+    Returns:
+        ai_metadata (dict): Metadata extracted from the CV, including target job titles and skill information.
+        personas_cfg (dict): Persona configuration, dynamically built from AI metadata if available, otherwise static.
+    """
     cv_text = Path(config["paths"]["cv_file"]).read_text(encoding="utf-8")
     analyzer = CVAnalyzer()
     ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
-    global ai_metadata_global
-    ai_metadata_global = ai_metadata
 
     personas_cfg = persona_search_config
     if ai_metadata.get("target_job_titles"):
@@ -197,9 +203,12 @@ def _configure_scoring_system(ai_metadata: dict) -> bool:
         logger.info("✅ Enhanced AI-driven scoring system configured")
         scoring_system = IntelligentScoringSystem(config)
         return True
-    except Exception as e:  # pragma: no cover - unexpected errors
+    except (ValueError, TypeError, KeyError) as e:
         logger.error("❌ Scoring system configuration failed: %s", e)
         return False
+    except Exception:
+        logger.exception("❌ Unexpected error in scoring system configuration")
+        raise
 
 
 def _load_and_validate_csv(csv_path: str) -> pd.DataFrame | None:
@@ -215,9 +224,12 @@ def _load_and_validate_csv(csv_path: str) -> pd.DataFrame | None:
     except pd.errors.EmptyDataError:
         logger.error("❌ CSV dosyası boş!")
         return None
-    except Exception as e:  # pragma: no cover - unexpected errors
+    except (pd.errors.ParserError, UnicodeDecodeError) as e:
         logger.error("❌ CSV okuma hatası: %s", e)
         return None
+    except Exception:
+        logger.exception("❌ Unexpected error reading CSV file")
+        raise
 
 
 def _setup_cv_processor() -> CVProcessor | None:
@@ -269,8 +281,11 @@ def _process_job_embeddings(jobs_df: pd.DataFrame, vector_store: VectorStore) ->
             try:
                 embedding = embedding_service.create_embedding(str(job["description"]))
                 job_embeddings.append(embedding)
-            except Exception as e:  # pragma: no cover - unexpected errors
+            except (ValueError, TypeError, ConnectionError) as e:
                 logger.warning("⚠️ Embedding oluşturma hatası: %s", e)
+                job_embeddings.append(None)
+            except Exception:
+                logger.exception("❌ Unexpected error creating embedding")
                 job_embeddings.append(None)
         else:
             job_embeddings.append(None)
@@ -313,8 +328,17 @@ def _process_and_load_jobs(csv_path: str, vector_store: VectorStore):
         logger.error("❌ Vector store yükleme başarısız!")
 
 
-def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold):
-    """Execute the full analysis pipeline."""
+def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold, ai_metadata):
+    """
+    Runs the complete job matching pipeline, including job data collection, CV processing, embedding creation, vector storage, job scoring, result display, and summary statistics logging.
+
+    Parameters:
+        selected_personas (list[str] | None): List of persona names to process, or None to use all configured personas.
+        results_per_site (int | None): Number of job results to collect per site, or None for default.
+        personas_cfg (dict): Configuration dictionary for personas.
+        threshold (float): Minimum similarity threshold for job matching.
+        ai_metadata (dict): AI-extracted metadata for reporting.
+    """
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
     csv_path = collect_data_for_all_personas(selected_personas, results_per_site, personas_cfg)
     if not csv_path:
@@ -346,10 +370,13 @@ def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, th
     display_results(similar_jobs, threshold)
     try:
         jobs_df = pd.read_csv(Path(csv_path))
-    except Exception as e:  # pragma: no cover - defensive
+    except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
         logger.warning("Özet istatistikler için CSV okunamadı: %s", e)
         jobs_df = pd.DataFrame()
-    log_summary_statistics(jobs_df, similar_jobs, ai_metadata_global)
+    except Exception:
+        logger.exception("❌ Unexpected error reading CSV for summary statistics")
+        jobs_df = pd.DataFrame()
+    log_summary_statistics(jobs_df, similar_jobs, ai_metadata)
 
 
 def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, similarity_threshold=None):
@@ -363,7 +390,7 @@ def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, si
     if not _configure_scoring_system(ai_metadata):
         return
 
-    _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold)
+    _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold, ai_metadata)
 
 
 def run_end_to_end_pipeline(selected_personas=None, results_per_site=None, similarity_threshold=None):
