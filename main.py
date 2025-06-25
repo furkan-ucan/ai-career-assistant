@@ -60,16 +60,12 @@ def setup_logging():
     from datetime import datetime
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    file_handler = logging.FileHandler(
-        log_dir / f"kariyer_asistani_{timestamp}.log", encoding="utf-8"
-    )
+    file_handler = logging.FileHandler(log_dir / f"kariyer_asistani_{timestamp}.log", encoding="utf-8")
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
 
     # Error file handler (sadece hatalar)
-    error_handler = logging.FileHandler(
-        log_dir / f"errors_{timestamp}.log", encoding="utf-8"
-    )
+    error_handler = logging.FileHandler(log_dir / f"errors_{timestamp}.log", encoding="utf-8")
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(formatter)
 
@@ -98,7 +94,7 @@ def load_config():
     """
     config_path = Path("config.yaml")
     try:
-        with open(config_path, "r", encoding="utf-8") as file:
+        with open(config_path, encoding="utf-8") as file:
             config = yaml.safe_load(file)
         logger.info("✅ config.yaml başarıyla yüklendi")
         return config
@@ -139,20 +135,14 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
     Returns:
         str: Toplanan verilerin CSV dosya yolu
     """
-    logger.info(
-        "🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor..."
-    )
+    logger.info("🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor...")
     logger.info("=" * 70)
 
     all_collected_jobs_list = []
 
     personas = persona_search_config.items()
     if selected_personas:
-        personas = [
-            (p, cfg)
-            for p, cfg in persona_search_config.items()
-            if p in selected_personas
-        ]
+        personas = [(p, cfg) for p, cfg in persona_search_config.items() if p in selected_personas]
 
     for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
         logger.info(f"\n--- Persona '{persona_name}' için JobSpy Gelişmiş Arama ---")
@@ -161,11 +151,7 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
 
         try:
             # JobSpy'ın gelişmiş özelliklerini kullanarak veri toplama
-            max_results = (
-                results_per_site
-                if results_per_site is not None
-                else persona_cfg["results"]
-            )
+            max_results = results_per_site if results_per_site is not None else persona_cfg["results"]
             jobs_df_for_persona = collect_job_data(
                 search_term=persona_cfg["term"],
                 site_names=TARGET_SITES,  # LinkedIn + Indeed
@@ -178,24 +164,15 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
                 jobs_df_for_persona["persona_source"] = persona_name
                 jobs_df_for_persona["search_term_used"] = persona_cfg["term"]
                 all_collected_jobs_list.append(jobs_df_for_persona)
-                logger.info(
-                    f"✨ Persona '{persona_name}' için "
-                    f"{len(jobs_df_for_persona)} ilan bulundu."
-                )
+                logger.info(f"✨ Persona '{persona_name}' için {len(jobs_df_for_persona)} ilan bulundu.")
             else:
-                logger.info(
-                    f"ℹ️ Persona '{persona_name}' için hiçbir siteden ilan bulunamadı."
-                )
+                logger.info(f"ℹ️ Persona '{persona_name}' için hiçbir siteden ilan bulunamadı.")
 
         except Exception as e:
-            logger.error(
-                f"❌ Persona '{persona_name}' için hata: {str(e)}", exc_info=True
-            )
+            logger.error(f"❌ Persona '{persona_name}' için hata: {str(e)}", exc_info=True)
             continue
 
-    non_empty = [
-        df for df in all_collected_jobs_list if df is not None and not df.empty
-    ]
+    non_empty = [df for df in all_collected_jobs_list if df is not None and not df.empty]
     if not non_empty:
         logger.error("❌ Hiçbir persona ve site kombinasyonundan ilan bulunamadı.")
         return None
@@ -212,14 +189,9 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
         )
         final_df.drop(columns=["description_short"], inplace=True)
     elif not final_df.empty:
-        final_df.drop_duplicates(
-            subset=["title", "company", "location"], inplace=True, keep="first"
-        )
+        final_df.drop_duplicates(subset=["title", "company", "location"], inplace=True, keep="first")
 
-    logger.info(
-        f"✨✨✨ TOPLAM: {len(final_df)} adet BENZERSİZ ilan "
-        f"(JobSpy optimize edilmiş)! ✨✨✨"
-    )
+    logger.info(f"✨✨✨ TOPLAM: {len(final_df)} adet BENZERSİZ ilan (JobSpy optimize edilmiş)! ✨✨✨")
 
     # Optimize edilmiş CSV kaydetme (pathlib ile)
     output_dir = Path(config["paths"]["data_dir"])
@@ -232,18 +204,12 @@ def collect_data_for_all_personas(selected_personas=None, results_per_site=None)
     return str(final_csv_path)
 
 
-def analyze_and_find_best_jobs(
-    selected_personas=None, results_per_site=None, similarity_threshold=None
-):
+def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, similarity_threshold=None):
     """Run full pipeline and print best jobs."""
     logger.info("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
     logger.info("=" * 60)
 
-    threshold = (
-        similarity_threshold
-        if similarity_threshold is not None
-        else MIN_SIMILARITY_THRESHOLD
-    )
+    threshold = similarity_threshold if similarity_threshold is not None else MIN_SIMILARITY_THRESHOLD
 
     # 1. Veri toplama
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
@@ -270,9 +236,7 @@ def analyze_and_find_best_jobs(
         return
 
     # 4. İş ilanlarını vector store'a yükle
-    logger.info(
-        "🔄 4/6: İş ilanları vector store'a yükleniyor..."
-    )  # CSV'yi pathlib ile oku
+    logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")  # CSV'yi pathlib ile oku
     jobs_df = _load_and_validate_csv(csv_path)
     if jobs_df is None:
         return
@@ -342,9 +306,7 @@ def _setup_vector_store() -> Optional[VectorStore]:
     return vector_store
 
 
-def _process_job_embeddings(
-    jobs_df: pd.DataFrame, vector_store: VectorStore
-) -> List[Optional[List[float]]]:
+def _process_job_embeddings(jobs_df: pd.DataFrame, vector_store: VectorStore) -> List[Optional[List[float]]]:
     """İş ilanları için embeddings oluştur"""
     embedding_service = EmbeddingService(**embedding_settings)
     logger.info("🔄 5/6: İş ilanları için AI embeddings oluşturuluyor...")
@@ -370,9 +332,7 @@ def _process_job_embeddings(
     return job_embeddings
 
 
-def _search_and_score_jobs(
-    cv_embedding: List[float], vector_store: VectorStore, threshold: float
-) -> List[dict]:
+def _search_and_score_jobs(cv_embedding: List[float], vector_store: VectorStore, threshold: float) -> List[dict]:
     """Benzer işleri bul ve puanla"""
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
 
@@ -381,9 +341,7 @@ def _search_and_score_jobs(
 
     similar_jobs = [
         dict(metadata, similarity_score=(1 - dist) * 100)
-        for metadata, dist in zip(
-            search_results.get("metadatas", []), search_results.get("distances", [])
-        )
+        for metadata, dist in zip(search_results.get("metadatas", []), search_results.get("distances", []))
     ]
 
     if not similar_jobs:
@@ -406,48 +364,32 @@ def _display_results(similar_jobs: List[dict], threshold: float) -> None:
 
         for i, job in enumerate(similar_jobs[:15], 1):  # Top 15 göster
             logger.info(
-                f"\n{i}. {job.get('title', 'Başlık belirtilmemiş')} - "
-                f"{job.get('company', 'Şirket belirtilmemiş')}"
+                f"\n{i}. {job.get('title', 'Başlık belirtilmemiş')} - {job.get('company', 'Şirket belirtilmemiş')}"
             )
             logger.info(f"   📍 {job.get('location', 'Lokasyon belirtilmemiş')}")
             # match_score veya similarity_score'u güvenli şekilde al
             score = job.get("match_score", job.get("similarity_score", 0))
             logger.info(f"   📊 Uygunluk: %{score:.1f}")
-            logger.info(
-                f"   💼 Site: "
-                f"{job.get('source_site', job.get('site', 'Site belirtilmemiş'))}"
-            )
-            logger.info(
-                f"   👤 Persona: "
-                f"{job.get('persona_source', job.get('persona', 'Persona belirtilmemiş'))}"
-            )
+            logger.info(f"   💼 Site: {job.get('source_site', job.get('site', 'Site belirtilmemiş'))}")
+            logger.info(f"   👤 Persona: {job.get('persona_source', job.get('persona', 'Persona belirtilmemiş'))}")
             logger.info(f"   🔗 {job.get('url', job.get('job_url', 'URL bulunamadı'))}")
             logger.info("-" * 50)
 
-        logger.info(
-            f"\n🎯 Analiz tamamlandı! {len(similar_jobs)} yüksek kaliteli pozisyon listelendi."
-        )
+        logger.info(f"\n🎯 Analiz tamamlandı! {len(similar_jobs)} yüksek kaliteli pozisyon listelendi.")
 
-        if similar_jobs and (
-            "persona_source" in similar_jobs[0] or "persona" in similar_jobs[0]
-        ):
+        if similar_jobs and ("persona_source" in similar_jobs[0] or "persona" in similar_jobs[0]):
             persona_counts: Dict[str, int] = {}
             for job in similar_jobs:
                 persona = job.get("persona_source", job.get("persona", "Unknown"))
                 persona_counts[persona] = persona_counts.get(persona, 0) + 1
 
             logger.info("\n📈 Persona Dağılımı:")
-            for persona, count in sorted(
-                persona_counts.items(), key=lambda x: x[1], reverse=True
-            ):
+            for persona, count in sorted(persona_counts.items(), key=lambda x: x[1], reverse=True):
                 logger.info(f"   {persona}: {count} ilan")
 
     else:
         logger.warning(f"⚠️  0 ilan bulundu veya uygunluk eşiği (%{threshold}) altında.")
-        logger.info(
-            "💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi "
-            "düşünebilirsiniz."
-        )
+        logger.info("💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi düşünebilirsiniz.")
 
 
 def print_manual_validation_guide():
@@ -487,19 +429,15 @@ def main(selected_personas=None, results_per_site=None, similarity_threshold=Non
             logger.error(f"❌ HATA: CV dosyası boş: {cv_path}")
             return
 
-    except (OSError, IOError) as e:
+    except OSError as e:
         logger.error(f"❌ HATA: CV dosyası erişim hatası: {e}")
         return
 
     logger.info("✅ Sistem kontrolleri başarılı")
-    logger.info(
-        "🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n"
-    )
+    logger.info("🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n")
 
     # Tam otomatik analiz çalıştır
-    analyze_and_find_best_jobs(
-        selected_personas, results_per_site, similarity_threshold
-    )
+    analyze_and_find_best_jobs(selected_personas, results_per_site, similarity_threshold)
 
 
 # Test fonksiyonları için

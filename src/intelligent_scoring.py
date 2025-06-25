@@ -5,7 +5,6 @@ from __future__ import annotations
 # Standard Library
 import logging
 import re
-from typing import Dict, List, Tuple
 
 
 def _create_regex_pattern(keyword: str) -> re.Pattern:
@@ -18,7 +17,7 @@ def _create_regex_pattern(keyword: str) -> re.Pattern:
     return re.compile(rf"\b{escaped}\b", re.IGNORECASE)
 
 
-def _compile_patterns_from_config(items: List[str]) -> List[re.Pattern]:
+def _compile_patterns_from_config(items: list[str]) -> list[re.Pattern]:
     """Compile a list of keywords (comma separated allowed) into regex patterns."""
     patterns = []
     for item in items or []:
@@ -29,7 +28,7 @@ def _compile_patterns_from_config(items: List[str]) -> List[re.Pattern]:
     return patterns
 
 
-def _compile_weighted_patterns(items: Dict[str, int]) -> List[Tuple[re.Pattern, int]]:
+def _compile_weighted_patterns(items: dict[str, int]) -> list[tuple[re.Pattern, int]]:
     """Compile mapping of comma-separated keywords to weighted regex patterns."""
     patterns = []
     for key, weight in (items or {}).items():
@@ -46,7 +45,7 @@ logger = logging.getLogger(__name__)
 class IntelligentScoringSystem:
     """Weighted scoring and regex-based experience detection."""
 
-    def __init__(self, config: Dict):
+    def __init__(self, config: dict):
         scoring_cfg = config.get("scoring_system", {})
 
         weight_cfg = scoring_cfg.get("weights", {})
@@ -66,12 +65,8 @@ class IntelligentScoringSystem:
             "positive": _compile_patterns_from_config(title_cfg.get("positive", [])),
         }
         self.description_weights = {
-            "negative": _compile_weighted_patterns(
-                desc_weights_cfg.get("negative", {})
-            ),
-            "positive": _compile_weighted_patterns(
-                desc_weights_cfg.get("positive", {})
-            ),
+            "negative": _compile_weighted_patterns(desc_weights_cfg.get("negative", {})),
+            "positive": _compile_weighted_patterns(desc_weights_cfg.get("positive", {})),
         }
         self.experience_penalties = {int(k): int(v) for k, v in exp_penalty_cfg.items()}
         self.cv_skill_patterns = _compile_patterns_from_config(cv_cfg)
@@ -118,16 +113,14 @@ class IntelligentScoringSystem:
             logger.debug("No experience information found")
             return 0
         years = max(int(m[0]) for m in matches)
-        for threshold, penalty in sorted(
-            self.experience_penalties.items(), reverse=True
-        ):
+        for threshold, penalty in sorted(self.experience_penalties.items(), reverse=True):
             if years >= threshold:
                 logger.debug("Experience %s years -> %s", years, penalty)
                 return penalty
         logger.debug("Experience %s years -> 0", years)
         return 0
 
-    def score_job(self, job_data: Dict[str, str]) -> Tuple[int, Dict[str, int]]:
+    def score_job(self, job_data: dict[str, str]) -> tuple[int, dict[str, int]]:
         title = job_data.get("title", "")
         desc = job_data.get("description", "")
         title_score = self.score_title(title)

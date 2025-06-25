@@ -20,15 +20,11 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
-    def __init__(
-        self, batch_size: int = 10, retry_count: int = 3, rate_limit_delay: float = 0.1
-    ):
+    def __init__(self, batch_size: int = 10, retry_count: int = 3, rate_limit_delay: float = 0.1):
         """Gemini API'yi başlat ve konfigürasyon ayarlarını sakla"""
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key or api_key == "your_gemini_api_key_here":
-            raise ValueError(
-                "Gemini API key geçerli değil! .env dosyasını kontrol edin."
-            )
+            raise ValueError("Gemini API key geçerli değil! .env dosyasını kontrol edin.")
         genai.configure(api_key=api_key)
         self.model = "models/text-embedding-004"
         self.batch_size = batch_size
@@ -55,21 +51,14 @@ class EmbeddingService:
         original_length = len(text)
         if len(text) > max_chars:
             text = text[:max_chars]
-            logger.debug(
-                f"Metin {original_length} karakterden {max_chars} karaktere kısaltıldı"
-            )
+            logger.debug(f"Metin {original_length} karakterden {max_chars} karaktere kısaltıldı")
         retry_count = retry_count if retry_count is not None else self.retry_count
         for attempt in range(retry_count):
             try:
-                result = genai.embed_content(
-                    model=self.model, content=text, task_type="retrieval_document"
-                )
+                result = genai.embed_content(model=self.model, content=text, task_type="retrieval_document")
                 return result["embedding"]  # type: ignore
             except Exception as e:
-                logger.warning(
-                    f"⚠️ Embedding hatası (deneme {attempt + 1}/"
-                    f"{retry_count}): {str(e)}"
-                )
+                logger.warning(f"⚠️ Embedding hatası (deneme {attempt + 1}/{retry_count}): {str(e)}")
                 if attempt < retry_count - 1:
                     time.sleep(2**attempt)  # Exponential backoff
                 else:
@@ -97,9 +86,7 @@ class EmbeddingService:
         """
         batch_size = batch_size if batch_size is not None else self.batch_size
         retry_count = retry_count if retry_count is not None else self.retry_count
-        delay = (
-            rate_limit_delay if rate_limit_delay is not None else self.rate_limit_delay
-        )
+        delay = rate_limit_delay if rate_limit_delay is not None else self.rate_limit_delay
         embeddings = []
         total = len(texts)
         logger.info(f"🔄 {total} metin için embedding oluşturuluyor...")
@@ -107,9 +94,7 @@ class EmbeddingService:
             batch = texts[i : i + batch_size]
             batch_embeddings = []
             for text in batch:
-                embedding = self.create_embedding(
-                    text, retry_count=retry_count, max_chars=max_chars
-                )
+                embedding = self.create_embedding(text, retry_count=retry_count, max_chars=max_chars)
                 batch_embeddings.append(embedding)
                 # Rate limiting için kısa bekleme
                 time.sleep(delay)
@@ -119,9 +104,7 @@ class EmbeddingService:
         logger.info(f"✅ {successful_count}/{total} embedding başarıyla oluşturuldu")
         return embeddings
 
-    def calculate_similarity(
-        self, text1: str, text2: str, max_chars: int = 8000
-    ) -> float:
+    def calculate_similarity(self, text1: str, text2: str, max_chars: int = 8000) -> float:
         """
         İki metin arasındaki anlamsal benzerliği hesaplar (cosine similarity)
         Args:
@@ -159,7 +142,4 @@ if __name__ == "__main__":
     # Test çalıştırması
     service = EmbeddingService()
     test_embedding = service.create_embedding("Bu bir test metnidir.")
-    logger.info(
-        f"Test embedding boyutu: "
-        f"{len(test_embedding) if test_embedding else 'Başarısız'}"
-    )
+    logger.info(f"Test embedding boyutu: {len(test_embedding) if test_embedding else 'Başarısız'}")

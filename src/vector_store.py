@@ -37,15 +37,11 @@ class VectorStore:
                 logger.info("✅ ChromaDB geçici client başlatıldı")
             if collection_name is None:
                 try:
-                    with open("config.yaml", "r", encoding="utf-8") as f:
+                    with open("config.yaml", encoding="utf-8") as f:
                         cfg = yaml.safe_load(f)
-                    collection_name = cfg.get("vector_store_settings", {}).get(
-                        "collection_name"
-                    )
+                    collection_name = cfg.get("vector_store_settings", {}).get("collection_name")
                 except Exception as cfg_err:
-                    logger.warning(
-                        f"Config load failed: {cfg_err}; using default collection name"
-                    )
+                    logger.warning(f"Config load failed: {cfg_err}; using default collection name")
             self.collection_name = collection_name or "job_embeddings"
             self.collection: Optional[Any] = None
             logger.info("VectorStore başarıyla başlatıldı")
@@ -59,10 +55,10 @@ class VectorStore:
         """Create a deterministic job ID using URL if available."""
         url = job_dict.get("url") or job_dict.get("job_url")
         if url:
-            digest = hashlib.sha1(url.encode("utf-8")).hexdigest()
+            digest = hashlib.sha256(url.encode("utf-8")).hexdigest()
         else:
             canonical = json.dumps(job_dict, sort_keys=True, ensure_ascii=False)
-            digest = hashlib.sha1(canonical.encode("utf-8")).hexdigest()
+            digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         return f"job_{digest}"
 
     def create_collection(self) -> bool:
@@ -84,9 +80,7 @@ class VectorStore:
 
             return True
         except Exception as e:
-            logger.error(
-                f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True
-            )
+            logger.error(f"❌ Koleksiyon oluşturma/yükleme hatası: {str(e)}", exc_info=True)
             return False
 
     def get_collection(self):
@@ -115,9 +109,7 @@ class VectorStore:
         except Exception:
             return False
 
-    def add_jobs(
-        self, jobs_df: pd.DataFrame, embeddings: List[Optional[List[float]]]
-    ) -> bool:
+    def add_jobs(self, jobs_df: pd.DataFrame, embeddings: List[Optional[List[float]]]) -> bool:
         """
         İş ilanlarını ve embeddings'lerini koleksiyona ekle - Tekrar eklemeyi önler
         """
@@ -149,10 +141,7 @@ class VectorStore:
             # Batch olarak ekle
             collection.add(
                 embeddings=valid_embeddings,
-                documents=[
-                    f"{job.get('title', '')} {job.get('description', '')}"
-                    for job in valid_jobs
-                ],
+                documents=[f"{job.get('title', '')} {job.get('description', '')}" for job in valid_jobs],
                 metadatas=valid_jobs,
                 ids=valid_ids,
             )
@@ -199,12 +188,7 @@ class VectorStore:
         documents = results.get("documents")
         distances = results.get("distances")
 
-        if (
-            metadatas
-            and isinstance(metadatas, list)
-            and len(metadatas) > 0
-            and metadatas[0] is not None
-        ):
+        if metadatas and isinstance(metadatas, list) and len(metadatas) > 0 and metadatas[0] is not None:
             metadatas_list = metadatas[0] if metadatas[0] else []
             documents_list = documents[0] if documents and documents[0] else []
             distances_list = distances[0] if distances and distances[0] else []
@@ -260,9 +244,7 @@ def create_vector_store(
 ) -> Optional[VectorStore]:
     """VectorStore örneği oluştur"""
     try:
-        return VectorStore(
-            persist_directory=persist_directory, collection_name=collection_name
-        )
+        return VectorStore(persist_directory=persist_directory, collection_name=collection_name)
     except Exception as e:
         logger.error(f"VectorStore oluşturma hatası: {str(e)}")
         return None

@@ -15,7 +15,7 @@ import yaml
 def load_persona_choices(config_path: Path = Path("config.yaml")) -> List[str]:
     """Return available persona names from the configuration."""
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
         return list(cfg.get("persona_search_configs", {}).keys())
     except Exception:
@@ -23,18 +23,13 @@ def load_persona_choices(config_path: Path = Path("config.yaml")) -> List[str]:
 
 
 def build_parser(personas: List[str]) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description="Akilli Kariyer Asistani komut satiri arayuzu"
-    )
+    parser = argparse.ArgumentParser(description="Akilli Kariyer Asistani komut satiri arayuzu")
     parser.add_argument(
         "-p",
         "--persona",
         action="append",
         choices=personas,
-        help=(
-            "Sadece belirtilen persona(lar) icin arama yapar. "
-            "Opsiyonel olarak birden fazla kullanilabilir."
-        ),
+        help=("Sadece belirtilen persona(lar) icin arama yapar. Opsiyonel olarak birden fazla kullanilabilir."),
     )
     parser.add_argument(
         "-r",

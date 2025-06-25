@@ -49,7 +49,9 @@ dev = [
     "pytest-cov>=4.0.0",
     "mypy>=1.8.0",
     "isort>=5.12.0",
-    "pre-commit>=3.0.0"
+    "pre-commit>=3.0.0",
+    "ruff>=0.12.0",
+    "bandit>=1.8.0"
 ]
 
 [project.urls]
@@ -68,7 +70,7 @@ include = ["src", "src.*"]
 "" = "."
 
 [tool.black]
-line-length = 88
+line-length = 119
 target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
 include = '\.pyi?$'
 extend-exclude = '''
@@ -88,7 +90,7 @@ extend-exclude = '''
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 119
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
@@ -100,8 +102,44 @@ import_heading_stdlib = "Standard Library"
 import_heading_thirdparty = "Third Party"
 import_heading_firstparty = "Local"
 
+[tool.ruff]
+line-length = 119
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # Line too long (black handles this)
+    "B008",  # Do not perform function calls in argument defaults
+    "B904",  # Allow bare except
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    "kariyer-asistani-env",
+    ".venv",
+    "build",
+    "dist",
+    "*.egg-info",
+    "logs",
+    "data/chromadb"
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
 [tool.flake8]
-max-line-length = 88
+max-line-length = 119
 extend-ignore = ["E203", "W503", "E501"]
 max-cognitive-complexity = 15
 exclude = [
@@ -111,7 +149,9 @@ exclude = [
     ".venv",
     "build",
     "dist",
-    "*.egg-info"
+    "*.egg-info",
+    "logs",
+    "data/chromadb"
 ]
 per-file-ignores = [
     "__init__.py:F401"
@@ -135,9 +175,12 @@ warn_unused_configs = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 ignore_missing_imports = true
-no_strict_optional = true
-allow_untyped_calls = true
-allow_untyped_defs = true
+strict_optional = false
+exclude = [
+    "kariyer-asistani-env/",
+    "build/",
+    "dist/"
+]
 
 # External library ignores
 [[tool.mypy.overrides]]
@@ -146,6 +189,17 @@ module = [
     "chromadb.*",
     "jobspy.*",
     "tqdm.*",
-    "google.*"
+    "google.*",
+    "sentence_transformers.*"
 ]
 ignore_missing_imports = true
+
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    "kariyer-asistani-env",
+    ".venv",
+    "build",
+    "dist"
+]
+skips = ["B101", "B603"]  # Skip assert_used and subprocess_without_shell_equals_true

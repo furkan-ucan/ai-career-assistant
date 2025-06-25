@@ -155,9 +155,7 @@ def _filter_items(items: list) -> list:
     for item in items:
         if item.is_dir() and item.name in EXCLUDE_DIRS:
             continue
-        if item.is_file() and (
-            item.suffix in EXCLUDE_EXTENSIONS or item.name in EXCLUDE_FILES
-        ):
+        if item.is_file() and (item.suffix in EXCLUDE_EXTENSIONS or item.name in EXCLUDE_FILES):
             continue
         filtered_items.append(item)
     return filtered_items
@@ -167,10 +165,7 @@ def _print_tree_level(items: list, prefix: str, output_file=None):
     """Bir seviyedeki öğeleri yazdırır ve alt seviyeye geçer"""
     pointers = ["├── "] * (len(items) - 1) + ["└── "]
     for pointer, path in zip(pointers, items):
-        if path.is_dir():
-            icon = FOLDER_ICON
-        else:
-            icon = _get_file_icon(path)
+        icon = FOLDER_ICON if path.is_dir() else _get_file_icon(path)
 
         line = f"{prefix}{pointer}{icon} {path.name}"
         print(line)
@@ -210,9 +205,7 @@ def main():
     # Standard Library
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Renkli ikonlu proje ağaç yapısı oluşturucu"
-    )
+    parser = argparse.ArgumentParser(description="Renkli ikonlu proje ağaç yapısı oluşturucu")
     parser.add_argument(
         "-p",
         "--path",

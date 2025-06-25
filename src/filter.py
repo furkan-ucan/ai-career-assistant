@@ -175,9 +175,7 @@ def filter_junior_suitable_jobs(jobs_list, debug=False):
         else:
             filter_stats[filter_result] += 1
             if debug:
-                logger.debug(
-                    f"🔥 Filtrelendi ({filter_result}): {job.get('title', 'N/A')}"
-                )
+                logger.debug(f"🔥 Filtrelendi ({filter_result}): {job.get('title', 'N/A')}")
             if debug:
                 # Filtreleme istatistikleri
                 logger.debug(f"✅ Geçti: {job.get('title', 'N/A')}")
@@ -197,13 +195,9 @@ def score_jobs(jobs_list, scoring_system, debug=False):
         if scoring_system.should_include(total):
             scored.append(job)
             if debug:
-                logger.debug(
-                    f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}"
-                )
+                logger.debug(f"✅ Skor {total} ile kabul: {job.get('title', 'N/A')} - {details}")
         elif debug:
-            logger.debug(
-                f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}"
-            )
+            logger.debug(f"🔥 Skor {total} ile reddedildi: {job.get('title', 'N/A')} - {details}")
 
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored

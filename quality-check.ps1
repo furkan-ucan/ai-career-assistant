@@ -23,65 +23,78 @@ Write-Host "Sanal ortam aktiflestiiriliyor..." -ForegroundColor Yellow
 if ($Check) {
     Write-Host "🔍 Kod kalitesi kontrol ediliyor..." -ForegroundColor Cyan
 
-    # Import sıralaması kontrol
-    Write-Host "📋 Import sıralaması kontrol ediliyor..." -ForegroundColor White
-    isort main.py src/ tree_generator.py --profile black --check-only --diff
+    # Ruff kontrolü (linting + formatting)
+    Write-Host "⚡ Ruff kod kalitesi kontrolü..." -ForegroundColor White
+    ruff check main.py src/ tree_generator.py --diff
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Import sıralaması düzeltilmeli!" -ForegroundColor Red
+        Write-Host "❌ Ruff kod kalitesi sorunları bulundu!" -ForegroundColor Red
     } else {
-        Write-Host "✅ Import sıralaması OK" -ForegroundColor Green
+        Write-Host "✅ Ruff kod kalitesi OK" -ForegroundColor Green
     }
 
-    # Format kontrol
-    Write-Host "🎨 Format kontrol ediliyor..." -ForegroundColor White
-    black main.py src/ tree_generator.py --line-length=88 --check --diff
+    # Ruff format kontrolü
+    Write-Host "🎨 Ruff format kontrolü..." -ForegroundColor White
+    ruff format main.py src/ tree_generator.py --check --diff
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Format düzeltilmeli!" -ForegroundColor Red
     } else {
         Write-Host "✅ Format OK" -ForegroundColor Green
     }
 
-    # Lint kontrol (cognitive complexity dahil)
-    Write-Host "Lint kontrol ediliyor..." -ForegroundColor White
-    $lintResult = flake8 main.py src/ tree_generator.py --show-source 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Lint hatalari var!" -ForegroundColor Red
-        Write-Host $lintResult -ForegroundColor Yellow
-    } else {
-        Write-Host "Lint OK" -ForegroundColor Green
-    }
-
-    # MyPy tip kontrolu
-    Write-Host "Tip kontrolu ediliyor..." -ForegroundColor White
-    mypy main.py src/ --config-file=pyproject.toml
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Tip hatalari var!" -ForegroundColor Red
-    } else {
-        Write-Host "Tip kontrol OK" -ForegroundColor Green
-    }
-
     # MyPy tip kontrolü
     Write-Host "🔍 MyPy tip kontrolü..." -ForegroundColor White
-    mypy main.py src/cv_processor.py src/data_collector.py src/embedding_service.py --config-file=pyproject.toml
+    mypy main.py src/ tree_generator.py --config-file=pyproject.toml
     if ($LASTEXITCODE -ne 0) {
         Write-Host "⚠️ MyPy tip uyarıları var (kritik değil)" -ForegroundColor Yellow
     } else {
         Write-Host "✅ MyPy OK" -ForegroundColor Green
+    }
+
+    # Bandit güvenlik taraması
+    Write-Host "🔒 Bandit güvenlik taraması..." -ForegroundColor White
+    bandit -c pyproject.toml -r main.py src/ tree_generator.py
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "⚠️ Güvenlik uyarıları var (kontrol edin)" -ForegroundColor Yellow
+    } else {
+        Write-Host "✅ Güvenlik taraması OK" -ForegroundColor Green
+    }
+
+    # Geleneksel araçlar (yedek olarak)
+    Write-Host "� Geleneksel araç kontrolü..." -ForegroundColor White
+
+    # Flake8 kontrol (cognitive complexity dahil)
+    $lintResult = flake8 main.py src/ tree_generator.py --show-source 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "⚠️ Flake8 uyarıları var:" -ForegroundColor Yellow
+        Write-Host $lintResult -ForegroundColor Gray
+    } else {
+        Write-Host "✅ Flake8 OK" -ForegroundColor Green
     }
 }
 
 if ($Fix) {
     Write-Host "🔧 Kod kalitesi sorunları düzeltiliyor..." -ForegroundColor Cyan
 
-    # Import düzelt
-    Write-Host "📋 Import'lar düzeltiliyor..." -ForegroundColor White
+    # Ruff ile otomatik düzeltme
+    Write-Host "⚡ Ruff otomatik düzeltmeler..." -ForegroundColor White
+    ruff check main.py src/ tree_generator.py --fix
+    Write-Host "✅ Ruff lint sorunları düzeltildi" -ForegroundColor Green
+
+    # Ruff ile format düzeltme
+    Write-Host "🎨 Ruff format düzeltiliyor..." -ForegroundColor White
+    ruff format main.py src/ tree_generator.py
+    Write-Host "✅ Format düzeltildi" -ForegroundColor Green
+
+    # Geleneksel araçlarla yedek düzeltme
+    Write-Host "🔧 Geleneksel araçlarla ek düzeltmeler..." -ForegroundColor White
+
+    # Import düzelt (isort)
     isort main.py src/ tree_generator.py --profile black
     Write-Host "✅ Import'lar düzeltildi" -ForegroundColor Green
 
-    # Format düzelt
-    Write-Host "🎨 Format düzeltiliyor..." -ForegroundColor White
-    black main.py src/ tree_generator.py --line-length=88
-    Write-Host "✅ Format düzeltildi" -ForegroundColor Green
+    # Black format (Ruff'a ek olarak)
+    black main.py src/ tree_generator.py --line-length=119
+    Write-Host "✅ Black format uygulandı" -ForegroundColor Green
 
     Write-Host "🎉 Tüm kod kalitesi sorunları düzeltildi!" -ForegroundColor Green
 }

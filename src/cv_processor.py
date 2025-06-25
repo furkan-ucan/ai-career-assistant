@@ -14,9 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class CVProcessor:
-    def __init__(
-        self, cv_path: Optional[str] = None, embedding_settings: Optional[dict] = None
-    ):
+    def __init__(self, cv_path: Optional[str] = None, embedding_settings: Optional[dict] = None):
         """CV işleyici başlat"""
         if embedding_settings:
             self.embedding_service = EmbeddingService(**embedding_settings)
@@ -33,7 +31,7 @@ class CVProcessor:
                 logger.error(f"❌ CV dosyası bulunamadı: {self.cv_path}")
                 return False
 
-            with open(self.cv_path, "r", encoding="utf-8") as file:
+            with open(self.cv_path, encoding="utf-8") as file:
                 self.cv_text = file.read().strip()
 
             if not self.cv_text:
@@ -46,7 +44,7 @@ class CVProcessor:
         except FileNotFoundError:
             logger.error(f"❌ CV dosyası bulunamadı: {self.cv_path}")
             return False
-        except IOError as e:
+        except OSError as e:
             logger.error(f"❌ CV dosyası okuma hatası: {e}", exc_info=True)
             return False
         except Exception as e:
@@ -67,9 +65,7 @@ class CVProcessor:
         self.cv_embedding = self.embedding_service.create_embedding(self.cv_text)
 
         if self.cv_embedding:
-            logger.info(
-                f"✅ CV embedding oluşturuldu (boyut: {len(self.cv_embedding)})"
-            )
+            logger.info(f"✅ CV embedding oluşturuldu (boyut: {len(self.cv_embedding)})")
             return True
         else:
             logger.error("❌ CV embedding oluşturulamadı")
