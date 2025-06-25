@@ -144,7 +144,7 @@ def test_load_config():
 
 def test_datetime_timestamp():
     """Test datetime timestamp functionality."""
-    from main import datetime
+    from datetime import datetime
 
     # Test that datetime import works
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
