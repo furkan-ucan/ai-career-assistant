@@ -357,8 +357,10 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
                 "missing_keywords": data.get("missing_keywords", []),
             }
         )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("AI analysis failed for job %s: %s", job.get("title"), exc)
+    except json.JSONDecodeError as exc:
+        logger.warning("Failed to parse AI response for job %s: %s", job.get("title"), exc)
+    except Exception:
+        logger.exception("Unexpected error during AI analysis for job %s", job.get("title"))
     return job
 
 
