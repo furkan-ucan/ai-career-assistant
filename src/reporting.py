@@ -52,18 +52,36 @@ def _log_persona_distribution(similar_jobs: list[dict]) -> None:
 
 
 def display_results(similar_jobs: list[dict], threshold: float) -> None:
-    """Log formatted job search results."""
+    """Log formatted job search results with URL-based deduplication."""
     if similar_jobs:
-        logger.info("✅ %s adet yüksek kaliteli pozisyon bulundu!", len(similar_jobs))
+        # Deduplicate by URL - keep the highest scoring job for each URL
+        deduplicated_jobs = _deduplicate_jobs_by_url(similar_jobs)
+
+        original_count = len(similar_jobs)
+        deduplicated_count = len(deduplicated_jobs)
+
+        logger.info("✅ %s adet yüksek kaliteli pozisyon bulundu!", original_count)
+        if original_count != deduplicated_count:
+            logger.info(
+                "🔗 %s tekrar ilan URL'ye göre temizlendi (%s benzersiz ilan kaldı)",
+                original_count - deduplicated_count,
+                deduplicated_count,
+            )
+
         logger.info("📊 Uygunluk eşiği: %%%.0f ve üzeri", threshold)
         logger.info("\n" + "=" * 70)
         logger.info("🎉 SİZE ÖZEL EN UYGUN İŞ İLANLARI (JobSpy Optimize)")
         logger.info("🎯 YBS + Full-Stack + Veri Analizi Odaklı")
         logger.info("=" * 70)
-        for i, job in enumerate(similar_jobs[:15], 1):
+
+        # Display up to 15 deduplicated jobs
+        for i, job in enumerate(deduplicated_jobs[:15], 1):
             _log_single_job_details(job, i)
-        logger.info("\n🎯 Analiz tamamlandı! %s yüksek kaliteli pozisyon listelendi.", len(similar_jobs))
-        _log_persona_distribution(similar_jobs)
+
+        logger.info(
+            "\n🎯 Analiz tamamlandı! %s benzersiz yüksek kaliteli pozisyon listelendi.", min(15, deduplicated_count)
+        )
+        _log_persona_distribution(deduplicated_jobs)
     else:
         logger.warning("⚠️  0 ilan bulundu veya uygunluk eşiği (%%%.0f) altında.", threshold)
         logger.info("💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi düşünebilirsiniz.")
@@ -128,6 +146,55 @@ def _log_persona_success(high_quality_jobs: list[dict]) -> None:
         logger.info("\n🔹 En Başarılı Personalar:")
         for persona, count in persona_counts.most_common():
             logger.info(SITE_COUNT_FORMAT, persona, count)
+
+
+def _deduplicate_jobs_by_url(jobs: list[dict]) -> list[dict]:
+    """
+    Deduplicate jobs by URL, keeping the job with the highest score for each URL.
+
+    Args:
+        jobs: List of job dictionaries
+
+    Returns:
+        List of deduplicated jobs, sorted by score descending
+    """
+    if not jobs:
+        return []
+
+    url_to_best_job: dict[str, dict] = {}
+
+    for job in jobs:
+        url = job.get("job_url", "").strip()
+        if not url:
+            # If no URL, treat as unique (shouldn't happen but safe fallback)
+            unique_key = f"no_url_{id(job)}"
+            url_to_best_job[unique_key] = job
+            continue
+
+        # Get the current best score for scoring comparison
+        current_score = job.get("fit_score", job.get("match_score", job.get("similarity_score", 0)))
+
+        if url not in url_to_best_job:
+            # First job with this URL
+            url_to_best_job[url] = job
+        else:
+            # Compare with existing job for this URL
+            existing_job = url_to_best_job[url]
+            existing_score = existing_job.get(
+                "fit_score", existing_job.get("match_score", existing_job.get("similarity_score", 0))
+            )
+
+            if current_score > existing_score:
+                # Current job has higher score, replace
+                url_to_best_job[url] = job
+
+    # Return deduplicated jobs sorted by score descending
+    deduplicated = list(url_to_best_job.values())
+    deduplicated.sort(
+        key=lambda x: x.get("fit_score", x.get("match_score", x.get("similarity_score", 0))), reverse=True
+    )
+
+    return deduplicated
 
 
 __all__ = ["display_results", "log_summary_statistics"]

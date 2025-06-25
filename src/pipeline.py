@@ -356,6 +356,12 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
         response = model.generate_content(prompt, generation_config={"temperature": temperature})
         text = response.text if hasattr(response, "text") else str(response)
         text = text.strip().strip("`")
+
+        # Check for empty response
+        if not text or text.strip() == "":
+            logger.warning("AI returned empty response for job %s, keeping original scores", job.get("title"))
+            return job
+
         data = json.loads(text)
         job.update(
             {
@@ -367,13 +373,15 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
             }
         )
     except json.JSONDecodeError as exc:
-        logger.warning("Failed to parse AI response for job %s: %s", job.get("title"), exc)
+        logger.warning("Failed to parse AI response for job %s: %s, keeping original scores", job.get("title"), exc)
+        return job  # Return original job without AI analysis
     except Exception as exc:
         # Handle rate limit and other API errors gracefully
         if "ResourceExhausted" in str(exc) or "429" in str(exc):
             logger.warning("API rate limit reached for job %s, skipping AI analysis", job.get("title"))
         else:
-            logger.exception("Unexpected error during AI analysis for job %s", job.get("title"))
+            logger.warning("Unexpected error during AI analysis for job %s: %s", job.get("title"), exc)
+        return job  # Return original job in all error cases
     return job
 
 

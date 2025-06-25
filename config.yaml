@@ -3,26 +3,26 @@
 
 # Genel iş arama ayarları
 job_search_settings:
-  target_sites: ["linkedin", "indeed"]  # Hangi sitelerde arama yapılacak
-  default_hours_old: 72  # Varsayılan olarak son kaç saatteki ilanlar (JobSpy native)
-  default_results_per_site: 25  # Her persona ve site için kaç sonuç çekilecek
-  min_similarity_threshold: 60  # Benzerlik eşiği (%) - JobSpy ile daha kaliteli veri
+  target_sites: ["linkedin", "indeed"] # Hangi sitelerde arama yapılacak
+  default_hours_old: 72 # Varsayılan olarak son kaç saatteki ilanlar (JobSpy native)
+  default_results_per_site: 25 # Her persona ve site için kaç sonuç çekilecek
+  min_similarity_threshold: 60 # Benzerlik eşiği (%) - JobSpy ile daha kaliteli veri
 
 # Persona bazlı arama konfigürasyonları
 # Indeed'e göre optimize edilmiş ve negatif filtreli arama terimleri
 persona_search_configs:
   Software_Engineer:
-    term: "(\"Software Engineer\" OR \"Yazılım Mühendisi\") -Senior -Lead -Principal -Manager -Direktör"
+    term: '("Software Engineer" OR "Yazılım Mühendisi") -Senior -Lead -Principal -Manager -Direktör'
     hours_old: 72
     results: 25
 
   Business_Analyst:
-    term: "(\"Business Analyst\" OR \"İş Analisti\") (ERP OR SAP OR Process OR Süreç) -Senior -Lead -Manager"
+    term: '("Business Analyst" OR "İş Analisti") (ERP OR SAP OR Process OR Süreç) -Senior -Lead -Manager'
     hours_old: 72
     results: 25
 
   Data_Analyst:
-    term: "(\"Data Analyst\" OR \"Veri Analisti\" OR \"BI Analyst\" OR \"Business Intelligence\") (SQL OR Python OR PowerBI OR Tableau) -Senior -Lead"
+    term: '("Data Analyst" OR "Veri Analisti" OR "BI Analyst" OR "Business Intelligence") (SQL OR Python OR PowerBI OR Tableau) -Senior -Lead'
     hours_old: 168
     results: 25
 
@@ -37,7 +37,7 @@ paths:
 embedding_settings:
   batch_size: 10
   retry_count: 3
-  rate_limit_delay: 0.1  # saniye
+  rate_limit_delay: 0.1 # saniye
 
 # Vector store ayarları
 vector_store_settings:
@@ -100,6 +100,6 @@ cv_analyzer_settings:
 ai_reranking_settings:
   enabled: true
   rerank_pool_size: 75
-  max_workers: 2  # Gemini Free Tier için düşürüldü (15 req/min limit)
-  llm_model: "gemini-1.5-flash-latest"
+  max_workers: 2 # Gemini Free Tier için düşürüldü (15 req/min limit)
+  llm_model: "ggemini-2.5-flash"
   llm_temperature: 0.1
