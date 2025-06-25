@@ -23,6 +23,37 @@ DEFAULT_MAX_RESULTS_PER_SITE = 50  # Her site için ayrı limit
 TARGET_SITES = ["indeed", "linkedin"]  # ÖNEMLİ: LinkedIn öncelikli!
 
 
+def _scrape_single_site(
+    site: str, search_term: str, location: str, max_results_per_site: int, hours_old: int
+) -> pd.DataFrame | None:
+    """Scrape jobs from a single site."""
+    logger.info(f"\n--- Site '{site}' için arama yapılıyor ---")
+    try:
+        scrape_params = {
+            "site_name": site,
+            "search_term": search_term,
+            "location": location,
+            "results_wanted": max_results_per_site,
+            "hours_old": hours_old,
+        }
+        if site == "indeed":
+            scrape_params["country_indeed"] = "Turkey"
+            logger.info("   🎯 Indeed: Türkiye özel ayarları aktif")
+        elif site == "linkedin":
+            scrape_params["linkedin_fetch_description"] = True
+            logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")
+
+        jobs_from_site: pd.DataFrame | None = scrape_jobs(**scrape_params)
+        if jobs_from_site is not None and not jobs_from_site.empty:
+            logger.info(f"✅ '{site}' sitesinden {len(jobs_from_site)} ilan toplandı.")
+            jobs_from_site["source_site"] = site
+            return jobs_from_site
+        logger.info(f"ℹ️ '{site}' sitesinden bu arama terimi için ilan bulunamadı.")
+    except Exception as e:
+        logger.error(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True)
+    return None
+
+
 def collect_job_data(
     search_term,
     location=DEFAULT_LOCATION,
@@ -52,35 +83,11 @@ def collect_job_data(
 
     all_jobs_list = []
 
-    def scrape_single(site: str):
-        logger.info(f"\n--- Site '{site}' için arama yapılıyor ---")
-        try:
-            scrape_params = {
-                "site_name": site,
-                "search_term": search_term,
-                "location": location,
-                "results_wanted": max_results_per_site,
-                "hours_old": hours_old,
-            }
-            if site == "indeed":
-                scrape_params["country_indeed"] = "Turkey"
-                logger.info("   🎯 Indeed: Türkiye özel ayarları aktif")
-            elif site == "linkedin":
-                scrape_params["linkedin_fetch_description"] = True
-                logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")
-
-            jobs_from_site = scrape_jobs(**scrape_params)
-            if jobs_from_site is not None and not jobs_from_site.empty:
-                logger.info(f"✅ '{site}' sitesinden {len(jobs_from_site)} ilan toplandı.")
-                jobs_from_site["source_site"] = site
-                return jobs_from_site
-            logger.info(f"ℹ️ '{site}' sitesinden bu arama terimi için ilan bulunamadı.")
-        except Exception as e:
-            logger.error(f"❌ '{site}' sitesinden veri toplarken hata: {str(e)}", exc_info=True)
-        return None
-
     with ThreadPoolExecutor(max_workers=len(site_names)) as executor:
-        future_to_site = {executor.submit(scrape_single, site): site for site in site_names}
+        future_to_site = {
+            executor.submit(_scrape_single_site, site, search_term, location, max_results_per_site, hours_old): site
+            for site in site_names
+        }
         for future in as_completed(future_to_site):
             result = future.result()
             if result is not None:

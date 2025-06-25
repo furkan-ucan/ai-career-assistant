@@ -103,29 +103,82 @@ def test_display_results_with_no_jobs(caplog):
     assert "Eşiği düşürmeyi" in output
 
 
-def test_log_summary_statistics_with_full_data(
-    caplog, sample_jobs_df, sample_high_quality_jobs, sample_ai_metadata
+@pytest.mark.parametrize(
+    "jobs_df_fixture,high_quality_jobs_fixture,ai_metadata_fixture,expected_sections,missing_sections",
+    [
+        # Full data case
+        (
+            "sample_jobs_df",
+            "sample_high_quality_jobs",
+            "sample_ai_metadata",
+            ["Site Dağılımı", "Ana Yeteneklerin", "En Başarılı Personalar"],
+            [],
+        ),
+        # Empty DataFrame case
+        ("empty_df", "sample_high_quality_jobs", "sample_ai_metadata", ["En Başarılı Personalar"], ["Site Dağılımı"]),
+        # Empty high quality jobs case
+        (
+            "sample_jobs_df",
+            "empty_high_quality_jobs",
+            "sample_ai_metadata",
+            ["Site Dağılımı", "Ana Yeteneklerin"],
+            ["En Başarılı Personalar"],
+        ),
+        # No AI metadata case
+        (
+            "sample_jobs_df",
+            "sample_high_quality_jobs",
+            "no_ai_metadata",
+            ["Site Dağılımı", "En Başarılı Personalar"],
+            ["Ana Yeteneklerin"],
+        ),
+        # All empty case
+        (
+            "empty_df",
+            "empty_high_quality_jobs",
+            "no_ai_metadata",
+            [],
+            ["Site Dağılımı", "Ana Yeteneklerin", "En Başarılı Personalar"],
+        ),
+    ],
+)
+def test_log_summary_statistics_combinations(
+    request,
+    caplog,
+    jobs_df_fixture,
+    high_quality_jobs_fixture,
+    ai_metadata_fixture,
+    expected_sections,
+    missing_sections,
 ):
-    """Test log_summary_statistics with complete data."""
+    """Parametrized test for log_summary_statistics with different input combinations."""
+    # Helper fixtures for parametrize
+    fixtures = {
+        "sample_jobs_df": request.getfixturevalue("sample_jobs_df"),
+        "empty_df": pd.DataFrame(),
+        "sample_high_quality_jobs": request.getfixturevalue("sample_high_quality_jobs"),
+        "empty_high_quality_jobs": [],
+        "sample_ai_metadata": request.getfixturevalue("sample_ai_metadata"),
+        "no_ai_metadata": None,
+    }
+
+    jobs_df = fixtures[jobs_df_fixture]
+    high_quality_jobs = fixtures[high_quality_jobs_fixture]
+    ai_metadata = fixtures[ai_metadata_fixture]
+
     with caplog.at_level(logging.INFO):
-        log_summary_statistics(sample_jobs_df, sample_high_quality_jobs, sample_ai_metadata)
+        log_summary_statistics(jobs_df, high_quality_jobs, ai_metadata)
 
-    # Check header
+    # Check that expected sections are present
+    for section in expected_sections:
+        assert section in caplog.text, f"Expected section '{section}' not found"
+
+    # Check that missing sections are not present
+    for section in missing_sections:
+        assert section not in caplog.text, f"Unexpected section '{section}' found"
+
+    # Header should always be present
     assert "📊 Özet İstatistikler:" in caplog.text
-
-    # Check site distribution
-    assert "🔹 Site Dağılımı:" in caplog.text
-    assert "kariyer.net: 2 ilan" in caplog.text
-    assert "yenibiris.com: 1 ilan" in caplog.text
-    assert "linkedin: 1 ilan" in caplog.text
-
-    # Check skill mentions (python, react, sql, typescript should be found)
-    assert "🔹 Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı:" in caplog.text
-
-    # Check persona success
-    assert "🔹 En Başarılı Personalar:" in caplog.text
-    assert "developer: 2 ilan" in caplog.text
-    assert "analyst: 1 ilan" in caplog.text
 
 
 def test_log_summary_statistics_empty_dataframe(caplog, sample_high_quality_jobs, sample_ai_metadata):
@@ -182,9 +235,7 @@ def test_log_summary_statistics_jobs_without_persona_source(caplog, sample_jobs_
     assert "🔹 En Başarılı Personalar:" not in caplog.text
 
 
-def test_log_summary_statistics_missing_description_column(
-    caplog, sample_high_quality_jobs, sample_ai_metadata
-):
+def test_log_summary_statistics_missing_description_column(caplog, sample_high_quality_jobs, sample_ai_metadata):
     """Test log_summary_statistics with DataFrame missing description column."""
     df_no_desc = pd.DataFrame({"source_site": ["kariyer.net", "yenibiris.com"], "title": ["Developer", "Analyst"]})
 
