@@ -1,46 +1,72 @@
-# AGENTS.md – Akıllı Kariyer Asistanı Kuralları
+# AGENTS.md — Akıllı Kariyer Asistanı · Codex Çalışma Kılavuzu
 
-## 1. Proje Özeti
-Python tabanlı CLI: CV → embed → ilan toplama (`JobSpy` ile LinkedIn/Indeed) → ChromaDB (`cosine`) → Gemini AI ile puanlama → filtrelenmiş iş listesi.
-Yapılandırma: `config.yaml`. API Anahtarı: `.env` (`GEMINI_API_KEY`).
+<!-- AgentsMD-Spec: v0.3  |  Docs: https://agentsmd.net/#what-is-agentsmd -->
 
-## 2. Temel Komutlar
-- **Uygulamayı Çalıştır:** `python main.py` (Sanal ortam (`kariyer-asistani-env`) aktif olmalı)
-- **Bağımlılıkları Yükle:** `pip install -r requirements.txt`
-- **Kod Kalitesi (Format + Lint + Test):** `make quality-check` (veya Windows için `.\dev-tools.ps1 -Action Test-CodeQuality`)
-- **Sadece Testleri Çalıştır:** `pytest -q tests/`
+## 1 • Görev Tanımı
 
-## 3. Kod Standartları ve En İyi Pratikler
-- **Formatlama:** `black .` (Yapılandırma `pyproject.toml` içinde)
-- **Import Sıralama:** `isort .` (Yapılandırma `pyproject.toml` içinde)
-- **Linting:** `flake8 .` (Yapılandırma `.flake8` içinde)
-- **Loglama:** Python `logging` modülü kullanılacak (varsayılan seviye: INFO). `print()` kullanmaktan kaçın.
-- **Dosya Yolları:** `pathlib.Path` kullan.
-- **Yapılandırma:** Tüm ayarlar `config.yaml`'dan, hassas bilgiler `.env`'den okunur.
-- **Hata Yönetimi:** Spesifik exception'lar yakalanmalı, `tenacity` ile API retry.
+OpenAI Codex, bu depoda **Python CLI** aracı geliştirir:
+CV → `JobSpy` (LinkedIn / Indeed) → ChromaDB (cosine) → Gemini AI puanlama → filtrelenmiş ilan listesi.
+Aşağıdaki dizinler dışında hiçbir dosya yaratma / silme:
 
-## 4. Önemli Klasörler ve Dosyalar
-| Klasör/Dosya        | Açıklama                                      |
-| ------------------- | --------------------------------------------- |
-| `main.py`           | Ana uygulama giriş noktası                     |
-| `config.yaml`       | Tüm proje ve puanlama ayarları                |
-| `src/`              | Tüm Python modülleri (business logic)         |
-| `src/intelligent_scoring.py` | Anahtar puanlama mantığı                  |
-| `data/cv.txt`       | Kullanıcı CV metni (config'den yolu override edilebilir) |
-| `data/chromadb/`    | Vektör veritabanı (Git'e ekleme!)             |
-| `tests/`            | Pytest birim testleri                         |
+| Bileşen    | Dizin                           | Açıklama                     |
+| ---------- | ------------------------------- | ---------------------------- |
+| Kaynak-kod | `src/`                          | Embedding, scraping, scoring |
+| CLI giriş  | `main.py`                       | Uygulama başlangıcı          |
+| Konfig     | `config.yaml`, `pyproject.toml` | Runtime + tooling            |
+| Veri       | `data/`                         | CV, ChromaDB, CSV            |
+| Test       | `tests/`                        | Pytest senaryoları           |
+| Araç       | `quality-check.ps1`, `setup.sh` | Kod kalitesi, hızlı kurulum  |
+| Belgeler   | `docs/`, `memory-bank/`         | Sistem mimarisi              |
 
-## 5. Kesinlikle Yasaklı Eylemler
-- **Commit ETME:** `.env` dosyası, `data/chromadb/` klasörü, `*.pyc` dosyaları, `__pycache__/` klasörü.
-- **Komutlar (Sandbox Dışı):** `git reset --hard`, `rm -rf` (özellikle proje dışı yollarda).
-- **ChromaDB:** `VectorStore.create_collection()` içindeki koleksiyon silme mantığı sadece debug/test amaçlıdır; üretimde `get_or_create_collection` kullanılmalı.
+## 2 • Çalıştırma Talimatları (Runbook)
 
-## 6. Puanlama Sistemi İpuçları (Scoring Hints)
-- Ağırlıklı puanlama `config.yaml`'daki `scoring_system` bölümünden yönetilir.
-- **Bileşenler:** Başlık (`title_weights`), Açıklama (`description_weights`), Deneyim Yılı (`experience_penalties`).
-- **CV Beceri Bonusu:** Eğer bir ilanın AI tarafından hesaplanan ham kosinüs benzerlik skoru `cv_skill_boost_threshold`'un üzerindeyse, toplam skora `cv_skill_bonus_points` eklenir. (Bu özellik `calculate_total_score` içinde kontrol edilir).
-- Regex pattern'leri `_create_regex_pattern` ile kelime sınırı (`\b`) gözetilerek ve case-insensitive olarak oluşturulur.
+```bash
+# Ortam
+bash setup.sh && source kariyer-asistani-env/bin/activate
+# Tam kalite kontrolü
+ruff check --fix . && ruff format . && mypy . && bandit -c pyproject.toml -r .
+pytest -q
+3 • Kodlama Standartları
+Biçim + Lint + Import: ruff v0.4+
 
-## 7. Dil ve Yorumlar
-- Kod içi yorumlar ve log mesajları **Türkçe** olabilir.
-- Değişken, fonksiyon, sınıf ve dosya isimleri **İngilizce** olmalıdır (PEP 8).
+Satır uzunluğu: 119
+
+Adlandırma: EN; yorum/log mesajı TR
+
+Logging: logging (INFO) — print() yasak
+
+Yollar: pathlib.Path
+
+Tip kontrolü: mypy (uyarı yok)
+
+Güvenlik: bandit (0 issue)
+
+Do / Don’t
+Yap	Yapma
+logging.info() kullan	print() kullanma
+ruff check --fix	black / isort / flake8 çalıştırma
+get_or_create_collection	Chroma koleksiyonunu silme
+
+4 • Fonksiyon Manifesti (Codex Function-Calling)
+yaml
+Kopyala
+Düzenle
+functions:
+  run_tests:
+    description: "Pytest senaryolarını çalıştır."
+    parameters: {}
+  format_code:
+    description: "Ruff ile kodu biçimlendir."
+    parameters: {}
+5 • Pull-Request-Checklist
+Açıklama net, ilgili issue etiketli
+
+ruff, mypy, bandit, pytest yeşil
+
+Yalnızca tek odaklı değişiklik
+
+README / docs güncel
+
+6 • Yasaklı Dosyalar
+.env, data/chromadb/, *.pyc, __pycache__/, .ruff_cache/, logs/
+```
