@@ -20,7 +20,7 @@ def test_setup_logging():
 
 def test_validate_skill_metadata():
     """Test skill metadata validation."""
-    from main import _validate_skill_metadata
+    from src.pipeline import _validate_skill_metadata
 
     # Valid metadata
     skills = ["python", "sql"]
@@ -39,10 +39,10 @@ def test_validate_skill_metadata():
     assert _validate_skill_metadata(skills, ["high", "low"]) is False
 
 
-@patch("main.CVAnalyzer")
+@patch("src.pipeline.CVAnalyzer")
 def test_setup_ai_metadata_and_personas(mock_analyzer_class):
     """Test AI metadata and personas setup."""
-    from main import _setup_ai_metadata_and_personas, config
+    from src.pipeline import _setup_ai_metadata_and_personas, config
 
     # Mock analyzer
     mock_analyzer = MagicMock()
@@ -66,7 +66,7 @@ def test_setup_ai_metadata_and_personas(mock_analyzer_class):
 
 def test_apply_skill_weights():
     """Test skill weight application."""
-    from main import _apply_skill_weights, config
+    from src.pipeline import _apply_skill_weights, config
 
     # Initialize empty config
     if "scoring_system" not in config:
@@ -85,10 +85,10 @@ def test_apply_skill_weights():
     assert config["scoring_system"]["description_weights"]["positive"]["excel"] == 6
 
 
-@patch("main.IntelligentScoringSystem")
+@patch("src.pipeline.IntelligentScoringSystem")
 def test_configure_scoring_system_with_ai_metadata(mock_scoring_class):
     """Test scoring system configuration with AI metadata."""
-    from main import _configure_scoring_system, config
+    from src.pipeline import _configure_scoring_system, config
 
     # Setup config
     config["scoring_system"] = {"dynamic_skill_weight": 10, "description_weights": {"positive": {}}}
@@ -100,10 +100,10 @@ def test_configure_scoring_system_with_ai_metadata(mock_scoring_class):
     mock_scoring_class.assert_called_once_with(config)
 
 
-@patch("main.IntelligentScoringSystem")
+@patch("src.pipeline.IntelligentScoringSystem")
 def test_configure_scoring_system_without_ai_metadata(mock_scoring_class):
     """Test scoring system configuration without AI metadata."""
-    from main import _configure_scoring_system
+    from src.pipeline import _configure_scoring_system
 
     ai_metadata = {}
 
@@ -112,10 +112,10 @@ def test_configure_scoring_system_without_ai_metadata(mock_scoring_class):
     mock_scoring_class.assert_called_once()
 
 
-@patch("main.IntelligentScoringSystem")
+@patch("src.pipeline.IntelligentScoringSystem")
 def test_configure_scoring_system_invalid_metadata(mock_scoring_class):
     """Test scoring system configuration with invalid AI metadata."""
-    from main import _configure_scoring_system, config
+    from src.pipeline import _configure_scoring_system, config
 
     # Setup config
     config["scoring_system"] = {"dynamic_skill_weight": 10, "description_weights": {"positive": {}}}
@@ -152,13 +152,13 @@ def test_datetime_timestamp():
     assert "_" in timestamp
 
 
-@patch("main.collect_job_data")
+@patch("src.pipeline.collect_job_data")
 def test_collect_data_for_all_personas_mock(mock_collect):
     """Test data collection for all personas with proper mocking."""
     # Import pandas for DataFrame creation
     import pandas as pd
 
-    from main import collect_data_for_all_personas
+    from src.pipeline import collect_data_for_all_personas
 
     # Mock successful collection with DataFrame
     mock_df = pd.DataFrame({"title": ["Developer"], "company": ["Test Corp"]})
