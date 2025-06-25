@@ -1,4 +1,5 @@
 # Standard Library
+import shutil
 import tempfile
 
 # Third Party
@@ -31,17 +32,34 @@ def test_stable_job_id_uses_url():
 def test_duplicate_detection_across_runs():
     job = {"title": "Dev", "description": "desc"}
     df = pd.DataFrame([job])
-    embeddings = [[0.0, 0.0, 0.0]]
+    embeddings: list[list[float] | None] = [[0.0, 0.0, 0.0]]
 
-    with tempfile.TemporaryDirectory() as tmpdir:
+    tmpdir = tempfile.mkdtemp()
+    try:
         # First run
         vs1 = VectorStore(persist_directory=tmpdir)
         vs1.add_jobs(df, embeddings)
         count1 = vs1.get_stats()["total_jobs"]
         assert count1 == 1
+        vs1 = None  # Explicitly close
 
         # Simulate new run with same storage
         vs2 = VectorStore(persist_directory=tmpdir)
         vs2.add_jobs(df, embeddings)
         count2 = vs2.get_stats()["total_jobs"]
         assert count2 == 1
+        vs2 = None  # Explicitly close
+    finally:
+        # Manual cleanup with retry for Windows
+        for attempt in range(3):
+            try:
+                shutil.rmtree(tmpdir)
+                break
+            except PermissionError:
+                if attempt < 2:
+                    import time
+
+                    time.sleep(0.5)
+                else:
+                    # Skip cleanup if still locked
+                    pass
