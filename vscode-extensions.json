@@ -408,7 +408,7 @@
       "version": "1.7.8",
       "description": "Syntax highlighting for styled-components"
     },
-        {
+    {
       "id": "trunk.io",
       "name": "Trunk Code Quality",
       "version": "latest",
@@ -502,10 +502,7 @@
       "mechatroner.rainbow-csv",
       "grapecity.gc-excelviewer"
     ],
-    "mobile_development": [
-      "dart-code.dart-code",
-      "dart-code.flutter"
-    ],
+    "mobile_development": ["dart-code.dart-code", "dart-code.flutter"],
     "devops_containers": [
       "ms-azuretools.vscode-docker",
       "ms-kubernetes-tools.vscode-kubernetes-tools",
@@ -532,10 +529,7 @@
       "orta.vscode-jest",
       "vitest.explorer"
     ],
-    "themes_icons": [
-      "github.github-vscode-theme",
-      "pkief.material-icon-theme"
-    ]
+    "themes_icons": ["github.github-vscode-theme", "pkief.material-icon-theme"]
   },
   "metadata": {
     "generated_date": "2025-06-25",

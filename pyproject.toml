@@ -8,10 +8,8 @@ version = "1.0.0"
 description = "Akıllı Kariyer Asistanı - AI tabanlı iş arama ve eşleştirme sistemi"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
-authors = [
-    {name = "Furkan", email = "furkan.ucann@yandex.com"}
-]
+license = { text = "MIT" }
+authors = [{ name = "Furkan", email = "furkan.ucann@yandex.com" }]
 keywords = ["ai", "career", "job-search", "nlp", "machine-learning"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -46,7 +44,7 @@ dev = [
     "mypy>=1.8.0",
     "pre-commit>=3.0.0",
     "ruff>=0.12.0",
-    "bandit>=1.8.0"
+    "bandit>=1.8.0",
 ]
 
 [project.urls]
@@ -81,9 +79,9 @@ select = [
     "SIM", # flake8-simplify
 ]
 ignore = [
-    "E501",  # Line too long (black handles this)
-    "B008",  # Do not perform function calls in argument defaults
-    "B904",  # Allow bare except
+    "E501", # Line too long (black handles this)
+    "B008", # Do not perform function calls in argument defaults
+    "B904", # Allow bare except
 ]
 exclude = [
     ".git",
@@ -94,7 +92,7 @@ exclude = [
     "dist",
     "*.egg-info",
     "logs",
-    "data/chromadb"
+    "data/chromadb",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -107,13 +105,8 @@ indent-style = "space"
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --strict-markers"
-testpaths = [
-    "tests",
-]
-python_files = [
-    "test_*.py",
-    "*_test.py",
-]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -123,11 +116,7 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 ignore_missing_imports = true
 strict_optional = false
-exclude = [
-    "kariyer-asistani-env/",
-    "build/",
-    "dist/"
-]
+exclude = ["kariyer-asistani-env/", "build/", "dist/"]
 
 # External library ignores
 [[tool.mypy.overrides]]
@@ -137,16 +126,13 @@ module = [
     "jobspy.*",
     "tqdm.*",
     "google.*",
-    "sentence_transformers.*"
+    "sentence_transformers.*",
 ]
 ignore_missing_imports = true
 
 [tool.bandit]
-exclude_dirs = [
-    "tests",
-    "kariyer-asistani-env",
-    ".venv",
-    "build",
-    "dist"
-]
-skips = ["B101", "B603"]  # Skip assert_used and subprocess_without_shell_equals_true
+exclude_dirs = ["tests", "kariyer-asistani-env", ".venv", "build", "dist"]
+skips = [
+    "B101",
+    "B603",
+] # Skip assert_used and subprocess_without_shell_equals_true
