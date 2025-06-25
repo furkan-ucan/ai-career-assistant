@@ -20,6 +20,7 @@
 ##### ✅ PR #35: "feat: dynamic scoring and reporting" - DETAYLI ANALİZ
 
 **Kapsamlı Değişiklikler:**
+
 - **Yenilik**: AI-driven skill weighting sistemi (threshold-based)
 - **Dinamik**: Persona result counts artık role-based
 - **Raporlama**: Summary statistics (site distribution, skill mentions, persona breakdown)
@@ -27,12 +28,14 @@
 - **Test Kapsamı**: Genişletilmiş test suite (reporting.py, pipeline.py için yeni testler)
 
 **Teknik Detaylar:**
+
 - `min_importance_for_scoring` config parametresi eklendi (threshold: 0.7)
 - Skill importance scores artık scoring system'de kullanılıyor
 - Job title content'e göre dynamic result counts
 - Summary statistics: site, skill, persona dağılımları
 
 **Code Review Feedback:**
+
 - **Copilot Review**: Global state kullanımı, pandas import eksikliği flaglendi
 - **CodeRabbit Review**: Test coverage artırılması önerildi
 - **Sonuç**: Feedback'ler ele alındı, iyileştirmeler yapıldı
@@ -40,11 +43,13 @@
 ##### 📝 PR #36: "Add docstrings to codex/implement-advanced-scoring,-dynamic-search,-and-reporting"
 
 **Otomatik Docstring PR:**
+
 - **Otomasyon**: CodeRabbit AI tarafından PR #35'teki yeni koda docstring eklendi
 - **Kapsam**: 5 dosya değiştirildi (+76 ekleme, -11 silme)
 - **Kalite**: Google style docstrings, parametreler ve return values açıklandı
 
 **Değiştirilen Dosyalar:**
+
 1. `src/persona_builder.py` - `build_dynamic_personas()` fonksiyonu
 2. `src/pipeline.py` - 6 fonksiyon için detaylı docstring'ler
 3. `src/reporting.py` - `display_results()` ve `log_summary_statistics()`
@@ -52,12 +57,14 @@
 5. `tests/test_persona_builder.py` - Test case documentation
 
 **Docstring Kalitesi:**
+
 - ✅ **Parameters**: Tüm parametreler tip ve açıklama ile belgelenmiş
 - ✅ **Returns**: Return type'lar ve açıklamalar eklendi
 - ✅ **Functionality**: Fonksiyon davranışları detaylandırıldı
 - ✅ **Standards**: Google docstring format'ına uygun
 
 **Örnek Docstring İyileştirmesi:**
+
 ```python
 # Öncesi
 def build_dynamic_personas(target_job_titles: list[str]) -> dict[str, dict[str, object]]:
