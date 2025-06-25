@@ -16,7 +16,7 @@ from .embedding_service import EmbeddingService
 from .filter import score_jobs
 from .intelligent_scoring import IntelligentScoringSystem
 from .persona_builder import build_dynamic_personas
-from .reporting import display_results
+from .reporting import display_results, log_summary_statistics
 from .utils.file_helpers import save_dataframe_csv
 from .vector_store import VectorStore
 
@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 config = load_settings()
 
 scoring_system: IntelligentScoringSystem | None = None
+ai_metadata_global: dict | None = None
 
 embedding_settings = config.get("embedding_settings", {})
 
@@ -119,6 +120,8 @@ def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
     cv_text = Path(config["paths"]["cv_file"]).read_text(encoding="utf-8")
     analyzer = CVAnalyzer()
     ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
+    global ai_metadata_global
+    ai_metadata_global = ai_metadata
 
     personas_cfg = persona_search_config
     if ai_metadata.get("target_job_titles"):
@@ -144,19 +147,24 @@ def _validate_skill_metadata(key_skills: object, skill_importance: object) -> bo
     )
 
 
-def _apply_skill_weights(skill: str, importance: float, base_weight: int) -> None:
-    """Apply weight multiplier based on skill importance."""
-    if importance >= 0.85:
-        weight = int(base_weight * 1.5)
+def _apply_skill_weights(skill: str, importance: float, base_weight: int, min_imp: float) -> None:
+    """Apply dynamic weight based on skill importance."""
+    if importance >= min_imp:
+        weight = int(round(base_weight * importance))
         config["scoring_system"]["description_weights"]["positive"][skill] = weight
-        logger.debug("  🔥 Core skill: %s (importance: %.2f) → weight: %s", skill, importance, weight)
-    elif importance >= 0.7:
-        config["scoring_system"]["description_weights"]["positive"][skill] = base_weight
-        logger.debug("  ⭐ Secondary skill: %s (importance: %.2f) → weight: %s", skill, importance, base_weight)
+        logger.debug(
+            "  ⭐ Skill: %s (importance: %.2f) → weight: %s",
+            skill,
+            importance,
+            weight,
+        )
     else:
-        weight = int(base_weight * 0.6)
-        config["scoring_system"]["description_weights"]["positive"][skill] = weight
-        logger.debug("  💡 Familiar skill: %s (importance: %.2f) → weight: %s", skill, importance, weight)
+        logger.debug(
+            "  ⏭️  Skill %s below importance threshold %.2f (score %.2f)",
+            skill,
+            min_imp,
+            importance,
+        )
 
 
 def _configure_scoring_system(ai_metadata: dict) -> bool:
@@ -177,10 +185,14 @@ def _configure_scoring_system(ai_metadata: dict) -> bool:
             return True
 
         base_weight = config["scoring_system"].get("dynamic_skill_weight", 10)
+        min_imp = config["scoring_system"].get("min_importance_for_scoring", 0.75)
         logger.info("🎯 Configuring enhanced scoring with %s AI-detected skills", len(key_skills))
 
+        if len(skill_importance) != len(key_skills):
+            skill_importance = [1.0] * len(key_skills)
+
         for skill, importance in zip(key_skills, skill_importance, strict=False):
-            _apply_skill_weights(skill, importance, base_weight)
+            _apply_skill_weights(skill, float(importance), base_weight, min_imp)
 
         logger.info("✅ Enhanced AI-driven scoring system configured")
         scoring_system = IntelligentScoringSystem(config)
@@ -332,6 +344,12 @@ def _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, th
 
     similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, threshold)
     display_results(similar_jobs, threshold)
+    try:
+        jobs_df = pd.read_csv(Path(csv_path))
+    except Exception as e:  # pragma: no cover - defensive
+        logger.warning("Özet istatistikler için CSV okunamadı: %s", e)
+        jobs_df = pd.DataFrame()
+    log_summary_statistics(jobs_df, similar_jobs, ai_metadata_global)
 
 
 def analyze_and_find_best_jobs(selected_personas=None, results_per_site=None, similarity_threshold=None):

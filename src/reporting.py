@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import logging
+import re
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -48,4 +51,32 @@ def display_results(similar_jobs: list[dict], threshold: float) -> None:
         logger.info("💡 Eşiği düşürmeyi veya persona terimlerini genişletmeyi düşünebilirsiniz.")
 
 
-__all__ = ["display_results"]
+def log_summary_statistics(
+    all_jobs_df: pd.DataFrame, high_quality_jobs: list[dict], ai_metadata: dict | None = None
+) -> None:
+    """Log summary statistics about the search process."""
+    logger.info("\n📊 Özet İstatistikler:")
+
+    if not all_jobs_df.empty and "source_site" in all_jobs_df.columns:
+        logger.info("\n🔹 Site Dağılımı:")
+        for site, count in all_jobs_df["source_site"].value_counts().items():
+            logger.info("   %s: %s ilan", site, count)
+
+    if ai_metadata and ai_metadata.get("key_skills") and "description" in all_jobs_df.columns:
+        skills_pattern = "|".join(map(re.escape, ai_metadata["key_skills"]))
+        total = int(all_jobs_df["description"].str.count(skills_pattern, case=False).sum())
+        logger.info("\n🔹 Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı: %s", total)
+
+    if high_quality_jobs:
+        persona_counts: dict[str, int] = {}
+        for job in high_quality_jobs:
+            persona = job.get("persona_source")
+            if persona:
+                persona_counts[persona] = persona_counts.get(persona, 0) + 1
+        if persona_counts:
+            logger.info("\n🔹 En Başarılı Personalar:")
+            for persona, count in sorted(persona_counts.items(), key=lambda x: x[1], reverse=True):
+                logger.info("   %s: %s ilan", persona, count)
+
+
+__all__ = ["display_results", "log_summary_statistics"]
