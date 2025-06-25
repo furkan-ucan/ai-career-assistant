@@ -90,3 +90,16 @@ scoring_system:
   cv_skill_bonus_points: 10
   dynamic_skill_weight: 10
   min_importance_for_scoring: 0.75
+
+# CV Analyzer ayarları
+cv_analyzer_settings:
+  prompt_version: "v2.0"
+  token_limit: 4000
+
+# AI yeniden sıralama (reranking) ayarları
+ai_reranking_settings:
+  enabled: true
+  rerank_pool_size: 75
+  max_workers: 8
+  llm_model: "gemini-1.5-flash-latest"
+  llm_temperature: 0.1

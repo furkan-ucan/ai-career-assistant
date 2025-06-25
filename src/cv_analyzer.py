@@ -16,10 +16,15 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_fixed
 
+from .config import load_settings
+
 logger = logging.getLogger(__name__)
 
+config = load_settings()
+
 # Prompt versioning for cache invalidation
-PROMPT_VERSION = "v1.1"
+PROMPT_VERSION = config.get("cv_analyzer_settings", {}).get("prompt_version", "v1")
+TOKEN_LIMIT = config.get("cv_analyzer_settings", {}).get("token_limit", 4000)
 
 SKILL_BLACKLIST = {
     "ms office",
@@ -75,22 +80,25 @@ developer.  Your analysis *must* prioritise business-technology bridge roles
      “Business Systems Analyst”, “Junior Project Manager”
    - ERP / Consulting Roles: “Junior ERP Consultant”, “IT Consultant”
    - Hybrid Roles: “Technical Business Analyst”, “Data Analyst”
-   - Dev Roles (max 30-40 %): “Full-Stack Developer”, “Mobile Developer (Flutter)”
-   - **GIS Roles (if any, place at the end of the list):** “GIS Specialist”
+ - Dev Roles (max 30-40 %): “Full-Stack Developer”, “Mobile Developer (Flutter)”
+  - **GIS Roles (if any, place at the end of the list):** “GIS Specialist”
 
 3. `"skill_importance"`   ⭐ *array [float]* – same length as `key_skills`,
    values 0.00-1.00 (2 decimals).  Reflect how central the skill is to the
    candidate’s profile & projects.
 
+4. `"cv_summary"` 🗄 *string* – 2-3 sentence professional summary of the candidate.
+
 **JSON SCHEMA (enforced):**
 {{
   "type": "object",
-  "properties": {{
+ "properties": {{
     "key_skills":        {{"type": "array", "items": {{"type": "string"}}}},
     "target_job_titles": {{"type": "array", "items": {{"type": "string"}}}},
-    "skill_importance":  {{"type": "array", "items": {{"type":"number"}}}}
+    "skill_importance":  {{"type": "array", "items": {{"type":"number"}}}},
+    "cv_summary":       {{"type": "string"}}
   }},
-  "required": ["key_skills", "target_job_titles", "skill_importance"]
+  "required": ["key_skills", "target_job_titles", "skill_importance", "cv_summary"]
 }}
 
 **ABSOLUTE RULES:**
@@ -206,7 +214,7 @@ class CVAnalyzer:
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=False)
     def _call_gemini_api(self, cv_text: str) -> dict | None:
         try:
-            truncated = cv_text[:4000]
+            truncated = cv_text[:TOKEN_LIMIT]
             prompt = PROMPT_TEMPLATE.format(cv_text=truncated)
             logger.debug(f"Sending prompt to Gemini: {prompt[:200]}...")
 
@@ -272,10 +280,18 @@ class CVAnalyzer:
                 importance = importance[: len(skills)] + [0.8] * (len(skills) - len(importance))
             metadata["skill_importance"] = importance
 
+            cv_summary = cast(str, metadata.get("cv_summary", ""))
+            metadata["cv_summary"] = cv_summary.strip()
+
             self._cache_metadata(cv_text, metadata)
             job_titles = cast(list[str], metadata.get("target_job_titles", []))
             logger.info(f"Extracted {len(skills)} skills and {len(job_titles)} job titles from CV")
             return metadata
 
         logger.warning("Gemini API failed, using empty metadata")
-        return {"key_skills": [], "target_job_titles": [], "skill_importance": []}
+        return {
+            "key_skills": [],
+            "target_job_titles": [],
+            "skill_importance": [],
+            "cv_summary": "",
+        }

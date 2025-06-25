@@ -17,6 +17,8 @@ Akıllı Kariyer Asistanı, geleneksel iş arama sürecini devrim niteliğinde d
 - **🌐 Çoklu Platform Desteği:** LinkedIn ve Indeed'den eş zamanlı iş ilanı toplama
 - **🔍 Akıllı Keşif:** "Yazılım Geliştirici" ararken "İş Zekası Uzmanı" gibi ilişkili pozisyonları da bulur
 - **📊 Puanlama Sistemi:** Her ilan için %0-100 arası uygunluk skoru
+- **🧾 Açıklamalı AI Raporu:** İki aşamalı analiz ile her ilan için neden/niçin
+  uygun olduğuna dair açıklamalar
 - **🎭 Dinamik Persona Tabanlı Arama:** CV'nizden öğrenilen profillerle otomatik arama
 - **⚡ Zaman Tasarrufu:** 2 saatlik manuel aramayı 2 dakikaya indirger
 - **🔒 Gizlilik:** Tüm veriler yerel olarak işlenir, cloud'a gönderilmez

@@ -33,7 +33,7 @@ def print_manual_validation_guide() -> None:
     logger.info("=" * 80)
 
 
-def main(selected_personas=None, results_per_site=None, similarity_threshold=None):
+def main(selected_personas=None, results_per_site=None, similarity_threshold=None, rerank=True):
     """Run the end to end career assistant pipeline."""
     logger.info("🚀 Akıllı Kariyer Asistanı - Böl ve Fethet Stratejisi")
     logger.info("=" * 60)
@@ -61,7 +61,7 @@ def main(selected_personas=None, results_per_site=None, similarity_threshold=Non
     logger.info("✅ Sistem kontrolleri başarılı")
     logger.info("🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n")
 
-    run_end_to_end_pipeline(selected_personas, results_per_site, similarity_threshold)
+    run_end_to_end_pipeline(selected_personas, results_per_site, similarity_threshold, rerank)
 
 
 if __name__ == "__main__":
@@ -70,4 +70,5 @@ if __name__ == "__main__":
         selected_personas=args.persona,
         results_per_site=args.results,
         similarity_threshold=args.threshold,
+        rerank=not args.no_rerank,
     )

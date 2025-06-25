@@ -13,7 +13,10 @@ def sample_jobs():
             "title": "Software Engineer",
             "company": "TechCorp",
             "location": "Remote",
-            "match_score": 90.0,
+            "fit_score": 90.0,
+            "reasoning": "Great fit",
+            "matching_keywords": ["python"],
+            "missing_keywords": ["sap"],
             "source_site": "SiteA",
             "persona_source": "dev",
             "url": "http://job1",
@@ -22,7 +25,10 @@ def sample_jobs():
             "title": "Data Scientist",
             "company": "DataCorp",
             "location": "Istanbul",
-            "match_score": 85.0,
+            "fit_score": 85.0,
+            "reasoning": "Good",
+            "matching_keywords": ["sql"],
+            "missing_keywords": [],
             "source_site": "SiteB",
             "persona_source": "data",
             "url": "http://job2",
@@ -56,19 +62,22 @@ def sample_high_quality_jobs():
             "title": "Python Developer",
             "company": "TechCorp",
             "persona_source": "developer",
-            "match_score": 85.5,
+            "fit_score": 85.5,
+            "matching_keywords": ["python"],
         },
         {
             "title": "Business Analyst",
             "company": "BizCorp",
             "persona_source": "analyst",
-            "match_score": 78.2,
+            "fit_score": 78.2,
+            "matching_keywords": ["sql"],
         },
         {
             "title": "Full Stack Developer",
             "company": "DevCorp",
             "persona_source": "developer",
-            "match_score": 82.1,
+            "fit_score": 82.1,
+            "matching_keywords": ["react"],
         },
     ]
 
@@ -111,7 +120,7 @@ def test_display_results_with_no_jobs(caplog):
             "sample_jobs_df",
             "sample_high_quality_jobs",
             "sample_ai_metadata",
-            ["Site Dağılımı", "Ana Yeteneklerin", "En Başarılı Personalar"],
+            ["Site Dağılımı", "En Popüler 5 Skill", "En Başarılı Personalar"],
             [],
         ),
         # Empty DataFrame case
@@ -121,7 +130,7 @@ def test_display_results_with_no_jobs(caplog):
             "sample_jobs_df",
             "empty_high_quality_jobs",
             "sample_ai_metadata",
-            ["Site Dağılımı", "Ana Yeteneklerin"],
+            ["Site Dağılımı", "En Popüler 5 Skill"],
             ["En Başarılı Personalar"],
         ),
         # No AI metadata case
@@ -130,7 +139,7 @@ def test_display_results_with_no_jobs(caplog):
             "sample_high_quality_jobs",
             "no_ai_metadata",
             ["Site Dağılımı", "En Başarılı Personalar"],
-            ["Ana Yeteneklerin"],
+            ["En Popüler 5 Skill"],
         ),
         # All empty case
         (
@@ -138,7 +147,7 @@ def test_display_results_with_no_jobs(caplog):
             "empty_high_quality_jobs",
             "no_ai_metadata",
             [],
-            ["Site Dağılımı", "Ana Yeteneklerin", "En Başarılı Personalar"],
+            ["Site Dağılımı", "En Popüler 5 Skill", "En Başarılı Personalar"],
         ),
     ],
 )
@@ -203,8 +212,8 @@ def test_log_summary_statistics_no_ai_metadata(caplog, sample_jobs_df, sample_hi
     assert "📊 Özet İstatistikler:" in caplog.text
     assert "🔹 Site Dağılımı:" in caplog.text
     assert "🔹 En Başarılı Personalar:" in caplog.text
-    # No skill mentions without AI metadata
-    assert "Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı:" not in caplog.text
+    # No skill stats without AI metadata
+    assert "En Popüler 5 Skill" not in caplog.text
 
 
 def test_log_summary_statistics_empty_high_quality_jobs(caplog, sample_jobs_df, sample_ai_metadata):
@@ -214,7 +223,7 @@ def test_log_summary_statistics_empty_high_quality_jobs(caplog, sample_jobs_df, 
 
     assert "📊 Özet İstatistikler:" in caplog.text
     assert "🔹 Site Dağılımı:" in caplog.text
-    assert "🔹 Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı:" in caplog.text
+    assert "En Popüler 5 Skill" in caplog.text
     # No persona success section
     assert "🔹 En Başarılı Personalar:" not in caplog.text
 
@@ -245,8 +254,8 @@ def test_log_summary_statistics_missing_description_column(caplog, sample_high_q
     assert "📊 Özet İstatistikler:" in caplog.text
     assert "🔹 Site Dağılımı:" in caplog.text
     assert "🔹 En Başarılı Personalar:" in caplog.text
-    # No skill mentions without description column
-    assert "Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı:" not in caplog.text
+    # No skill stats without description column
+    assert "En Popüler 5 Skill" not in caplog.text
 
 
 def test_log_summary_statistics_skill_counting(caplog, sample_ai_metadata):
@@ -265,8 +274,7 @@ def test_log_summary_statistics_skill_counting(caplog, sample_ai_metadata):
     with caplog.at_level(logging.INFO):
         log_summary_statistics(df_with_skills, [], sample_ai_metadata)
 
-    # Should find: python (2), react (1), sql (1), typescript (0) = 4 total
-    assert "Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı: 4" in caplog.text
+    assert "En Popüler 5 Skill" in caplog.text
 
 
 def test_log_summary_statistics_completely_empty_inputs(caplog):
@@ -280,5 +288,5 @@ def test_log_summary_statistics_completely_empty_inputs(caplog):
     assert "📊 Özet İstatistikler:" in caplog.text
     # No other sections should appear
     assert "🔹 Site Dağılımı:" not in caplog.text
-    assert "🔹 Ana Yeteneklerin İlanlardaki Toplam Görünme Sayısı:" not in caplog.text
+    assert "En Popüler 5 Skill" not in caplog.text
     assert "🔹 En Başarılı Personalar:" not in caplog.text
