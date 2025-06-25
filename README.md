@@ -17,7 +17,7 @@ Akıllı Kariyer Asistanı, geleneksel iş arama sürecini devrim niteliğinde d
 - **🌐 Çoklu Platform Desteği:** LinkedIn ve Indeed'den eş zamanlı iş ilanı toplama
 - **🔍 Akıllı Keşif:** "Yazılım Geliştirici" ararken "İş Zekası Uzmanı" gibi ilişkili pozisyonları da bulur
 - **📊 Puanlama Sistemi:** Her ilan için %0-100 arası uygunluk skoru
-- **🎭 Persona Tabanlı Arama:** 12 farklı kariyer profili ile geniş kapsamlı tarama
+- **🎭 Dinamik Persona Tabanlı Arama:** CV'nizden öğrenilen profillerle otomatik arama
 - **⚡ Zaman Tasarrufu:** 2 saatlik manuel aramayı 2 dakikaya indirger
 - **🔒 Gizlilik:** Tüm veriler yerel olarak işlenir, cloud'a gönderilmez
 
@@ -60,6 +60,7 @@ echo "GEMINI_API_KEY=your_actual_gemini_api_key" > .env
 mkdir data
 # Sonra cv.txt dosyasını data klasörü içine oluşturun
 ```
+Sistem CV'nizi analiz ederek arama kişiliklerini ve puanlama ağırlıklarını otomatik günceller.
 
 ## 🎯 Kullanım Rehberi
 
