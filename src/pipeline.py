@@ -7,6 +7,7 @@ import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 
 import google.generativeai as genai
@@ -22,6 +23,7 @@ from .embedding_service import EmbeddingService
 from .exceptions import CVNotFoundError
 from .filter import score_jobs
 from .intelligent_scoring import IntelligentScoringSystem
+from .models.pipeline_context import PipelineContext
 from .persona_builder import build_dynamic_personas
 from .reporting import display_results, log_summary_statistics
 from .utils.file_helpers import save_dataframe_csv
@@ -47,6 +49,39 @@ DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings["default_results_per_site"]
 persona_search_config = config["persona_search_configs"]
 
 rerank_settings = config.get("ai_reranking_settings", {})
+
+
+class JobAnalysisPipeline:
+    """High level orchestrator for the job analysis workflow."""
+
+    def __init__(self, config: dict) -> None:
+        self.config = config
+
+    def run(self, cli_args: Any) -> PipelineContext:
+        """Execute the end-to-end pipeline."""
+        context = PipelineContext(config=self.config, cli_args=cli_args)
+
+        threshold = cli_args.threshold if cli_args.threshold is not None else MIN_SIMILARITY_THRESHOLD
+
+        try:
+            context.ai_metadata, context.personas_config = _setup_ai_metadata_and_personas()
+        except CVNotFoundError as exc:  # pragma: no cover - error path
+            logger.error("İşlem durduruldu: %s", exc)
+            return context
+
+        if not _configure_scoring_system(context.ai_metadata):
+            return context
+
+        _execute_full_pipeline(
+            cli_args.persona,
+            cli_args.results,
+            context.personas_config,
+            threshold,
+            context.ai_metadata,
+            rerank_flag=not getattr(cli_args, "no_rerank", False),
+        )
+
+        return context
 
 
 def extract_json_from_response(text: str) -> dict[str, Any] | None:
@@ -497,22 +532,19 @@ def _execute_full_pipeline(
 def analyze_and_find_best_jobs(
     selected_personas=None, results_per_site=None, similarity_threshold=None, rerank: bool = True
 ):
-    """Run full pipeline and print best jobs."""
+    """Run full pipeline and print best jobs via the orchestrator."""
     logger.info("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
     logger.info("=" * 60)
 
-    threshold = similarity_threshold if similarity_threshold is not None else MIN_SIMILARITY_THRESHOLD
+    args = SimpleNamespace(
+        persona=selected_personas,
+        results=results_per_site,
+        threshold=similarity_threshold,
+        no_rerank=not rerank,
+    )
 
-    try:
-        ai_metadata, personas_cfg = _setup_ai_metadata_and_personas()
-    except CVNotFoundError as e:
-        logger.error("İşlem durduruldu: %s", e)
-        return None
-
-    if not _configure_scoring_system(ai_metadata):
-        return
-
-    _execute_full_pipeline(selected_personas, results_per_site, personas_cfg, threshold, ai_metadata, rerank)
+    pipeline = JobAnalysisPipeline(config)
+    pipeline.run(args)
 
 
 def run_end_to_end_pipeline(
@@ -523,6 +555,7 @@ def run_end_to_end_pipeline(
 
 
 __all__ = [
+    "JobAnalysisPipeline",
     "collect_data_for_all_personas",
     "analyze_and_find_best_jobs",
     "run_end_to_end_pipeline",
