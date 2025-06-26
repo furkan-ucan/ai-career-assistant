@@ -14,6 +14,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from .config import get_config
+from .constants import PROMPTS_DIR
 from .cv_analyzer import TOKEN_LIMIT, CVAnalyzer
 from .cv_processor import CVProcessor
 from .data_collector import collect_job_data
@@ -24,24 +25,10 @@ from .intelligent_scoring import IntelligentScoringSystem
 from .persona_builder import build_dynamic_personas
 from .reporting import display_results, log_summary_statistics
 from .utils.file_helpers import save_dataframe_csv
+from .utils.prompt_loader import load_prompt
 from .vector_store import VectorStore
 
-RERANK_PROMPT_TEMPLATE = """
-
-You are an expert career assistant. Candidate summary: {cv_summary}
-
-JOB TITLE: {title}
-JOB DESCRIPTION: {description}
-
-Return ONLY JSON with fields:
-{{
-  "fit_score": int,          # 0-100 suitability
-  "is_recommended": bool,    # True if worth applying
-  "reasoning": str,          # short reasoning
-  "matching_keywords": [str],
-  "missing_keywords": [str]
-}}
-"""
+RERANK_PROMPT_TEMPLATE = load_prompt(PROMPTS_DIR / "rerank_prompt.md")
 
 logger = logging.getLogger(__name__)
 
