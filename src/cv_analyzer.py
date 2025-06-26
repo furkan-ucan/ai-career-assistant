@@ -4,7 +4,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -13,14 +12,13 @@ from typing import cast
 import google.generativeai as genai
 
 # Third Party
-from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from .config import load_settings
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 
-config = load_settings()
+config = get_config()
 
 # Prompt versioning for cache invalidation
 PROMPT_VERSION = config.get("cv_analyzer_settings", {}).get("prompt_version", "v1")
@@ -113,8 +111,8 @@ class CVAnalyzer:
     """Analyze CV text using Gemini AI and cache the results."""
 
     def __init__(self) -> None:
-        load_dotenv()
-        api_key = os.getenv("GEMINI_API_KEY")
+        config = get_config()
+        api_key = config.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
         genai.configure(api_key=api_key)

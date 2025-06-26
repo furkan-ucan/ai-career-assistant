@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from src.cli import parse_args
-from src.config import load_settings
+from src.config import get_config
 from src.logger_config import setup_logging
 from src.pipeline import run_end_to_end_pipeline
 
 load_dotenv()
 logger = setup_logging()
-config = load_settings()
+config = get_config()
 
 
 def load_config() -> dict:
@@ -39,7 +38,7 @@ def main(selected_personas=None, results_per_site=None, similarity_threshold=Non
     logger.info("=" * 60)
 
     print_manual_validation_guide()
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = config.get("GEMINI_API_KEY")
     if not api_key or api_key == "your_gemini_api_key_here":
         logger.error("❌ HATA: Gemini API key bulunamadı!")
         logger.info("📝 Lütfen .env dosyasında GEMINI_API_KEY değerini ayarlayın.")

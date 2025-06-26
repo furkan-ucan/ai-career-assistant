@@ -5,23 +5,23 @@ Google Gemini API kullanarak metin embeddings'leri oluşturur.
 
 # Standard Library
 import logging
-import os
 import time
 
 # Third Party
 import google.generativeai as genai
 import numpy as np
-from dotenv import load_dotenv
+
+from .config import get_config
 
 # Environment variables yükle
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
     def __init__(self, batch_size: int = 10, retry_count: int = 3, rate_limit_delay: float = 0.1):
         """Gemini API'yi başlat ve konfigürasyon ayarlarını sakla"""
-        api_key = os.getenv("GEMINI_API_KEY")
+        config = get_config()
+        api_key = config.get("GEMINI_API_KEY")
         if not api_key or api_key == "your_gemini_api_key_here":
             raise ValueError("Gemini API key geçerli değil! .env dosyasını kontrol edin.")
         genai.configure(api_key=api_key)

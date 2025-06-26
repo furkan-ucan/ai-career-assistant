@@ -101,5 +101,13 @@ ai_reranking_settings:
   enabled: true
   rerank_pool_size: 75
   max_workers: 2 # Gemini Free Tier için düşürüldü (15 req/min limit)
-  llm_model: "ggemini-2.5-flash"
+  llm_model: "gemini-2.5-flash"
   llm_temperature: 0.1
+
+# Persona Builder ayarları
+persona_builder_settings:
+  role_results:
+    developer: 30
+    analyst: 25
+  default_results: 20
+  default_hours_old: 72

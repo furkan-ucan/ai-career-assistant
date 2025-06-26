@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import Any, cast
 
 import google.generativeai as genai
 import pandas as pd
 from tqdm import tqdm
 
-from .config import load_settings
+from .config import get_config
 from .cv_analyzer import TOKEN_LIMIT, CVAnalyzer
 from .cv_processor import CVProcessor
 from .data_collector import collect_job_data
@@ -25,6 +27,7 @@ from .utils.file_helpers import save_dataframe_csv
 from .vector_store import VectorStore
 
 RERANK_PROMPT_TEMPLATE = """
+
 You are an expert career assistant. Candidate summary: {cv_summary}
 
 JOB TITLE: {title}
@@ -42,7 +45,7 @@ Return ONLY JSON with fields:
 
 logger = logging.getLogger(__name__)
 
-config = load_settings()
+config = get_config()
 
 scoring_system: IntelligentScoringSystem | None = None
 
@@ -57,6 +60,32 @@ DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings["default_results_per_site"]
 persona_search_config = config["persona_search_configs"]
 
 rerank_settings = config.get("ai_reranking_settings", {})
+
+
+def extract_json_from_response(text: str) -> dict[str, Any] | None:
+    """Extracts a JSON object from a string, prioritizing markdown code blocks."""
+    # 1. Try to find JSON within a markdown code block first
+    match = re.search(r"```(?:json)?\n(.*?)\n```", text, re.DOTALL)
+    if match:
+        json_str = match.group(1).strip()
+        try:
+            return cast(dict[str, Any], json.loads(json_str))
+        except json.JSONDecodeError:
+            logger.warning(f"Markdown bloğu içindeki JSON ayrıştırılamadı. Blok: {json_str[:200]}")
+            # Fall through to the next method if parsing fails
+
+    # 2. If no markdown block, find the first and last curly brace
+    json_match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not json_match:
+        logger.warning(f"Metin içinde geçerli JSON bloğu bulunamadı. Metin: {text[:200]}")
+        return None
+
+    json_str = json_match.group(0)
+    try:
+        return cast(dict[str, Any], json.loads(json_str))
+    except json.JSONDecodeError:
+        logger.error(f"Temizleme sonrası bile JSON ayrıştırılamadı. Metin: {text[:200]}", exc_info=True)
+        return None
 
 
 def _collect_jobs_for_persona(
@@ -355,14 +384,19 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
     try:
         response = model.generate_content(prompt, generation_config={"temperature": temperature})
         text = response.text if hasattr(response, "text") else str(response)
-        text = text.strip().strip("`")
 
-        # Check for empty response
         if not text or text.strip() == "":
             logger.warning("AI returned empty response for job %s, keeping original scores", job.get("title"))
             return job
 
-        data = json.loads(text)
+        data = extract_json_from_response(text)
+
+        if data is None:
+            logger.warning(
+                "Could not extract JSON from AI response for job %s, keeping original scores", job.get("title")
+            )
+            return job
+
         job.update(
             {
                 "fit_score": data.get("fit_score", 0),
@@ -372,16 +406,11 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
                 "missing_keywords": data.get("missing_keywords", []),
             }
         )
-    except json.JSONDecodeError as exc:
-        logger.warning("Failed to parse AI response for job %s: %s, keeping original scores", job.get("title"), exc)
-        return job  # Return original job without AI analysis
     except Exception as exc:
-        # Handle rate limit and other API errors gracefully
         if "ResourceExhausted" in str(exc) or "429" in str(exc):
             logger.warning("API rate limit reached for job %s, skipping AI analysis", job.get("title"))
         else:
             logger.warning("Unexpected error during AI analysis for job %s: %s", job.get("title"), exc)
-        return job  # Return original job in all error cases
     return job
 
 
