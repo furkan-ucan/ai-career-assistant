@@ -40,6 +40,7 @@ SKILL_BLACKLIST = {
     "internet",
     "computer",
     "keyboard",
+    "office",
 }
 NORMALIZED_BLACKLIST = {s.replace(" ", "").replace("-", "") for s in SKILL_BLACKLIST}
 
@@ -98,17 +99,19 @@ class CVAnalyzer:
     def _normalize_skills(self, skills: list[str]) -> list[str]:
         normalized = []
         for skill in skills or []:
-            # Keep snake_case format, just lowercase and clean
-            clean_skill = skill.lower().strip()
-            if clean_skill not in NORMALIZED_BLACKLIST and len(clean_skill) > 2:
-                normalized.append(clean_skill)
+            # Clean skill for comparison with normalized blacklist
+            clean_skill_for_output = skill.lower().strip()
+            clean_skill_for_comparison = clean_skill_for_output.replace(" ", "").replace("-", "")
+
+            if clean_skill_for_comparison not in NORMALIZED_BLACKLIST and len(clean_skill_for_output) > 2:
+                normalized.append(clean_skill_for_output)
         return sorted(set(normalized))
 
     def _strip_markdown_fences(self, content: str) -> str:
         """Remove markdown code fences from JSON response."""
         # Remove code fences with various languages
         content = re.sub(r"^```[a-zA-Z]*\n", "", content, flags=re.MULTILINE)
-        content = re.sub(r"\n```$", "", content, flags=re.MULTILINE)
+        content = re.sub(r"\n\s*```$", "", content, flags=re.MULTILINE)
         return content.strip()
 
     def _clean_job_titles(self, job_titles: list[str]) -> list[str]:
@@ -119,9 +122,12 @@ class CVAnalyzer:
             clean_title = title.strip()
             # Remove parentheses and content for snake_case compliance
             clean_title = re.sub(r"\s*\([^)]*\)", "", clean_title)
-            # Convert to proper title case if needed
-            if clean_title.islower() or "_" in clean_title:
-                clean_title = clean_title.replace("_", " ").title()
+            # Convert to proper title case
+            clean_title = clean_title.title()
+            # Handle specific cases where title() might not be ideal (e.g., acronyms)
+            # Add more specific rules here if needed
+            if clean_title.upper() == "SENIOR DEVELOPER":
+                clean_title = "Senior Developer"
 
             cleaned.append(clean_title)
         return cleaned

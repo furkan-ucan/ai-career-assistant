@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from logging import getLogger
 from pathlib import Path
+
+logger = getLogger(__name__)
 
 
 def load_prompt(file_path: str | Path) -> str:
@@ -8,6 +11,6 @@ def load_prompt(file_path: str | Path) -> str:
     path = Path(file_path)
     try:
         return path.read_text(encoding="utf-8")
-    except FileNotFoundError as exc:
-        logger.error("Prompt file not found: %s", path, exc_info=True)
+    except FileNotFoundError:
+        logger.error("Prompt file not found: %s", path)
         raise

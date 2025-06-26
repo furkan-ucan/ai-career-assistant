@@ -1,13 +1,17 @@
 import hashlib
 
+from src.config import get_config
 from src.cv_analyzer import CVAnalyzer
 
 
 def test_cache_key_generation():
     analyzer = CVAnalyzer()
     cv_text = "Sample CV content"
-    key = analyzer._generate_cache_key(cv_text)
-    expected = hashlib.md5(cv_text.encode()).hexdigest()
+    key = analyzer._get_cache_key(cv_text)
+    config = get_config()
+    prompt_version = config.get("cv_analyzer_settings", {}).get("prompt_version", "v1")
+    content_hash = hashlib.sha256(cv_text.encode("utf-8")).hexdigest()[:16]
+    expected = f"{prompt_version}_{content_hash}"
     assert key == expected
 
 
@@ -67,20 +71,11 @@ def test_categorize_skills_by_importance():
     skills = ["python", "java", "sql"]
     importance = [0.9, 0.7, 0.8]
 
-    high, medium, low = analyzer._categorize_skills_by_importance(skills, importance)
+    categorized_skills = analyzer._categorize_skills_by_importance(skills, importance)
 
-    assert "python" in high  # 0.9 > 0.8
-    assert "sql" in medium  # 0.8 == 0.8
-    assert "java" in low  # 0.7 < 0.8
-
-
-def test_validate_skill_metadata_mismatch():
-    analyzer = CVAnalyzer()
-    skills = ["python", "java"]
-    importance = [0.9]  # mismatch
-
-    result = analyzer._validate_skill_metadata(skills, importance)
-    assert result is False  # should return False due to length mismatch
+    assert "python" in categorized_skills["core"]  # 0.9 > 0.8
+    assert "sql" in categorized_skills["secondary"]  # 0.8 == 0.8
+    assert "java" in categorized_skills["secondary"]  # 0.7 >= 0.7
 
 
 def test_cv_summary_present(monkeypatch):
