@@ -16,6 +16,8 @@ import chromadb
 import pandas as pd
 import yaml
 
+from .constants import COSINE_METRIC, DEFAULT_COLLECTION_NAME
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +44,7 @@ class VectorStore:
                     collection_name = cfg.get("vector_store_settings", {}).get("collection_name")
                 except Exception as cfg_err:
                     logger.warning(f"Config load failed: {cfg_err}; using default collection name")
-            self.collection_name = collection_name or "job_embeddings"
+            self.collection_name = collection_name or DEFAULT_COLLECTION_NAME
             self.collection: Any | None = None
             logger.info("VectorStore başarıyla başlatıldı")
 
@@ -67,7 +69,7 @@ class VectorStore:
             # get_or_create_collection kullanarak hem yeni oluşturma hem de mevcut getirme
             self.collection = self.client.get_or_create_collection(
                 name=self.collection_name,
-                metadata={"hnsw:space": "cosine"},  # Cosine similarity kullan
+                metadata={"hnsw:space": COSINE_METRIC},  # Cosine similarity kullan
             )
 
             # Mevcut öğe sayısını kontrol et

@@ -15,12 +15,14 @@ from pathlib import Path
 import pandas as pd
 from jobspy import scrape_jobs
 
+from .constants import SITE_INDEED, SITE_LINKEDIN
+
 logger = logging.getLogger(__name__)
 
 # --- VARSAYILAN AYARLAR ---
 DEFAULT_LOCATION = "Turkey"
 DEFAULT_MAX_RESULTS_PER_SITE = 50  # Her site için ayrı limit
-TARGET_SITES = ["indeed", "linkedin"]  # ÖNEMLİ: LinkedIn öncelikli!
+TARGET_SITES = [SITE_INDEED, SITE_LINKEDIN]  # ÖNEMLİ: LinkedIn öncelikli!
 
 
 def _scrape_single_site(
@@ -36,10 +38,10 @@ def _scrape_single_site(
             "results_wanted": max_results_per_site,
             "hours_old": hours_old,
         }
-        if site == "indeed":
+        if site == SITE_INDEED:
             scrape_params["country_indeed"] = "Turkey"
             logger.info("   🎯 Indeed: Türkiye özel ayarları aktif")
-        elif site == "linkedin":
+        elif site == SITE_LINKEDIN:
             scrape_params["linkedin_fetch_description"] = True
             logger.info("   💼 LinkedIn: Detaylı açıklama ve direkt URL çekiliyor...")
 
