@@ -14,6 +14,8 @@ class PipelineContext:
     cv_embedding: list[float] | None = None
     ai_metadata: dict[str, Any] = field(default_factory=dict)
     personas_config: dict[str, Any] = field(default_factory=dict)
+    threshold: float = 60.0
+    rerank_flag: bool = True
     raw_jobs_df: pd.DataFrame | None = None
     vector_store_path: str | None = None
     initial_matches: list[dict[str, Any]] = field(default_factory=list)

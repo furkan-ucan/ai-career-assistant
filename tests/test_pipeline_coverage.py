@@ -15,6 +15,8 @@ MOCK_AI_METADATA = {
 MOCK_SIMILAR_JOBS = [{"title": "Data Analyst", "description": "python job", "similarity_score": 0.9}]
 
 
+@patch("pathlib.Path.read_text", return_value="cv")
+@patch("src.pipeline.CVProcessor")
 @patch("src.pipeline.CVAnalyzer")
 @patch("src.pipeline.collect_data_for_all_personas")
 @patch("src.pipeline.display_results")
@@ -24,6 +26,8 @@ def test_pipeline_no_rerank(
     mock_display,
     mock_collect_data,
     mock_cv_analyzer,
+    mock_cv_processor,
+    mock_read_text,
 ):
     """Test the main pipeline with the rerank feature disabled."""
     # Setup mocks
@@ -45,9 +49,11 @@ def test_pipeline_no_rerank(
     mock_log_summary.assert_called_once()
 
 
+@patch("pathlib.Path.read_text", return_value="cv")
+@patch("src.pipeline.CVProcessor")
 @patch("src.pipeline.CVAnalyzer")
 @patch("src.pipeline.logger")
-def test_pipeline_cv_processing_error(mock_logger, mock_cv_analyzer):
+def test_pipeline_cv_processing_error(mock_logger, mock_cv_analyzer, mock_cv_processor, mock_read_text):
     """Test that the pipeline handles CV processing errors gracefully."""
     # Setup mock to raise an error
     mock_cv_analyzer.return_value.extract_metadata_from_cv.side_effect = CVNotFoundError("CV Error")
@@ -64,10 +70,14 @@ def test_pipeline_cv_processing_error(mock_logger, mock_cv_analyzer):
     mock_logger.error.assert_called()
 
 
+@patch("pathlib.Path.read_text", return_value="cv")
+@patch("src.pipeline.CVProcessor")
 @patch("src.pipeline.CVAnalyzer")
 @patch("src.pipeline.collect_data_for_all_personas")
 @patch("src.pipeline.logger")
-def test_pipeline_no_similar_jobs_found(mock_logger, mock_collect_data, mock_cv_analyzer):
+def test_pipeline_no_similar_jobs_found(
+    mock_logger, mock_collect_data, mock_cv_analyzer, mock_cv_processor, mock_read_text
+):
     """Test the pipeline's behavior when no data is collected."""
     # Setup mocks
     mock_cv_analyzer.return_value.extract_metadata_from_cv.return_value = MOCK_AI_METADATA
