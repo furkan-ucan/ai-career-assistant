@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 from dotenv import load_dotenv
 
 from src.cli import parse_args
 from src.config import get_config
 from src.logger_config import setup_logging
-from src.pipeline import run_end_to_end_pipeline
+from src.pipeline import JobAnalysisPipeline
 
 load_dotenv()
 logger = setup_logging()
@@ -60,7 +61,14 @@ def main(selected_personas=None, results_per_site=None, similarity_threshold=Non
     logger.info("✅ Sistem kontrolleri başarılı")
     logger.info("🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n")
 
-    run_end_to_end_pipeline(selected_personas, results_per_site, similarity_threshold, rerank)
+    cli_args = SimpleNamespace(
+        persona=selected_personas,
+        results=results_per_site,
+        threshold=similarity_threshold,
+        no_rerank=not rerank,
+    )
+    pipeline = JobAnalysisPipeline(config)
+    pipeline.run(cli_args)
 
 
 if __name__ == "__main__":
