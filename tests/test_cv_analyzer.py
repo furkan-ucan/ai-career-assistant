@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from src.cv_analyzer import CVAnalyzer
 
 
@@ -43,21 +45,43 @@ def test_cache_key_generation():
     """Test cache functionality through public API"""
     analyzer = CVAnalyzer()
     cv_text = "Sample CV content"
-    # Test that cache key generation works consistently
-    test_data = {"test": "data"}
 
-    # Cache some data
-    analyzer._cache_metadata(cv_text, test_data)
+    with patch("src.cv_analyzer.genai.GenerativeModel") as mock_model:
+        mock_model.return_value.generate_content.return_value.text = (
+            '{"key_skills": ["python"], "target_job_titles": ["dev"], "skill_importance": [0.9], "cv_summary": "test"}'
+        )
 
-    # Try to load it back
-    cached_result = analyzer._load_cached_metadata(cv_text)
+        # First call should hit API
+        result1 = analyzer.extract_metadata_from_cv(cv_text)
+        # Second call should use cache (verify by checking API call count)
+        result2 = analyzer.extract_metadata_from_cv(cv_text)
 
-    # Either it should work (return the data) or return None if cache is disabled
-    assert cached_result is None or cached_result == test_data
+        assert result1 == result2
+        assert mock_model.return_value.generate_content.call_count == 1
 
 
 def test_normalize_skills_integration():
-    """Test skill normalization through integration test"""
+    """Test skill normalization through public API"""
     analyzer = CVAnalyzer()
-    # Can't test private method directly, just ensure analyzer works
-    assert analyzer is not None
+
+    with patch("src.cv_analyzer.genai.GenerativeModel") as mock_model:
+        mock_model.return_value.generate_content.return_value.text = """
+        {
+            "key_skills": ["Python", "MS Office", "EXCEL", "javascript"],
+            "target_job_titles": ["Developer"],
+            "skill_importance": [0.9, 0.8, 0.7, 0.6],
+            "cv_summary": "Developer with skills"
+        }
+        """
+
+        result = analyzer.extract_metadata_from_cv("test cv")
+        skills = result["key_skills"]
+
+        # Ensure skills is a list before assertions
+        assert isinstance(skills, list)
+
+        # Verify normalization: blacklisted skills removed, case normalized
+        assert "python" in skills
+        assert "javascript" in skills
+        assert "ms office" not in skills
+    assert "excel" not in skills  # Can't test private method directly, just ensure analyzer works

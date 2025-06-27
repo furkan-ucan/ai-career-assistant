@@ -51,14 +51,17 @@ PROMPT_TEMPLATE = load_prompt(PROMPTS_DIR / "cv_analysis_prompt.md")
 class CVAnalyzer:
     """Analyze CV text using Gemini AI and cache the results."""
 
-    def __init__(self) -> None:
-        config = get_config()
-        api_key = config.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is required")
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-2.5-flash")
-        self.cache_dir = Path("data")
+    def __init__(self, model=None, cache_dir: Path | None = None) -> None:
+        if model is None:
+            config = get_config()
+            api_key = config.get("GEMINI_API_KEY")
+            if not api_key:
+                raise ValueError("GEMINI_API_KEY environment variable is required")
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-1.5-flash-latest")
+
+        self.model = model
+        self.cache_dir = cache_dir or Path("data")
         self.cache_dir.mkdir(exist_ok=True)
 
     def _get_cache_key(self, cv_text: str) -> str:
@@ -74,11 +77,22 @@ class CVAnalyzer:
         try:
             with open(cache_file, encoding="utf-8") as f:
                 data = cast(dict[str, object], json.load(f))
+
+            # Ensure we actually got a dict
+            if not isinstance(data, dict):
+                logger.warning("Cached data is not a dictionary")
+                return None
+
             ts = str(data.get("generated_at", ""))
             if ts:
-                generated_at = datetime.fromisoformat(ts)
-                if datetime.now(UTC) - generated_at <= timedelta(days=7):
-                    return cast(dict[str, object], data.get("metadata", data))
+                try:
+                    generated_at = datetime.fromisoformat(ts)
+                    if datetime.now(UTC) - generated_at <= timedelta(days=7):
+                        metadata = data.get("metadata", data)
+                        if isinstance(metadata, dict):
+                            return cast(dict[str, object], metadata)
+                except ValueError as dt_error:
+                    logger.warning("Invalid datetime format in cache: %s", dt_error)
         except (OSError, json.JSONDecodeError, KeyError) as e:
             logger.exception("Cache load failed: %s", e)
         return None
@@ -196,7 +210,10 @@ class CVAnalyzer:
         except google_exceptions.ResourceExhausted as e:
             logger.exception(f"Gemini API Quota Exceeded: {e}")
             return None
-        except Exception as e:  # noqa: BLE001
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.exception(f"Unexpected error in Gemini API call: {e}")
+            return None
+        except Exception as e:
             logger.exception(f"An unexpected Gemini API call failed: {e}")
             return None
 

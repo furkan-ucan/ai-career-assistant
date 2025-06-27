@@ -74,8 +74,17 @@ def _apply_env_overrides(config_data: dict[str, Any]) -> None:
 def _apply_numeric_setting(config_data: dict[str, Any], section: str, key: str, env_var: str, default: int) -> None:
     """Apply numeric environment variable override with proper type conversion."""
     if env_var in os.environ:
-        with contextlib.suppress(ValueError):
+        try:
             config_data.setdefault(section, {})[key] = int(os.getenv(env_var, str(default)))
+        except ValueError:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Invalid numeric value for %s: %s, using default %s",
+                env_var,
+                os.getenv(env_var),
+                default,
+            )
 
 
 def _apply_float_setting(config_data: dict[str, Any], section: str, key: str, env_var: str, default: float) -> None:

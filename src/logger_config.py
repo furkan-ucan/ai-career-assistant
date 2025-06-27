@@ -81,7 +81,5 @@ def setup_logging() -> logging.Logger:
         root_logger.addHandler(error_handler)
 
     if not file_handler and not error_handler:
-        root_logger.addHandler(console_handler)
         root_logger.warning("No file handlers could be created, logging to console only.")
-
     return root_logger

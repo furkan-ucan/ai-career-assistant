@@ -57,10 +57,37 @@ class JobAnalysisPipeline:
     def __init__(self, config: dict) -> None:
         self.config = config
 
+    def validate_prerequisites(self) -> bool:
+        """Validate API key and CV file before processing."""
+        # API key validation
+        api_key = self.config.get("GEMINI_API_KEY")
+        if not api_key or api_key == "your_gemini_api_key_here":
+            logger.error("❌ HATA: Gemini API key bulunamadı!")
+            logger.info("📝 Lütfen .env dosyasında GEMINI_API_KEY değerini ayarlayın.")
+            return False
+
+        # CV file validation
+        cv_path = Path(self.config["paths"]["cv_file"])
+        try:
+            if not cv_path.exists():
+                logger.error("❌ HATA: CV dosyası bulunamadı: %s", cv_path)
+                logger.info("📝 Lütfen CV'nizi data/cv.txt dosyasına ekleyin.")
+                return False
+            if cv_path.stat().st_size == 0:
+                logger.error("❌ HATA: CV dosyası boş: %s", cv_path)
+                return False
+        except OSError as exc:
+            logger.error("❌ HATA: CV dosyası erişim hatası: %s", exc)
+            return False
+
+        logger.info("✅ Sistem kontrolleri başarılı")
+        return True
+
     def run(self, cli_args: Any) -> PipelineContext:
         """Execute the end-to-end pipeline."""
         context = PipelineContext(config=self.config, cli_args=cli_args)
-
+        if not self.validate_prerequisites():
+            return context
         context.threshold = cli_args.threshold if cli_args.threshold is not None else MIN_SIMILARITY_THRESHOLD
         context.rerank_flag = not getattr(cli_args, "no_rerank", False)
 

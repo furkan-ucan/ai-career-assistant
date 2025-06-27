@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 
 from dotenv import load_dotenv
@@ -39,26 +38,7 @@ def main(selected_personas=None, results_per_site=None, similarity_threshold=Non
     logger.info("=" * 60)
 
     print_manual_validation_guide()
-    api_key = config.get("GEMINI_API_KEY")
-    if not api_key or api_key == "your_gemini_api_key_here":
-        logger.error("❌ HATA: Gemini API key bulunamadı!")
-        logger.info("📝 Lütfen .env dosyasında GEMINI_API_KEY değerini ayarlayın.")
-        return
-
-    cv_path = Path(config["paths"]["cv_file"])
-    try:
-        if not cv_path.exists():
-            logger.error("❌ HATA: CV dosyası bulunamadı: %s", cv_path)
-            logger.info("📝 Lütfen CV'nizi data/cv.txt dosyasına ekleyin.")
-            return
-        if cv_path.stat().st_size == 0:
-            logger.error("❌ HATA: CV dosyası boş: %s", cv_path)
-            return
-    except OSError as exc:
-        logger.error("❌ HATA: CV dosyası erişim hatası: %s", exc)
-        return
-
-    logger.info("✅ Sistem kontrolleri başarılı")
+    # All validation is now handled by the pipeline
     logger.info("🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n")
 
     cli_args = SimpleNamespace(
