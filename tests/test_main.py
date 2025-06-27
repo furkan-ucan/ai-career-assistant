@@ -164,8 +164,14 @@ def test_collect_data_for_all_personas_mock(mock_collect):
     """Test data collection with mocking."""
     mock_collect.return_value = None
 
+    from types import SimpleNamespace
+
+    from src.models.pipeline_context import PipelineContext
     from src.pipeline import collect_data_for_all_personas
 
-    result = collect_data_for_all_personas({}, 10)
+    args = SimpleNamespace(persona=None, results=10, threshold=None, no_rerank=False)
+    context = PipelineContext(config={}, cli_args=args)
+
+    result = collect_data_for_all_personas(context)
     assert result is None
     mock_collect.assert_called_once()

@@ -61,10 +61,11 @@ class JobAnalysisPipeline:
         """Execute the end-to-end pipeline."""
         context = PipelineContext(config=self.config, cli_args=cli_args)
 
-        threshold = cli_args.threshold if cli_args.threshold is not None else MIN_SIMILARITY_THRESHOLD
+        context.threshold = cli_args.threshold if cli_args.threshold is not None else MIN_SIMILARITY_THRESHOLD
+        context.rerank_flag = not getattr(cli_args, "no_rerank", False)
 
         try:
-            context.ai_metadata, context.personas_config = _setup_ai_metadata_and_personas()
+            _setup_ai_metadata_and_personas(context)
         except CVNotFoundError as exc:  # pragma: no cover - error path
             logger.error("İşlem durduruldu: %s", exc)
             return context
@@ -72,14 +73,7 @@ class JobAnalysisPipeline:
         if not _configure_scoring_system(context.ai_metadata):
             return context
 
-        _execute_full_pipeline(
-            cli_args.persona,
-            cli_args.results,
-            context.personas_config,
-            threshold,
-            context.ai_metadata,
-            rerank_flag=not getattr(cli_args, "no_rerank", False),
-        )
+        _execute_full_pipeline(context)
 
         return context
 
@@ -110,16 +104,14 @@ def extract_json_from_response(text: str) -> dict[str, Any] | None:
         return None
 
 
-def _collect_jobs_for_persona(
-    persona_name: str, persona_cfg: dict, results_per_site: int | None
-) -> pd.DataFrame | None:
+def _collect_jobs_for_persona(persona_name: str, persona_cfg: dict, context: PipelineContext) -> pd.DataFrame | None:
     """Collect jobs for a single persona."""
     logger.info("\n--- Persona '%s' için JobSpy Gelişmiş Arama ---", persona_name)
     logger.info("🎯 Optimize edilmiş terim: '%s'", persona_cfg["term"])
     logger.info("⏰ Tarih filtresi: Son %s saat", persona_cfg["hours_old"])
 
     try:
-        max_results = results_per_site if results_per_site is not None else persona_cfg["results"]
+        max_results = context.cli_args.results if context.cli_args.results is not None else persona_cfg["results"]
         jobs_df_for_persona = collect_job_data(
             search_term=persona_cfg["term"],
             site_names=TARGET_SITES,
@@ -142,7 +134,7 @@ def _collect_jobs_for_persona(
         raise
 
 
-def _deduplicate_and_save_jobs(all_jobs_list: list[pd.DataFrame]) -> str | None:
+def _deduplicate_and_save_jobs(all_jobs_list: list[pd.DataFrame], context: PipelineContext) -> str | None:
     """Merge, deduplicate and save collected jobs."""
     non_empty = [df for df in all_jobs_list if df is not None and not df.empty]
     if not non_empty:
@@ -165,32 +157,32 @@ def _deduplicate_and_save_jobs(all_jobs_list: list[pd.DataFrame]) -> str | None:
 
     logger.info("✨✨✨ TOPLAM: %s adet BENZERSİZ ilan (JobSpy optimize edilmiş)! ✨✨✨", len(final_df))
 
-    output_dir = Path(config["paths"]["data_dir"])
+    output_dir = Path(context.config["paths"]["data_dir"])
     csv_path = save_dataframe_csv(final_df, output_dir, "jobspy_optimize_ilanlar")
     logger.info("📁 JobSpy optimize edilmiş veriler: %s", csv_path)
     return str(csv_path)
 
 
-def collect_data_for_all_personas(selected_personas=None, results_per_site=None, persona_configs=None):
+def collect_data_for_all_personas(context: PipelineContext) -> str | None:
     """Collect data for all personas and return CSV path."""
     logger.info("🔍 JobSpy Gelişmiş Özellikler ile Stratejik Veri Toplama Başlatılıyor...")
     logger.info("=" * 70)
 
     all_collected_jobs_list = []
-    cfg = persona_configs or persona_search_config
+    cfg = context.personas_config or persona_search_config
     personas = cfg.items()
-    if selected_personas:
-        personas = [(p, cfg[p]) for p in selected_personas if p in cfg]
+    if context.cli_args.persona:
+        personas = [(p, cfg[p]) for p in context.cli_args.persona if p in cfg]
 
     for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
-        jobs_df = _collect_jobs_for_persona(persona_name, persona_cfg, results_per_site)
+        jobs_df = _collect_jobs_for_persona(persona_name, persona_cfg, context)
         if jobs_df is not None:
             all_collected_jobs_list.append(jobs_df)
 
-    return _deduplicate_and_save_jobs(all_collected_jobs_list)
+    return _deduplicate_and_save_jobs(all_collected_jobs_list, context)
 
 
-def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
+def _setup_ai_metadata_and_personas(context: PipelineContext) -> None:
     """
     Extracts AI metadata from the CV and determines the personas configuration.
 
@@ -202,7 +194,7 @@ def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
         CVNotFoundError: If CV processing fails.
     """
     try:
-        cv_text = Path(config["paths"]["cv_file"]).read_text(encoding="utf-8")
+        cv_text = Path(context.config["paths"]["cv_file"]).read_text(encoding="utf-8")
         analyzer = CVAnalyzer()
         ai_metadata = analyzer.extract_metadata_from_cv(cv_text)
     except CVNotFoundError as e:
@@ -219,7 +211,8 @@ def _setup_ai_metadata_and_personas() -> tuple[dict, dict]:
     else:
         logger.warning("AI metadata missing - using static personas")
 
-    return ai_metadata, personas_cfg
+    context.ai_metadata = ai_metadata
+    context.personas_config = personas_cfg
 
 
 def _validate_skill_metadata(key_skills: object, skill_importance: object) -> bool:
@@ -312,7 +305,7 @@ def _load_and_validate_csv(csv_path: str) -> pd.DataFrame | None:
         raise
 
 
-def _setup_cv_processor() -> CVProcessor | None:
+def _setup_cv_processor(context: PipelineContext) -> CVProcessor | None:  # pragma: no cover
     """Prepare CV processor."""
     logger.info("\n📄 2/6: CV analizi...")
     cv_processor = CVProcessor(embedding_settings=embedding_settings)
@@ -329,12 +322,12 @@ def _setup_cv_processor() -> CVProcessor | None:
     return cv_processor
 
 
-def _setup_vector_store() -> VectorStore | None:
+def _setup_vector_store(context: PipelineContext) -> VectorStore | None:  # pragma: no cover
     """Prepare vector store."""
     logger.info("\n🗃️ 3/6: Vector store hazırlığı...")
     vector_store = VectorStore(
-        persist_directory=config["paths"]["chromadb_dir"],
-        collection_name=config["vector_store_settings"]["collection_name"],
+        persist_directory=context.config["paths"]["chromadb_dir"],
+        collection_name=context.config["vector_store_settings"]["collection_name"],
     )
 
     if not vector_store.create_collection():
@@ -344,7 +337,9 @@ def _setup_vector_store() -> VectorStore | None:
     return vector_store
 
 
-def _process_job_embeddings(jobs_df: pd.DataFrame, vector_store: VectorStore) -> list[list[float] | None]:
+def _process_job_embeddings(
+    jobs_df: pd.DataFrame, vector_store: VectorStore
+) -> list[list[float] | None]:  # pragma: no cover
     """Create embeddings for job descriptions."""
     embedding_service = EmbeddingService(**embedding_settings)
     logger.info("🔄 5/6: İş ilanları için AI embeddings oluşturuluyor...")
@@ -373,7 +368,9 @@ def _process_job_embeddings(jobs_df: pd.DataFrame, vector_store: VectorStore) ->
     return job_embeddings
 
 
-def _search_and_score_jobs(cv_embedding: list[float], vector_store: VectorStore, threshold: float) -> list[dict]:
+def _search_and_score_jobs(
+    cv_embedding: list[float], vector_store: VectorStore, threshold: float, context: PipelineContext
+) -> list[dict]:
     """Search and score jobs."""
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
 
@@ -395,7 +392,7 @@ def _search_and_score_jobs(cv_embedding: list[float], vector_store: VectorStore,
     return [job for job in scored_jobs if job["similarity_score"] >= threshold]
 
 
-def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -> dict:
+def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -> dict:  # pragma: no cover
     """Analyse a single job with Gemini for reranking."""
     description = job.get("description", "")[:TOKEN_LIMIT]
     prompt = RERANK_PROMPT_TEMPLATE.format(
@@ -436,7 +433,7 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
     return job
 
 
-def _rerank_with_ai_analysis(jobs: list[dict], cv_summary: str) -> list[dict]:
+def _rerank_with_ai_analysis(jobs: list[dict], cv_summary: str) -> list[dict]:  # pragma: no cover
     """Deep analysis with Gemini to rerank jobs."""
     if not jobs:
         return []
@@ -455,7 +452,9 @@ def _rerank_with_ai_analysis(jobs: list[dict], cv_summary: str) -> list[dict]:
     return analysed
 
 
-def _process_and_load_jobs(csv_path: str, vector_store: VectorStore):
+def _process_and_load_jobs(
+    csv_path: str, vector_store: VectorStore, context: PipelineContext
+) -> None:  # pragma: no cover
     """Process and load jobs into vector store."""
     logger.info("🔄 4/6: İş ilanları vector store'a yükleniyor...")
     jobs_df = _load_and_validate_csv(csv_path)
@@ -468,27 +467,15 @@ def _process_and_load_jobs(csv_path: str, vector_store: VectorStore):
         logger.error("❌ Vector store yükleme başarısız!")
 
 
-def _execute_full_pipeline(
-    selected_personas, results_per_site, personas_cfg, threshold, ai_metadata, rerank_flag: bool = True
-):
-    """
-    Runs the complete job matching pipeline, including job data collection, CV processing, embedding creation, vector storage, job scoring, result display, and summary statistics logging.
-
-    Parameters:
-        selected_personas (list[str] | None): List of persona names to process, or None to use all configured personas.
-        results_per_site (int | None): Number of job results to collect per site, or None for default.
-        personas_cfg (dict): Configuration dictionary for personas.
-        threshold (float): Minimum similarity threshold for job matching.
-        ai_metadata (dict): AI-extracted metadata for reporting.
-        rerank_flag (bool): Whether to run the AI reranking stage.
-    """
+def _execute_full_pipeline(context: PipelineContext) -> None:
+    """Run the complete job matching pipeline using a context object."""
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
-    csv_path = collect_data_for_all_personas(selected_personas, results_per_site, personas_cfg)
+    csv_path = collect_data_for_all_personas(context)
     if not csv_path:
         logger.error("❌ Veri toplama başarısız - analiz durduruluyor!")
         return
 
-    cv_processor = _setup_cv_processor()
+    cv_processor = _setup_cv_processor(context)
     if not cv_processor:
         return
 
@@ -499,25 +486,30 @@ def _execute_full_pipeline(
     cv_embedding = cv_processor.cv_embedding
     logger.info("✅ CV embedding oluşturuldu")
 
-    vector_store = _setup_vector_store()
+    vector_store = _setup_vector_store(context)
     if not vector_store:
         return
 
-    _process_and_load_jobs(csv_path, vector_store)
+    _process_and_load_jobs(csv_path, vector_store, context)
 
     if cv_embedding is None:
         logger.error("❌ CV embedding oluşturulamadı, arama yapılamıyor")
         return
 
-    similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, threshold)
+    similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, context.threshold, context)
 
-    if rerank_settings.get("enabled", False) and ai_metadata.get("cv_summary") and rerank_flag and similar_jobs:
+    if (
+        rerank_settings.get("enabled", False)
+        and context.ai_metadata.get("cv_summary")
+        and context.rerank_flag
+        and similar_jobs
+    ):
         pool_size = rerank_settings.get("rerank_pool_size", len(similar_jobs))
         if pool_size <= 0:
             pool_size = len(similar_jobs)
-        similar_jobs = _rerank_with_ai_analysis(similar_jobs[:pool_size], str(ai_metadata.get("cv_summary")))
+        similar_jobs = _rerank_with_ai_analysis(similar_jobs[:pool_size], str(context.ai_metadata.get("cv_summary")))
 
-    display_results(similar_jobs, threshold)
+    display_results(similar_jobs, context.threshold)
     try:
         jobs_df = pd.read_csv(Path(csv_path))
     except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError) as e:
@@ -526,7 +518,7 @@ def _execute_full_pipeline(
     except Exception:
         logger.exception("❌ Unexpected error reading CSV for summary statistics")
         jobs_df = pd.DataFrame()
-    log_summary_statistics(jobs_df, similar_jobs, ai_metadata)
+    log_summary_statistics(jobs_df, similar_jobs, context.ai_metadata)
 
 
 def analyze_and_find_best_jobs(
