@@ -82,11 +82,12 @@ class JobAnalysisPipeline:
         logger.info("✅ Sistem kontrolleri başarılı")
         return True
 
-    def run(self, cli_args: Any) -> PipelineContext:
+    def run(self, cli_args: Any) -> list[dict] | None:
         """Execute the end-to-end pipeline."""
         context = PipelineContext(config=self.config, cli_args=cli_args)
+        context.hours_old = getattr(cli_args, "hours_old", None)
         if not self.validate_prerequisites():
-            return context
+            return None
         context.threshold = cli_args.threshold if cli_args.threshold is not None else MIN_SIMILARITY_THRESHOLD
         context.rerank_flag = not getattr(cli_args, "no_rerank", False)
 
@@ -94,16 +95,14 @@ class JobAnalysisPipeline:
             _setup_ai_metadata_and_personas(context)
         except CVNotFoundError as exc:  # pragma: no cover - error path
             logger.error("İşlem durduruldu: %s", exc)
-            return context
+            return None
 
         scoring_sys = _configure_scoring_system(self.config, context.ai_metadata)
         if scoring_sys is None:
-            return context
+            return None
 
         context.scoring_system = scoring_sys
-        _execute_full_pipeline(context)
-
-        return context
+        return _execute_full_pipeline(context)
 
 
 def _collect_jobs_for_persona(persona_name: str, persona_cfg: dict, context: PipelineContext) -> pd.DataFrame | None:
@@ -177,7 +176,10 @@ def collect_data_for_all_personas(context: PipelineContext) -> str | None:
         personas = [(p, cfg[p]) for p in context.cli_args.persona if p in cfg]
 
     for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
-        jobs_df = _collect_jobs_for_persona(persona_name, persona_cfg, context)
+        cfg_for_run = persona_cfg.copy()
+        if context.cli_args.hours_old is not None:
+            cfg_for_run["hours_old"] = context.cli_args.hours_old
+        jobs_df = _collect_jobs_for_persona(persona_name, cfg_for_run, context)
         if jobs_df is not None:
             all_collected_jobs_list.append(jobs_df)
 
@@ -531,19 +533,20 @@ def _score_and_rank_jobs(
     return similar_jobs
 
 
-def _execute_full_pipeline(context: PipelineContext) -> None:
+def _execute_full_pipeline(context: PipelineContext) -> list[dict] | None:
     """Run the complete job matching pipeline using a context object."""
     logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
     csv_path, cv_embedding, vector_store = _collect_and_prepare_data(context)
     if not csv_path or cv_embedding is None or vector_store is None:
-        return
+        return None
 
     if context.scoring_system is None:
         logger.error("Scoring system not configured")
-        return
+        return None
 
     similar_jobs = _score_and_rank_jobs(cv_embedding, vector_store, context)
 
+    context.final_results = similar_jobs
     display_results(similar_jobs, context.threshold)
     try:
         jobs_df = pd.read_csv(Path(csv_path))
@@ -554,10 +557,15 @@ def _execute_full_pipeline(context: PipelineContext) -> None:
         logger.exception("❌ Unexpected error reading CSV for summary statistics")
         jobs_df = pd.DataFrame()
     log_summary_statistics(jobs_df, similar_jobs, context.ai_metadata)
+    return similar_jobs
 
 
 def analyze_and_find_best_jobs(
-    selected_personas=None, results_per_site=None, similarity_threshold=None, rerank: bool = True
+    selected_personas=None,
+    results_per_site=None,
+    similarity_threshold=None,
+    rerank: bool = True,
+    hours_old: int | None = None,
 ):
     """Run full pipeline and print best jobs via the orchestrator."""
     logger.info("\n🚀 Tam Otomatik AI Kariyer Analizi Başlatılıyor...")
@@ -567,18 +575,29 @@ def analyze_and_find_best_jobs(
         persona=selected_personas,
         results=results_per_site,
         threshold=similarity_threshold,
+        hours_old=hours_old,
         no_rerank=not rerank,
     )
 
     pipeline = JobAnalysisPipeline(config)
-    pipeline.run(args)
+    return pipeline.run(args)
 
 
 def run_end_to_end_pipeline(
-    selected_personas=None, results_per_site=None, similarity_threshold=None, rerank: bool = True
+    selected_personas=None,
+    results_per_site=None,
+    similarity_threshold=None,
+    rerank: bool = True,
+    hours_old: int | None = None,
 ):
     """Public wrapper to run the full analysis pipeline."""
-    analyze_and_find_best_jobs(selected_personas, results_per_site, similarity_threshold, rerank)
+    return analyze_and_find_best_jobs(
+        selected_personas,
+        results_per_site,
+        similarity_threshold,
+        rerank,
+        hours_old,
+    )
 
 
 __all__ = [
