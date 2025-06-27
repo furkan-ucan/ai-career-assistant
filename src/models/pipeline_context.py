@@ -3,6 +3,8 @@ from typing import Any
 
 import pandas as pd
 
+from ..intelligent_scoring import IntelligentScoringSystem
+
 
 @dataclass
 class PipelineContext:
@@ -21,3 +23,4 @@ class PipelineContext:
     initial_matches: list[dict[str, Any]] = field(default_factory=list)
     scored_jobs: list[dict[str, Any]] = field(default_factory=list)
     final_results: list[dict[str, Any]] = field(default_factory=list)
+    scoring_system: IntelligentScoringSystem | None = None

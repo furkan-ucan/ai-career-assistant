@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import re
@@ -36,8 +37,6 @@ logger = logging.getLogger(__name__)
 
 config = get_config()
 
-scoring_system: IntelligentScoringSystem | None = None
-
 embedding_settings = config.get("embedding_settings", {})
 
 job_settings = config["job_search_settings"]
@@ -70,9 +69,11 @@ class JobAnalysisPipeline:
             logger.error("İşlem durduruldu: %s", exc)
             return context
 
-        if not _configure_scoring_system(context.ai_metadata):
+        scoring_sys = _configure_scoring_system(self.config, context.ai_metadata)
+        if scoring_sys is None:
             return context
 
+        context.scoring_system = scoring_sys
         _execute_full_pipeline(context)
 
         return context
@@ -226,11 +227,12 @@ def _validate_skill_metadata(key_skills: object, skill_importance: object) -> bo
     )
 
 
-def _apply_skill_weights(skill: str, importance: float, base_weight: int, min_imp: float) -> None:
-    """Apply dynamic weight based on skill importance."""
+def _apply_skill_weights(cfg: dict, skill: str, importance: float, base_weight: int, min_imp: float) -> dict:
+    """Return updated config with dynamic skill weights applied."""
+    new_cfg = copy.deepcopy(cfg)
     if importance >= min_imp:
         weight = int(round(base_weight * importance))
-        config["scoring_system"]["description_weights"]["positive"][skill] = weight
+        new_cfg["scoring_system"]["description_weights"]["positive"][skill] = weight
         logger.debug(
             "  ⭐ Skill: %s (importance: %.2f) → weight: %s",
             skill,
@@ -244,41 +246,40 @@ def _apply_skill_weights(skill: str, importance: float, base_weight: int, min_im
             min_imp,
             importance,
         )
+    return new_cfg
 
 
-def _configure_scoring_system(ai_metadata: dict) -> bool:
-    """Configure the scoring system with AI metadata and skill importance."""
-    global scoring_system
+def _configure_scoring_system(config_data: dict, ai_metadata: dict) -> IntelligentScoringSystem | None:
+    """Return a scoring system configured with AI metadata."""
     try:
+        cfg = copy.deepcopy(config_data)
         if not (ai_metadata.get("key_skills") and ai_metadata.get("skill_importance")):
             logger.info("No AI skill data available - using static scoring")
-            scoring_system = IntelligentScoringSystem(config)
-            return True
+            return IntelligentScoringSystem(cfg)
 
         key_skills = ai_metadata["key_skills"]
         skill_importance = ai_metadata["skill_importance"]
 
         if not _validate_skill_metadata(key_skills, skill_importance):
             logger.warning("AI metadata skills format invalid - using static scoring")
-            scoring_system = IntelligentScoringSystem(config)
-            return True
+            return IntelligentScoringSystem(cfg)
 
-        base_weight = config["scoring_system"].get("dynamic_skill_weight", 10)
-        min_imp = config["scoring_system"].get("min_importance_for_scoring", 0.75)
+        base_weight = cfg["scoring_system"].get("dynamic_skill_weight", 10)
+        min_imp = cfg["scoring_system"].get("min_importance_for_scoring", 0.75)
         logger.info("🎯 Configuring enhanced scoring with %s AI-detected skills", len(key_skills))
 
         if len(skill_importance) != len(key_skills):
             skill_importance = [1.0] * len(key_skills)
 
+        temp_cfg = cfg
         for skill, importance in zip(key_skills, skill_importance, strict=False):
-            _apply_skill_weights(skill, float(importance), base_weight, min_imp)
+            temp_cfg = _apply_skill_weights(temp_cfg, skill, float(importance), base_weight, min_imp)
 
         logger.info("✅ Enhanced AI-driven scoring system configured")
-        scoring_system = IntelligentScoringSystem(config)
-        return True
+        return IntelligentScoringSystem(temp_cfg)
     except (ValueError, TypeError, KeyError) as e:
         logger.error("❌ Scoring system configuration failed: %s", e)
-        return False
+        return None
     except Exception:
         logger.exception("❌ Unexpected error in scoring system configuration")
         raise
@@ -369,7 +370,11 @@ def _process_job_embeddings(
 
 
 def _search_and_score_jobs(
-    cv_embedding: list[float], vector_store: VectorStore, threshold: float, context: PipelineContext
+    cv_embedding: list[float],
+    vector_store: VectorStore,
+    threshold: float,
+    scoring_sys: IntelligentScoringSystem,
+    context: PipelineContext,
 ) -> list[dict]:
     """Search and score jobs."""
     logger.info("\n🔄 6/6: Akıllı eşleştirme ve filtreleme...")
@@ -388,7 +393,7 @@ def _search_and_score_jobs(
         return []
 
     logger.info("🔍 Sonuçlar akıllı puanlama ile değerlendiriliyor...")
-    scored_jobs = score_jobs(similar_jobs, scoring_system, debug=False)
+    scored_jobs = score_jobs(similar_jobs, scoring_sys, debug=False)
     return [job for job in scored_jobs if job["similarity_score"] >= threshold]
 
 
@@ -467,36 +472,40 @@ def _process_and_load_jobs(
         logger.error("❌ Vector store yükleme başarısız!")
 
 
-def _execute_full_pipeline(context: PipelineContext) -> None:
-    """Run the complete job matching pipeline using a context object."""
-    logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
+def _collect_and_prepare_data(context: PipelineContext) -> tuple[str | None, list[float] | None, VectorStore | None]:
+    """Collect job data and prepare vector store and embeddings."""
     csv_path = collect_data_for_all_personas(context)
     if not csv_path:
         logger.error("❌ Veri toplama başarısız - analiz durduruluyor!")
-        return
+        return None, None, None
 
     cv_processor = _setup_cv_processor(context)
     if not cv_processor:
-        return
-
-    if not cv_processor.create_cv_embedding():
-        logger.error("❌ CV embedding oluşturma başarısız!")
-        return
+        return None, None, None
 
     cv_embedding = cv_processor.cv_embedding
-    logger.info("✅ CV embedding oluşturuldu")
 
     vector_store = _setup_vector_store(context)
     if not vector_store:
-        return
+        return csv_path, None, None
 
     _process_and_load_jobs(csv_path, vector_store, context)
+    return csv_path, cv_embedding, vector_store
 
-    if cv_embedding is None:
-        logger.error("❌ CV embedding oluşturulamadı, arama yapılamıyor")
-        return
 
-    similar_jobs = _search_and_score_jobs(cv_embedding, vector_store, context.threshold, context)
+def _score_and_rank_jobs(
+    cv_embedding: list[float],
+    vector_store: VectorStore,
+    context: PipelineContext,
+) -> list[dict]:
+    """Search, score and optionally rerank jobs."""
+    similar_jobs = _search_and_score_jobs(
+        cv_embedding,
+        vector_store,
+        context.threshold,
+        context.scoring_system,
+        context,
+    )
 
     if (
         rerank_settings.get("enabled", False)
@@ -507,7 +516,25 @@ def _execute_full_pipeline(context: PipelineContext) -> None:
         pool_size = rerank_settings.get("rerank_pool_size", len(similar_jobs))
         if pool_size <= 0:
             pool_size = len(similar_jobs)
-        similar_jobs = _rerank_with_ai_analysis(similar_jobs[:pool_size], str(context.ai_metadata.get("cv_summary")))
+        similar_jobs = _rerank_with_ai_analysis(
+            similar_jobs[:pool_size],
+            str(context.ai_metadata.get("cv_summary")),
+        )
+    return similar_jobs
+
+
+def _execute_full_pipeline(context: PipelineContext) -> None:
+    """Run the complete job matching pipeline using a context object."""
+    logger.info("\n🔄 1/6: JobSpy Gelişmiş Özellikler ile veri toplama...")
+    csv_path, cv_embedding, vector_store = _collect_and_prepare_data(context)
+    if not csv_path or cv_embedding is None or vector_store is None:
+        return
+
+    if context.scoring_system is None:
+        logger.error("Scoring system not configured")
+        return
+
+    similar_jobs = _score_and_rank_jobs(cv_embedding, vector_store, context)
 
     display_results(similar_jobs, context.threshold)
     try:
