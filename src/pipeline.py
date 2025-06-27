@@ -177,8 +177,8 @@ def collect_data_for_all_personas(context: PipelineContext) -> str | None:
 
     for persona_name, persona_cfg in tqdm(personas, desc="Persona Aramaları"):
         cfg_for_run = persona_cfg.copy()
-        if context.cli_args.hours_old is not None:
-            cfg_for_run["hours_old"] = context.cli_args.hours_old
+        if context.hours_old is not None:
+            cfg_for_run["hours_old"] = context.hours_old
         jobs_df = _collect_jobs_for_persona(persona_name, cfg_for_run, context)
         if jobs_df is not None:
             all_collected_jobs_list.append(jobs_df)
