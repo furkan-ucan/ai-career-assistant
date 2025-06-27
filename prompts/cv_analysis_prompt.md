@@ -47,16 +47,16 @@ developer.  Your analysis *must* prioritise business-technology bridge roles
 4. `"cv_summary"` 🗄 *string* – 2-3 sentence professional summary of the candidate.
 
 **JSON SCHEMA (enforced):**
-{
+{{
   "type": "object",
- "properties": {
-    "key_skills":        {"type": "array", "items": {"type": "string"}},
-    "target_job_titles": {"type": "array", "items": {"type": "string"}},
-    "skill_importance":  {"type": "array", "items": {"type":"number"}},
-    "cv_summary":       {"type": "string"}
-  },
+  "properties": {{
+    "key_skills":        {{"type": "array", "items": {{"type": "string"}}}},
+    "target_job_titles": {{"type": "array", "items": {{"type": "string"}}}},
+    "skill_importance":  {{"type": "array", "items": {{"type":"number"}}}},
+    "cv_summary":       {{"type": "string"}}
+  }},
   "required": ["key_skills", "target_job_titles", "skill_importance", "cv_summary"]
-}
+}}
 
 **ABSOLUTE RULES:**
 * Do **NOT** wrap the JSON with ``` or any extra text.

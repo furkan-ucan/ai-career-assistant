@@ -139,6 +139,13 @@ python main.py
 python main.py --persona Data_Analyst --results 10 --threshold 50
 ```
 
+Alternatif olarak, etkileşimli web arayüzünü başlatmak için aşağıdaki komutu
+kullanabilirsiniz:
+
+```bash
+streamlit run app.py
+```
+
 #### Komut Satırı Seçenekleri
 
 - `--persona`: Sadece belirtilen persona(lar) için arama yapar. Birden fazla persona belirtmek için argümanı tekrarlayın.
