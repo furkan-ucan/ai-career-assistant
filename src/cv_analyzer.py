@@ -18,6 +18,7 @@ from tenacity import retry, stop_after_attempt, wait_fixed
 
 from .config import get_config
 from .constants import PROMPTS_DIR
+from .utils.json_helpers import extract_json_from_response
 from .utils.prompt_loader import load_prompt
 
 load_dotenv(dotenv_path=PROMPTS_DIR.parent / ".env")
@@ -122,21 +123,6 @@ class CVAnalyzer:
                 normalized.append(clean_skill_for_output)
         return sorted(set(normalized))
 
-    def _extract_json_from_response(self, text: str) -> str | None:
-        """Extracts a JSON object string from a string, handling markdown code blocks."""
-        # 1. Try to find JSON within a markdown code block first
-        match = re.search(r"```(?:json)?\n(.*?)\n```", text, re.DOTALL)
-        if match:
-            return match.group(1).strip()
-
-        # 2. If no markdown block, find the first and last curly brace for a JSON object
-        match = re.search(r"\{.*\}", text, re.DOTALL)
-        if match:
-            return match.group(0)
-
-        logger.warning("No JSON object found within the text: %s", text[:200])
-        return None
-
     def _clean_job_titles(self, job_titles: list[str]) -> list[str]:
         """Clean and normalize job titles."""
         cleaned = []
@@ -149,8 +135,6 @@ class CVAnalyzer:
             clean_title = clean_title.title()
             # Handle specific cases where title() might not be ideal (e.g., acronyms)
             # Add more specific rules here if needed
-            if clean_title.upper() == "SENIOR DEVELOPER":
-                clean_title = "Senior Developer"
 
             cleaned.append(clean_title)
         return cleaned
@@ -194,19 +178,12 @@ class CVAnalyzer:
                 return None
 
             # Use the new consolidated cleaning/extraction function
-            json_str = self._extract_json_from_response(content)
-            if not json_str:
+            parsed_data = extract_json_from_response(content)
+            if parsed_data is None:
                 logger.error("Could not extract JSON from Gemini response: %s", content[:500])
                 return None
 
-            parsed_data = cast(dict[str, object], json.loads(json_str))
-
-            return parsed_data
-        except json.JSONDecodeError as e:
-            logger.error(
-                f"Gemini JSON decode error: {e}. Response was: {content[:500] if 'content' in locals() else 'No content'}"
-            )
-            return None
+            return cast(dict, parsed_data)
         except google_exceptions.ResourceExhausted as e:
             logger.exception(f"Gemini API Quota Exceeded: {e}")
             return None

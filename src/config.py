@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,8 @@ from typing import Any
 import yaml
 
 from .exceptions import ConfigError
+
+logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path("config.yaml")
 _config_cache: dict[str, Any] | None = None
@@ -77,9 +80,7 @@ def _apply_numeric_setting(config_data: dict[str, Any], section: str, key: str, 
         try:
             config_data.setdefault(section, {})[key] = int(os.getenv(env_var, str(default)))
         except ValueError:
-            import logging
-
-            logging.getLogger(__name__).warning(
+            logger.warning(
                 "Invalid numeric value for %s: %s, using default %s",
                 env_var,
                 os.getenv(env_var),

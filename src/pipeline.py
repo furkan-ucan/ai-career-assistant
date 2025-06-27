@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import copy
-import json
 import logging
-import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any
 
 import google.generativeai as genai
 import pandas as pd
@@ -29,6 +27,7 @@ from .models.pipeline_context import PipelineContext
 from .persona_builder import build_dynamic_personas
 from .reporting import display_results, log_summary_statistics
 from .utils.file_helpers import save_dataframe_csv
+from .utils.json_helpers import extract_json_from_response
 from .utils.prompt_loader import load_prompt
 from .vector_store import VectorStore
 
@@ -105,32 +104,6 @@ class JobAnalysisPipeline:
         _execute_full_pipeline(context)
 
         return context
-
-
-def extract_json_from_response(text: str) -> dict[str, Any] | None:
-    """Extracts a JSON object from a string, prioritizing markdown code blocks."""
-    # 1. Try to find JSON within a markdown code block first
-    match = re.search(r"```(?:json)?\n(.*?)\n```", text, re.DOTALL)
-    if match:
-        json_str = match.group(1).strip()
-        try:
-            return cast(dict[str, Any], json.loads(json_str))
-        except json.JSONDecodeError:
-            logger.warning(f"Markdown bloğu içindeki JSON ayrıştırılamadı. Blok: {json_str[:200]}")
-            # Fall through to the next method if parsing fails
-
-    # 2. If no markdown block, find the first and last curly brace
-    json_match = re.search(r"\{.*\}", text, re.DOTALL)
-    if not json_match:
-        logger.warning(f"Metin içinde geçerli JSON bloğu bulunamadı. Metin: {text[:200]}")
-        return None
-
-    json_str = json_match.group(0)
-    try:
-        return cast(dict[str, Any], json.loads(json_str))
-    except json.JSONDecodeError:
-        logger.error(f"Temizleme sonrası bile JSON ayrıştırılamadı. Metin: {text[:200]}", exc_info=True)
-        return None
 
 
 def _collect_jobs_for_persona(persona_name: str, persona_cfg: dict, context: PipelineContext) -> pd.DataFrame | None:

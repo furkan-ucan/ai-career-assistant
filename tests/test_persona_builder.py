@@ -1,6 +1,6 @@
 import pytest
 
-from src.persona_builder import build_dynamic_personas
+from src.persona_builder import _generate_unique_key, build_dynamic_personas
 
 
 def test_build_dynamic_personas_simple():
@@ -23,6 +23,6 @@ def test_build_dynamic_personas_simple():
 )
 def test_dynamic_result_counts(titles, expected):
     personas = build_dynamic_personas(titles)
-    # Use same normalization as persona_builder
-    key = titles[0].strip().lower().replace(" ", "_")
+    # Use the production normalization logic
+    key = _generate_unique_key(titles[0], set())
     assert personas[key]["results"] == expected
