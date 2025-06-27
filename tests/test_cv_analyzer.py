@@ -43,14 +43,17 @@ def test_cache_key_generation():
     """Test cache functionality through public API"""
     analyzer = CVAnalyzer()
     cv_text = "Sample CV content"
-    # Test through public API that uses the cache
-    try:
-        analyzer._cache_metadata(cv_text, {"test": "data"})
-        # If no exception raised, cache functionality works
-        assert True
-    except Exception:
-        # If cache fails, that's ok for this test
-        assert True
+    # Test that cache key generation works consistently
+    test_data = {"test": "data"}
+
+    # Cache some data
+    analyzer._cache_metadata(cv_text, test_data)
+
+    # Try to load it back
+    cached_result = analyzer._load_cached_metadata(cv_text)
+
+    # Either it should work (return the data) or return None if cache is disabled
+    assert cached_result is None or cached_result == test_data
 
 
 def test_normalize_skills_integration():

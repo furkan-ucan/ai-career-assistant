@@ -11,6 +11,7 @@ from typing import cast
 
 import google.generativeai as genai
 from dotenv import load_dotenv
+from google.api_core import exceptions as google_exceptions
 
 # Third Party
 from tenacity import retry, stop_after_attempt, wait_fixed
@@ -107,12 +108,20 @@ class CVAnalyzer:
                 normalized.append(clean_skill_for_output)
         return sorted(set(normalized))
 
-    def _strip_markdown_fences(self, content: str) -> str:
-        """Remove markdown code fences from JSON response."""
-        # Remove code fences with various languages
-        content = re.sub(r"^```[a-zA-Z]*\n", "", content, flags=re.MULTILINE)
-        content = re.sub(r"\n\s*```$", "", content, flags=re.MULTILINE)
-        return content.strip()
+    def _extract_json_from_response(self, text: str) -> str | None:
+        """Extracts a JSON object string from a string, handling markdown code blocks."""
+        # 1. Try to find JSON within a markdown code block first
+        match = re.search(r"```(?:json)?\n(.*?)\n```", text, re.DOTALL)
+        if match:
+            return match.group(1).strip()
+
+        # 2. If no markdown block, find the first and last curly brace for a JSON object
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return match.group(0)
+
+        logger.warning("No JSON object found within the text: %s", text[:200])
+        return None
 
     def _clean_job_titles(self, job_titles: list[str]) -> list[str]:
         """Clean and normalize job titles."""
@@ -170,25 +179,13 @@ class CVAnalyzer:
                 logger.warning("Gemini returned empty response")
                 return None
 
-            # Clean JSON from markdown code blocks - enhanced version
-            content = self._strip_markdown_fences(content)
-
-            # Additional cleanup for common issues
-            content = content.strip()
-            if content.startswith("```json"):
-                content = content[7:]  # Remove ```json
-            if content.startswith("```"):
-                content = content[3:]  # Remove ```
-            if content.endswith("```"):
-                content = content[:-3]  # Remove closing ```
-            content = content.strip()
-
-            parsed_data = cast(dict[str, object], json.loads(content))
-
-            # Validate required fields
-            if "key_skills" not in parsed_data or "target_job_titles" not in parsed_data:
-                logger.warning("Gemini response missing required fields")
+            # Use the new consolidated cleaning/extraction function
+            json_str = self._extract_json_from_response(content)
+            if not json_str:
+                logger.error("Could not extract JSON from Gemini response: %s", content[:500])
                 return None
+
+            parsed_data = cast(dict[str, object], json.loads(json_str))
 
             return parsed_data
         except json.JSONDecodeError as e:
@@ -196,8 +193,11 @@ class CVAnalyzer:
                 f"Gemini JSON decode error: {e}. Response was: {content[:500] if 'content' in locals() else 'No content'}"
             )
             return None
-        except Exception:  # noqa: BLE001
-            logger.exception("Gemini API call failed")
+        except google_exceptions.ResourceExhausted as e:
+            logger.exception(f"Gemini API Quota Exceeded: {e}")
+            return None
+        except Exception as e:  # noqa: BLE001
+            logger.exception(f"An unexpected Gemini API call failed: {e}")
             return None
 
     def extract_metadata_from_cv(self, cv_text: str) -> dict[str, object]:
@@ -210,6 +210,18 @@ class CVAnalyzer:
         if data is not None:
             metadata = cast(dict[str, object], data)
 
+            # --- NEW VALIDATION BLOCK ---
+            required_keys = ["key_skills", "target_job_titles", "skill_importance", "cv_summary"]
+            if not all(key in metadata for key in required_keys):
+                logger.error(f"AI response is missing one of a required key. Found: {list(metadata.keys())}")
+                # Fallback to empty metadata
+                return {
+                    "key_skills": [],
+                    "target_job_titles": [],
+                    "skill_importance": [],
+                    "cv_summary": "",
+                }
+            # --- END OF VALIDATION BLOCK ---
             # Normalize skills
             skills = self._normalize_skills(cast(list[str], metadata.get("key_skills", [])))
             metadata["key_skills"] = skills

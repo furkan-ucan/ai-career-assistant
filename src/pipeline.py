@@ -13,6 +13,7 @@ from typing import Any, cast
 
 import google.generativeai as genai
 import pandas as pd
+from google.api_core import exceptions as google_exceptions
 from tqdm import tqdm
 
 from .config import get_config
@@ -430,11 +431,14 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
                 "missing_keywords": data.get("missing_keywords", []),
             }
         )
+    except google_exceptions.ResourceExhausted as exc:
+        logger.warning(
+            f"API rate limit or quota exhausted for job '{job.get('title')}'. Skipping AI analysis. Details: {exc}"
+        )
+    except google_exceptions.DeadlineExceeded as exc:
+        logger.warning(f"API call timed out for job '{job.get('title')}'. Skipping AI analysis. Details: {exc}")
     except Exception as exc:
-        if "ResourceExhausted" in str(exc) or "429" in str(exc):
-            logger.warning("API rate limit reached for job %s, skipping AI analysis", job.get("title"))
-        else:
-            logger.warning("Unexpected error during AI analysis for job %s: %s", job.get("title"), exc)
+        logger.warning(f"Unexpected error during AI analysis for job '{job.get('title')}': {exc}", exc_info=True)
     return job
 
 
@@ -499,6 +503,10 @@ def _score_and_rank_jobs(
     context: PipelineContext,
 ) -> list[dict]:
     """Search, score and optionally rerank jobs."""
+    if context.scoring_system is None:
+        logger.error("Scoring system is not configured. Cannot score jobs.")
+        return []
+
     similar_jobs = _search_and_score_jobs(
         cv_embedding,
         vector_store,
@@ -578,7 +586,4 @@ __all__ = [
     "collect_data_for_all_personas",
     "analyze_and_find_best_jobs",
     "run_end_to_end_pipeline",
-    "_validate_skill_metadata",
-    "_apply_skill_weights",
-    "_configure_scoring_system",
 ]

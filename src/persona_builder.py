@@ -25,11 +25,33 @@ def build_dynamic_personas(target_job_titles: list[str]) -> dict[str, dict[str, 
 
     Returns:
         dict[str, dict[str, object]]: Dictionary mapping persona keys to their configuration dictionaries, each containing "term", "hours_old", and "results".
+
+    Raises:
+        TypeError: If target_job_titles is not a list or contains non-string elements.
     """
+    if not isinstance(target_job_titles, list):
+        raise TypeError("target_job_titles must be a list")
+
     personas: dict[str, dict[str, object]] = {}
     for title in target_job_titles or []:
+        if not isinstance(title, str):
+            raise TypeError(f"All job titles must be strings, got {type(title)}")
+
+        # Skip empty or whitespace-only titles
+        if not title.strip():
+            continue
+
         # Normalize key to prevent collisions
-        key = re.sub(r"\s+", "_", title.strip().lower())
+        key = re.sub(r"[^\w\s]", "", title.strip().lower())  # Remove special chars first
+        key = re.sub(r"\s+", "_", key)  # Then replace spaces with underscores
+
+        # Handle potential key collisions
+        original_key = key
+        counter = 1
+        while key in personas:
+            key = f"{original_key}_{counter}"
+            counter += 1
+
         # Escape quotes in title for safe query construction
         safe_title = title.replace('"', '\\"')
         term = f'("{safe_title}" OR "{safe_title}") -Senior -Lead'
@@ -39,5 +61,7 @@ def build_dynamic_personas(target_job_titles: list[str]) -> dict[str, dict[str, 
             if role in role_lower:
                 results = count
                 break
+
         personas[key] = {"term": term, "hours_old": DEFAULT_HOURS_OLD, "results": results}
+
     return personas

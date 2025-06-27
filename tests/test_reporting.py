@@ -93,16 +93,20 @@ def sample_ai_metadata():
 
 
 def test_display_results_with_valid_jobs(sample_jobs, caplog):
-    logging.raiseExceptions = False
-    with caplog.at_level(logging.INFO, logger="src.reporting"):
-        display_results(sample_jobs, 80)
-    output = caplog.text
-    assert "Software Engineer" in output
-    assert "Great fit" in output  # Check for reasoning
-    assert "Eşleşen: python" in output  # Check for matching keywords
-    assert "DataCorp" in output
-    assert "Uygunluk eşiği: %80 ve üzeri" in output
-    assert "Persona Dağılımı" in output
+    original_raise_exceptions = logging.raiseExceptions
+    try:
+        logging.raiseExceptions = False
+        with caplog.at_level(logging.INFO, logger="src.reporting"):
+            display_results(sample_jobs, 80)
+        output = caplog.text
+        assert "Software Engineer" in output
+        assert "Great fit" in output  # Check for reasoning
+        assert "Eşleşen: python" in output  # Check for matching keywords
+        assert "DataCorp" in output
+        assert "Uygunluk eşiği: %80 ve üzeri" in output
+        assert "Persona Dağılımı" in output
+    finally:
+        logging.raiseExceptions = original_raise_exceptions
 
 
 def test_display_results_with_no_jobs(caplog):

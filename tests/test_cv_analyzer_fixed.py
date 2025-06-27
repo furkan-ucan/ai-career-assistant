@@ -1,5 +1,7 @@
 import hashlib
 
+import pytest
+
 from src.config import get_config
 from src.cv_analyzer import CVAnalyzer
 
@@ -42,20 +44,23 @@ def test_fail_safe(monkeypatch):
     assert result == {"key_skills": [], "target_job_titles": [], "skill_importance": [], "cv_summary": ""}
 
 
-def test_strip_markdown_fences():
+@pytest.mark.parametrize(
+    "input_text, expected_output",
+    [
+        ('```json\n{"a": 1}\n```', '{"a": 1}'),
+        ('Some text before ```json\n{"a": 1}\n``` and after.', '{"a": 1}'),
+        ('Some text before {"a": 1} and after.', '{"a": 1}'),
+        ("No json here", None),
+        ('```\n{"a": 1}\n```', '{"a": 1}'),
+        ('{"a": 1}', '{"a": 1}'),
+        ('Some text before\n{\n  "a": 1\n}\nand after.', '{\n  "a": 1\n}'),
+        ("invalid json ```json\n{}\n```", "{}"),
+    ],
+)
+def test_extract_json_from_response(input_text, expected_output):
+    """Test that JSON can be extracted from various string formats."""
     analyzer = CVAnalyzer()
-
-    # Test markdown removal
-    content_with_fences = """```json
-    {"key": "value"}
-    ```"""
-    result = analyzer._strip_markdown_fences(content_with_fences)
-    assert result == '{"key": "value"}'
-
-    # Test content without fences (should remain unchanged)
-    plain_content = '{"key": "value"}'
-    result = analyzer._strip_markdown_fences(plain_content)
-    assert result == '{"key": "value"}'
+    assert analyzer._extract_json_from_response(input_text) == expected_output
 
 
 def test_clean_job_titles():

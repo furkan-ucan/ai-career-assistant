@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 
 import pandas as pd
+import pytest
+from google.api_core import exceptions as google_exceptions
 
 from src import pipeline
 from src.models.pipeline_context import PipelineContext
@@ -120,13 +122,43 @@ def test_search_and_score_jobs(mocker):
     mock_vs.search_jobs.return_value = {"metadatas": [{"title": "t"}], "distances": [0.2]}
     mocker.patch("src.pipeline.score_jobs", side_effect=lambda jobs, sc, debug=False: jobs)
     result = pipeline._search_and_score_jobs([0.1], mock_vs, 0.0, context.scoring_system, context)
-    assert result[0]["similarity_score"] == 80.0
+    assert abs(result[0]["similarity_score"] - 80.0) < 1e-6
 
 
 def test_deduplicate_and_save_jobs(tmp_path, mocker):
     context = _make_context()
     context.config["paths"] = {"data_dir": str(tmp_path)}
     df = pd.DataFrame([{"title": "t", "company": "c"}])
-    mocker.patch("src.pipeline.save_dataframe_csv", return_value=tmp_path / "f.csv")
+    mocker.patch("src.pipeline.save_dataframe_csv", return_value=str(tmp_path / "f.csv"))
     path = pipeline._deduplicate_and_save_jobs([df], context)
-    assert path.endswith("f.csv")
+    assert path is not None
+    assert str(path).endswith("f.csv")
+
+
+@pytest.mark.parametrize(
+    "exception_to_raise, expected_log_part",
+    [
+        (google_exceptions.ResourceExhausted("quota exhausted"), "API rate limit or quota exhausted"),
+        (google_exceptions.DeadlineExceeded("timeout"), "API call timed out"),
+        (ValueError("some other error"), "Unexpected error during AI analysis"),
+    ],
+)
+def test_analyse_single_job_exception_handling(mocker, caplog, exception_to_raise, expected_log_part):
+    """Test that _analyse_single_job handles various API exceptions gracefully."""
+    # Mock the Gemini API call
+    mock_model = mocker.patch("src.pipeline.genai.GenerativeModel").return_value
+    mock_model.generate_content.side_effect = exception_to_raise
+
+    # Sample job data
+    job = {"title": "Test Job", "description": "Test description"}
+    cv_summary = "Test CV summary"
+
+    # Call the function
+    result = pipeline._analyse_single_job(job, cv_summary, mock_model, 0.1)
+
+    # Assertions
+    assert result == job  # Should return the original job on failure
+    assert expected_log_part in caplog.text
+    assert "Test Job" in caplog.text
+    if isinstance(exception_to_raise, ValueError):
+        assert "some other error" in caplog.text
