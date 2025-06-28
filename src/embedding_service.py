@@ -21,7 +21,7 @@ class EmbeddingService:
     def __init__(self, batch_size: int = 10, retry_count: int = 3, rate_limit_delay: float = 0.1):
         """Gemini API'yi başlat ve konfigürasyon ayarlarını sakla"""
         config = get_config()
-        api_key = config.get("GEMINI_API_KEY")
+        api_key = config.get("GEMINI_API_KEY") if config else None
         if not api_key or api_key == "your_gemini_api_key_here":
             raise ValueError("Gemini API key geçerli değil! .env dosyasını kontrol edin.")
         genai.configure(api_key=api_key)

@@ -21,9 +21,12 @@ from .constants import PROMPTS_DIR
 from .utils.json_helpers import extract_json_from_response
 from .utils.prompt_loader import load_prompt
 
-load_dotenv(dotenv_path=PROMPTS_DIR.parent / ".env")
-
 logger = logging.getLogger(__name__)
+
+try:
+    load_dotenv(dotenv_path=PROMPTS_DIR.parent / ".env")
+except OSError as e:
+    logger.warning(f"Failed to load .env file: {e}")
 
 config = get_config()
 
@@ -46,7 +49,21 @@ SKILL_BLACKLIST = {
 }
 NORMALIZED_BLACKLIST = {s.replace(" ", "").replace("-", "") for s in SKILL_BLACKLIST}
 
-PROMPT_TEMPLATE = load_prompt(PROMPTS_DIR / "cv_analysis_prompt.md")
+try:
+    PROMPT_TEMPLATE = load_prompt(PROMPTS_DIR / "cv_analysis_prompt.md")
+except OSError as e:
+    logger.error(f"Failed to load prompt template: {e}")
+    PROMPT_TEMPLATE = """Analyze the provided CV text and extract key metadata in JSON format.
+
+CV Text:
+{cv_text}
+
+Respond with a JSON object containing:
+- "key_skills": A list of the top 10-15 most important technical and soft skills.
+- "target_job_titles": A list of 3-5 suitable job titles for the candidate.
+- "skill_importance": A list of floats (0.0 to 1.0) corresponding to the importance of each skill in "key_skills".
+- "cv_summary": A 2-3 sentence summary of the candidate's profile.
+"""
 
 
 class CVAnalyzer:
@@ -190,9 +207,34 @@ class CVAnalyzer:
         except (ValueError, TypeError, AttributeError) as e:
             logger.exception(f"Unexpected error in Gemini API call: {e}")
             return None
-        except Exception as e:
-            logger.exception(f"An unexpected Gemini API call failed: {e}")
+        except Exception:
+            logger.exception("An unexpected Gemini API call failed")
+            raise
+
+    def _validate_and_normalize_metadata(self, metadata: dict[str, object]) -> dict[str, object] | None:
+        """Validate and normalize metadata extracted from the CV."""
+        required_keys = ["key_skills", "target_job_titles", "skill_importance", "cv_summary"]
+        if not all(key in metadata for key in required_keys):
+            logger.error(f"AI response is missing one of a required key. Found: {list(metadata.keys())}")
             return None
+
+        # Normalize skills
+        skills = self._normalize_skills(cast(list[str], metadata.get("key_skills", [])))
+        metadata["key_skills"] = skills
+
+        # Ensure skill_importance matches skills length
+        importance = cast(list[float], metadata.get("skill_importance", []))
+        if len(importance) != len(skills):
+            logger.warning(
+                f"skill_importance length ({len(importance)}) doesn't match skills ({len(skills)}), padding with 0.8"
+            )
+            importance = importance[: len(skills)] + [0.8] * (len(skills) - len(importance))
+        metadata["skill_importance"] = importance
+
+        cv_summary = cast(str, metadata.get("cv_summary", ""))
+        metadata["cv_summary"] = cv_summary.strip()
+
+        return metadata
 
     def extract_metadata_from_cv(self, cv_text: str) -> dict[str, object]:
         cached = self._load_cached_metadata(cv_text)
@@ -201,43 +243,18 @@ class CVAnalyzer:
             return cached
 
         data = self._call_gemini_api(cv_text)
-        if data is not None:
-            metadata = cast(dict[str, object], data)
+        if data:
+            # Validate and normalize the data from the API
+            normalized_metadata = self._validate_and_normalize_metadata(cast(dict[str, object], data))
 
-            # --- NEW VALIDATION BLOCK ---
-            required_keys = ["key_skills", "target_job_titles", "skill_importance", "cv_summary"]
-            if not all(key in metadata for key in required_keys):
-                logger.error(f"AI response is missing one of a required key. Found: {list(metadata.keys())}")
-                # Fallback to empty metadata
-                return {
-                    "key_skills": [],
-                    "target_job_titles": [],
-                    "skill_importance": [],
-                    "cv_summary": "",
-                }
-            # --- END OF VALIDATION BLOCK ---
-            # Normalize skills
-            skills = self._normalize_skills(cast(list[str], metadata.get("key_skills", [])))
-            metadata["key_skills"] = skills
+            if normalized_metadata:
+                self._cache_metadata(cv_text, normalized_metadata)
+                skills = cast(list[str], normalized_metadata.get("key_skills", []))
+                job_titles = cast(list[str], normalized_metadata.get("target_job_titles", []))
+                logger.info(f"Extracted {len(skills)} skills and {len(job_titles)} job titles from CV")
+                return normalized_metadata
 
-            # Ensure skill_importance matches skills length
-            importance = cast(list[float], metadata.get("skill_importance", []))
-            if len(importance) != len(skills):
-                logger.warning(
-                    f"skill_importance length ({len(importance)}) doesn't match skills ({len(skills)}), padding with 0.8"
-                )
-                importance = importance[: len(skills)] + [0.8] * (len(skills) - len(importance))
-            metadata["skill_importance"] = importance
-
-            cv_summary = cast(str, metadata.get("cv_summary", ""))
-            metadata["cv_summary"] = cv_summary.strip()
-
-            self._cache_metadata(cv_text, metadata)
-            job_titles = cast(list[str], metadata.get("target_job_titles", []))
-            logger.info(f"Extracted {len(skills)} skills and {len(job_titles)} job titles from CV")
-            return metadata
-
-        logger.warning("Gemini API failed, using empty metadata")
+        logger.warning("Gemini API failed or returned invalid data, using empty metadata")
         return {
             "key_skills": [],
             "target_job_titles": [],

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 from pathlib import Path
@@ -91,8 +90,15 @@ def _apply_numeric_setting(config_data: dict[str, Any], section: str, key: str, 
 def _apply_float_setting(config_data: dict[str, Any], section: str, key: str, env_var: str, default: float) -> None:
     """Apply float environment variable override with proper type conversion."""
     if env_var in os.environ:
-        with contextlib.suppress(ValueError):
+        try:
             config_data.setdefault(section, {})[key] = float(os.getenv(env_var, str(default)))
+        except ValueError:
+            logger.warning(
+                "Invalid float value for %s: %s, using default %s",
+                env_var,
+                os.getenv(env_var),
+                default,
+            )
 
 
 def _add_api_keys(config_data: dict[str, Any]) -> None:

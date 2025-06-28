@@ -100,10 +100,13 @@ def log_summary_statistics(
 
 def _log_site_distribution(all_jobs_df: pd.DataFrame) -> None:
     """Log site distribution statistics."""
-    if not all_jobs_df.empty and "source_site" in all_jobs_df.columns:
-        logger.info("\n🔹 Bulunan İlanların Site Dağılımı:")
-        for site, count in all_jobs_df["source_site"].value_counts().items():
-            logger.info(SITE_COUNT_FORMAT, site, count)
+    try:
+        if not all_jobs_df.empty and "source_site" in all_jobs_df.columns:
+            logger.info("\n🔹 Bulunan İlanların Site Dağılımı:")
+            for site, count in all_jobs_df["source_site"].value_counts().items():
+                logger.info(SITE_COUNT_FORMAT, site, count)
+    except Exception as e:
+        logger.warning("Site distribution logging failed: %s", e)
 
 
 def _log_top_skills(high_quality_jobs: list[dict], ai_metadata: dict | None = None) -> None:

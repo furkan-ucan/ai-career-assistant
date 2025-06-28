@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def save_dataframe_csv(df: pd.DataFrame, output_dir: Path, prefix: str) -> Path:
@@ -17,6 +20,8 @@ def save_dataframe_csv(df: pd.DataFrame, output_dir: Path, prefix: str) -> Path:
         df.to_csv(file_path, index=False, encoding="utf-8")
         return file_path
     except PermissionError as exc:
+        logger.exception("Permission denied while saving CSV to %s", output_dir)
         raise OSError(f"Failed to save CSV to {output_dir}: {exc}") from exc
     except Exception as exc:
+        logger.exception("Unexpected error while saving DataFrame to %s", output_dir)
         raise RuntimeError(f"Unexpected error saving DataFrame: {exc}") from exc

@@ -130,6 +130,9 @@ def _collect_jobs_for_persona(persona_name: str, persona_cfg: dict, context: Pip
     except (ValueError, TypeError, KeyError) as e:
         logger.error("❌ Persona '%s' için hata: %s", persona_name, e, exc_info=True)
         return None
+    except ConnectionError as e:
+        logger.error("❌ Persona '%s' için bağlantı hatası: %s", persona_name, e)
+        return None
     except Exception:
         logger.exception("❌ Unexpected error for persona '%s'", persona_name)
         raise
@@ -400,13 +403,17 @@ def _search_and_score_jobs(
     return [job for job in scored_jobs if job["similarity_score"] >= threshold]
 
 
-def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -> dict:  # pragma: no cover
+def _analyse_single_job(
+    job: dict, cv_summary: str, key_skills_list: list[str], model, temperature: float
+) -> dict:  # pragma: no cover
     """Analyse a single job with Gemini for reranking."""
-    description = job.get("description", "")[:TOKEN_LIMIT]
+    description_to_use = str(job.get("description", ""))[:TOKEN_LIMIT]
+    formatted_skills = "\n- ".join(key_skills_list)
     prompt = RERANK_PROMPT_TEMPLATE.format(
+        key_skills_list=formatted_skills,  # YENİ: Eksik bilgiyi ekle
         cv_summary=cv_summary,
         title=job.get("title", ""),
-        description=description,
+        description=description_to_use,
     )
     try:
         response = model.generate_content(prompt, generation_config={"temperature": temperature})
@@ -444,18 +451,24 @@ def _analyse_single_job(job: dict, cv_summary: str, model, temperature: float) -
     return job
 
 
-def _rerank_with_ai_analysis(jobs: list[dict], cv_summary: str) -> list[dict]:  # pragma: no cover
+def _rerank_with_ai_analysis(
+    jobs_to_rerank: list[dict], cv_summary: str, key_skills_list: list[str]
+) -> list[dict]:  # pragma: no cover
     """Deep analysis with Gemini to rerank jobs."""
-    if not jobs:
+    if not jobs_to_rerank:
         return []
 
-    model_name = rerank_settings.get("llm_model", "gemini-1.5-flash-latest")
+    model_name = rerank_settings.get("llm_model", "gemini-2.5-flash")
     temperature = rerank_settings.get("llm_temperature", 0.1)
     workers = rerank_settings.get("max_workers", 4)
     model = genai.GenerativeModel(model_name)
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        analysed = list(executor.map(lambda j: _analyse_single_job(j, cv_summary, model, temperature), jobs))
+        analysed = list(
+            executor.map(
+                lambda j: _analyse_single_job(j, cv_summary, key_skills_list, model, temperature), jobs_to_rerank
+            )
+        )
 
     analysed.sort(
         key=lambda j: (not j.get("is_recommended", False), -j.get("fit_score", 0), -j.get("similarity_score", 0))
@@ -526,9 +539,11 @@ def _score_and_rank_jobs(
         pool_size = rerank_settings.get("rerank_pool_size", len(similar_jobs))
         if pool_size <= 0:
             pool_size = len(similar_jobs)
+        jobs_to_rerank = similar_jobs[:pool_size]
         similar_jobs = _rerank_with_ai_analysis(
-            similar_jobs[:pool_size],
-            str(context.ai_metadata.get("cv_summary")),
+            jobs_to_rerank,
+            cv_summary=str(context.ai_metadata.get("cv_summary", "")),
+            key_skills_list=context.ai_metadata.get("key_skills", []),
         )
     return similar_jobs
 

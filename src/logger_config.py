@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -28,7 +29,8 @@ def _create_log_directory(log_dir: Path) -> Path | None:
         log_dir.mkdir(exist_ok=True)
         return log_dir
     except PermissionError as exc:
-        logging.getLogger(__name__).error("Could not create log directory: %s", exc)
+        # Use print for bootstrap errors before logging is fully configured.
+        print(f"ERROR: Could not create log directory: {exc}", file=sys.stderr)
         return None
 
 

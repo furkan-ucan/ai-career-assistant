@@ -13,6 +13,28 @@ def test_build_dynamic_personas_simple():
     assert personas["data_analyst"]["hours_old"] == 72
 
 
+def test_build_dynamic_personas_empty_input():
+    """Test with empty list."""
+    personas = build_dynamic_personas([])
+    assert personas == {}
+
+
+def test_build_dynamic_personas_whitespace_titles():
+    """Test with whitespace-only titles."""
+    personas = build_dynamic_personas(["", "  ", "Valid Title"])
+    assert len(personas) == 1
+    assert "valid_title" in personas
+
+
+def test_build_dynamic_personas_invalid_input():
+    """Test error handling for invalid input types."""
+    with pytest.raises(TypeError):
+        build_dynamic_personas("not a list")  # type: ignore
+
+    with pytest.raises(TypeError):
+        build_dynamic_personas(["invalid", "valid"])
+
+
 @pytest.mark.parametrize(
     "titles,expected",
     [
