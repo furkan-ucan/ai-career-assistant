@@ -66,7 +66,12 @@ class JobAnalysisPipeline:
             return False
 
         # CV file validation
-        cv_path = Path(self.config["paths"]["cv_file"])
+        cv_paths_config = self.config.get("paths", {})
+        cv_file = cv_paths_config.get("cv_file")
+        if not cv_file:
+            logger.error("❌ HATA: CV dosya yolu yapılandırmada bulunamadı!")
+            return False
+        cv_path = Path(cv_file)
         try:
             if not cv_path.exists():
                 logger.error("❌ HATA: CV dosyası bulunamadı: %s", cv_path)
@@ -388,13 +393,16 @@ def _search_and_score_jobs(
     top_k = config["vector_store_settings"]["top_k_results"]
     search_results = vector_store.search_jobs(cv_embedding, n_results=top_k)
 
-    similar_jobs = [
-        dict(metadata, similarity_score=(1 - dist) * 100)
-        for metadata, dist in zip(
-            search_results.get("metadatas", []), search_results.get("distances", []), strict=False
-        )
-    ]
+    metadatas = search_results.get("metadatas", [])
+    distances = search_results.get("distances", [])
 
+    if len(metadatas) != len(distances):
+        logger.error("Search results metadata and distances length mismatch")
+        return []
+
+    similar_jobs = [
+        dict(metadata, similarity_score=(1 - dist) * 100) for metadata, dist in zip(metadatas, distances, strict=True)
+    ]
     if not similar_jobs:
         return []
 

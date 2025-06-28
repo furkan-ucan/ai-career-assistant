@@ -29,8 +29,9 @@ def _create_log_directory(log_dir: Path) -> Path | None:
         log_dir.mkdir(exist_ok=True)
         return log_dir
     except PermissionError as exc:
-        # Use print for bootstrap errors before logging is fully configured.
-        print(f"ERROR: Could not create log directory: {exc}", file=sys.stderr)
+        # Use direct stderr write for bootstrap errors before logging is fully configured.
+        sys.stderr.write(f"ERROR: Could not create log directory: {exc}\n")
+        sys.stderr.flush()
         return None
 
 

@@ -84,4 +84,5 @@ def test_normalize_skills_integration():
         assert "python" in skills
         assert "javascript" in skills
         assert "ms office" not in skills
-    assert "excel" not in skills  # Can't test private method directly, just ensure analyzer works
+
+        assert "excel" not in skills  # Can't test private method directly, just ensure analyzer works

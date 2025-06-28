@@ -11,6 +11,7 @@
 │   │   ├── 📄 15758480228938124478
 │   │   ├── 📄 15830793153445498775
 │   │   ├── 📄 16302019719293240397
+│   │   ├── 📄 17638146848264419260
 │   │   ├── 📄 3496306798428100254
 │   │   ├── 📄 4323421448118765522
 │   │   ├── 📄 5679594551110482017
@@ -2279,66 +2280,23 @@
 ├── 📁 config
 ├── 📁 data
 │   ├── 📁 chromadb
-│   │   ├── 📁 54c3ff86-087b-4328-bde5-307d32d64057
-│   │   │   ├── ⚙️ data_level0.bin
-│   │   │   ├── ⚙️ header.bin
-│   │   │   ├── ⚙️ length.bin
-│   │   │   └── ⚙️ link_lists.bin
-│   │   ├── 📁 c42915c7-92ce-4389-a6fb-74cecd23fb86
+│   │   ├── 📁 ea4a8b04-ec42-49cc-83fe-d00acb01ab76
 │   │   │   ├── ⚙️ data_level0.bin
 │   │   │   ├── ⚙️ header.bin
 │   │   │   ├── ⚙️ length.bin
 │   │   │   └── ⚙️ link_lists.bin
 │   │   └── 🗃️ chroma.sqlite3
-│   ├── 📊 birlesmis_TUM_kaynaklar_ilanlar_20250621_012450.csv
 │   ├── 📄 cv.txt
-│   ├── 📊 jobspy_optimize_ilanlar_20250622_152212.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250622_182348.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250622_190331.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250622_192300.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250622_204739.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250622_223851.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250622_230828.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250623_000009.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250624_223750.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_062538.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_063447.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_070120.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_085531.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_095713.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_104105.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_105232.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_105334.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_114218.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_120059.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_120826.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_122754.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_123020.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_123426.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_124005.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_124521.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_125146.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_125446.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_234428.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250625_235410.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250626_001232.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250626_234754.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250626_235357.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250626_235730.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250627_000836.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250627_001045.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250627_002017.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250627_003539.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250627_005150.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250627_014152.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250627_020345.csv
-│   ├── 📊 jobspy_optimize_ilanlar_20250627_022253.csv
-│   ├── 📋 meta_v2.0_27917d1662faad72.json
-│   ├── 📋 meta_v2.0_acc789d13bc13e34.json
-│   └── 📋 meta_v2.0_fe02a430d3b40275.json
+│   ├── 📊 jobspy_optimize_ilanlar_20250628_005017.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250628_014204.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250628_022958.csv
+│   ├── 📊 jobspy_optimize_ilanlar_20250628_024735.csv
+│   └── 📋 meta_v2.0_345fac85edd57e3a.json
 ├── 📁 docs
 │   ├── 📝 EPIC_27_COMPLETION_REPORT.md
+│   ├── 📝 FINAL_PROJECT_STATUS.md
 │   ├── 📝 MODERN_SETUP_SUMMARY.md
+│   ├── 📝 PROJECT_STATUS_REPORT.md
 │   └── 📝 SONARQUBE_SETUP.md
 ├── 📁 examples
 │   ├── 🐍 test_scores.py
@@ -2369,8 +2327,10 @@
 │   ├── 🌐 z_145eef247bfb46b6_pipeline_py.html
 │   ├── 🌐 z_145eef247bfb46b6_reporting_py.html
 │   ├── 🌐 z_145eef247bfb46b6_vector_store_py.html
+│   ├── 🌐 z_532385f02888fdd3_pipeline_context_py.html
 │   ├── 🌐 z_6156a86a215061be___init___py.html
 │   ├── 🌐 z_6156a86a215061be_file_helpers_py.html
+│   ├── 🌐 z_6156a86a215061be_json_helpers_py.html
 │   └── 🌐 z_6156a86a215061be_prompt_loader_py.html
 ├── 📁 memory-bank
 │   ├── 📁 memory-bank
@@ -2417,9 +2377,12 @@
 ├── 📁 scripts
 │   └── 🐍 mcp_tools.py
 ├── 📁 src
+│   ├── 📁 models
+│   │   └── 🐍 pipeline_context.py
 │   ├── 📁 utils
 │   │   ├── 🐍 __init__.py
 │   │   ├── 🐍 file_helpers.py
+│   │   ├── 🐍 json_helpers.py
 │   │   └── 🐍 prompt_loader.py
 │   ├── 🐍 __init__.py
 │   ├── 🐍 cli.py
@@ -2443,9 +2406,6 @@
 │   ├── 🐍 test_cli.py
 │   ├── 🐍 test_config.py
 │   ├── 🐍 test_cv_analyzer.py
-│   ├── 🐍 test_cv_analyzer_fixed.py
-│   ├── 🐍 test_cv_analyzer_new.py
-│   ├── 🐍 test_cv_analyzer_simple.py
 │   ├── 🐍 test_cv_processor.py
 │   ├── 🐍 test_data_collector.py
 │   ├── 🐍 test_data_collector_single_site.py
@@ -2456,6 +2416,7 @@
 │   ├── 🐍 test_persona_builder.py
 │   ├── 🐍 test_pipeline.py
 │   ├── 🐍 test_pipeline_coverage.py
+│   ├── 🐍 test_pipeline_private.py
 │   ├── 🐍 test_reporting.py
 │   ├── 🐍 test_reporting_deduplication.py
 │   ├── 🐍 test_scoring.py
@@ -2465,13 +2426,12 @@
 ├── 📄 .gitignore
 ├── ⚙️ .pre-commit-config.yaml
 ├── 📝 AGENTS.md
+├── 🐍 app.py
 ├── ⚙️ config.yaml
 ├── 📄 coverage.xml
-├── 📝 FINAL_PROJECT_STATUS.md
 ├── 📄 LICENSE
 ├── 🐍 main.py
 ├── 📄 Makefile
-├── 📝 PROJECT_STATUS_REPORT.md
 ├── 📄 project_tree.txt
 ├── ⚙️ pyproject.toml
 ├── 💙 quality-check.ps1

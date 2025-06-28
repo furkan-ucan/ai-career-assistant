@@ -94,13 +94,12 @@ class CVAnalyzer:
             return None
         try:
             with open(cache_file, encoding="utf-8") as f:
-                data = cast(dict[str, object], json.load(f))
+                data = json.load(f)
 
             # Ensure we actually got a dict
             if not isinstance(data, dict):
                 logger.warning("Cached data is not a dictionary")
                 return None
-
             ts = str(data.get("generated_at", ""))
             if ts:
                 try:

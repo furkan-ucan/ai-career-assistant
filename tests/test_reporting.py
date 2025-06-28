@@ -36,7 +36,7 @@ def sample_jobs():
     ]
 
 
-@pytest.fixture
+@pytest.fixture()
 def sample_jobs_df():
     """Create sample all_jobs DataFrame for testing."""
     return pd.DataFrame(

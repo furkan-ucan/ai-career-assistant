@@ -53,6 +53,9 @@ def _log_persona_distribution(similar_jobs: list[dict]) -> None:
 
 def display_results(similar_jobs: list[dict], threshold: float) -> None:
     """Log formatted job search results with URL-based deduplication."""
+    if not (0 <= threshold <= 100):
+        logger.warning("Threshold should be between 0-100, got: %.1f", threshold)
+
     if similar_jobs:
         # Deduplicate by URL - keep the highest scoring job for each URL
         deduplicated_jobs = _deduplicate_jobs_by_url(similar_jobs)
