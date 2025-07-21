@@ -33,7 +33,7 @@
   // "docker" en yaygın ve güvenilir sanal ortamı sağlar.
   // EN YÜKSEK GÜVENLİK İÇİN: Bu değeri "true" olarak ayarlayabilirsiniz.
   // GELİŞTİRME ORTAMI İÇİN: "false" yaparak hız kazanabilirsiniz (DİKKATLİ OLUN!).
-  "sandbox": "false",
+  "sandbox": "docker",
 
   // 'autoAccept' false olduğunda, 'write_file', 'shell' gibi komutlar için onay istenir.
   // Bu, Güçlü Kullanıcı profili için en iyi dengedir: yeteneği ver, ama onayı iste.
@@ -130,8 +130,6 @@
 
     // Komutun hangi klasörde çalıştırılacağı. Bu, sunucunun kendi dosyalarına erişmesi için kritik.
     "cwd": "C:\\Users\\furka\\mcp\\memory-bank-mcp",
-
-    "transport": "stdio",
 
     // Gemini'nin sunucudan bir cevap için ne kadar bekleyeceği (milisaniye).
     "timeout": 15000,

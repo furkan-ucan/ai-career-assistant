@@ -37,7 +37,9 @@ def safe_dataframe_concat(
         return pd.DataFrame()
 
     # Single operation with ternary operator for performance
-    result = valid_dfs[0].copy() if len(valid_dfs) == 1 else pd.concat(valid_dfs, ignore_index=ignore_index)
+    result: pd.DataFrame = (
+        valid_dfs[0].copy() if len(valid_dfs) == 1 else pd.concat(valid_dfs, ignore_index=ignore_index)
+    )
 
     # Optional deduplication
     if dedup_columns and not result.empty:
@@ -99,7 +101,11 @@ def handle_scraping_error(
     else:
         logger.error(f"{error_msg} (Critical error)", exc_info=True)
         if raise_on_critical:
-            raise
+            try:
+                raise RuntimeError(error_msg)
+            except RuntimeError:
+                logger.exception("Critical error raised")
+                return False
         return False
 
 

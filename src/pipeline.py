@@ -461,33 +461,45 @@ def _process_single_job_for_separation(
         return job, None  # Treat as new on error
 
 
+def _get_analyzed_job_ids(vector_store: VectorStore) -> set[str]:
+    """Get analyzed job IDs from vector store."""
+    try:
+        return set(vector_store.get_analyzed_jobs())
+    except Exception as e:
+        logger.error(f"Error getting analyzed job ids: {e}")
+        return set()
+
+
+def _split_new_and_cached_jobs(
+    similar_jobs: list[dict], vector_store: VectorStore, analyzed_job_ids: set[str]
+) -> tuple[list[dict], list[dict]]:
+    """Split jobs into new and cached lists."""
+    new_jobs, cached_jobs = [], []
+    for job in similar_jobs:
+        new_job, cached_job = _process_single_job_for_separation(job, vector_store, analyzed_job_ids)
+        if new_job:
+            new_jobs.append(new_job)
+        if cached_job:
+            cached_jobs.append(cached_job)
+    return new_jobs, cached_jobs
+
+
 def _separate_jobs_by_rerank_status(
     similar_jobs: list[dict], vector_store: VectorStore
 ) -> tuple[list[dict], list[dict]]:
     """
     Separate jobs into new (need reranking) and cached (already analyzed) jobs.
-
     Returns:
         (new_jobs, cached_jobs): Two lists containing jobs that need/don't need reranking
     """
     if not cache_settings.get("enabled", False):
         return similar_jobs, []
-
     try:
-        analyzed_job_ids = set(vector_store.get_analyzed_jobs())
+        analyzed_job_ids = _get_analyzed_job_ids(vector_store)
         logger.info(f"🔍 Found {len(analyzed_job_ids)} previously analyzed jobs in cache")
-
-        new_jobs, cached_jobs = [], []
-        for job in similar_jobs:
-            new_job, cached_job = _process_single_job_for_separation(job, vector_store, analyzed_job_ids)
-            if new_job:
-                new_jobs.append(new_job)
-            if cached_job:
-                cached_jobs.append(cached_job)
-
+        new_jobs, cached_jobs = _split_new_and_cached_jobs(similar_jobs, vector_store, analyzed_job_ids)
         logger.info(f"📊 Job separation: {len(new_jobs)} new jobs, {len(cached_jobs)} cached jobs")
         return new_jobs, cached_jobs
-
     except Exception as e:
         logger.error(f"❌ Error separating jobs by rerank status: {e}")
         return similar_jobs, []

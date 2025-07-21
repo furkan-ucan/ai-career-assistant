@@ -61,7 +61,7 @@ class TieredJobCollector:
         site_results = []
 
         for site in sites_to_search:
-            site_df = self._collect_for_single_site(site, platform_queries, persona_name)
+            site_df = self._collect_for_single_site(site, platform_queries)
             if site_df is not None and not site_df.empty:
                 site_results.append(site_df)
 
@@ -78,9 +78,7 @@ class TieredJobCollector:
         logger.info(f"🎯 Persona '{persona_name}' final: {len(combined_df)} unique jobs")
         return combined_df
 
-    def _collect_for_single_site(
-        self, site: str, platform_queries: dict[str, str], persona_name: str
-    ) -> pd.DataFrame | None:
+    def _collect_for_single_site(self, site: str, platform_queries: dict[str, str]) -> pd.DataFrame | None:
         """Collect jobs for a single site using tiered strategy."""
         logger.info(f"\n--- Site '{site.upper()}' strategic search ---")
 
