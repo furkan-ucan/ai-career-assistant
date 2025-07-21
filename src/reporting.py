@@ -1,3 +1,4 @@
+# src/reporting.py
 """Reporting utilities for presenting final job results."""
 
 from __future__ import annotations

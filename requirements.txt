@@ -22,3 +22,6 @@ pytest-mock>=3.12.0
 pre-commit>=3.0.0
 
 streamlit>=1.4.1
+
+# NOT: API sunucusu ve Telegram bot entegrasyonu için ek bağımlılıklar
+# requirements-api.txt dosyasında tanımlanmıştır.

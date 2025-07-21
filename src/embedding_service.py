@@ -1,3 +1,4 @@
+# src/embedding_service.py
 """
 Embedding Servisi
 Google Gemini API kullanarak metin embeddings'leri oluşturur.

@@ -1,3 +1,4 @@
+# src/filter.py
 """
 Filtreleme Modülü
 Junior/entry-level pozisyonlar için akıllı filtreleme işlemleri

@@ -1,3 +1,4 @@
+# src/vector_store.py
 """
 Vektör Depolama Modülü - Temizlenmiş Versiyon
 ChromaDB kullanarak iş ilanı vektörlerini saklar ve arama yapar.
@@ -62,6 +63,49 @@ class VectorStore:
             canonical = json.dumps(job_dict, sort_keys=True, ensure_ascii=False)
             digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
         return f"job_{digest}"
+
+    @staticmethod
+    def _serialize_list(lst: list) -> str:
+        """
+        Liste tipindeki veriyi ChromaDB için string formatına dönüştür
+        """
+        if not lst:
+            return ""
+        return json.dumps(lst, ensure_ascii=False)
+
+    @staticmethod
+    def _deserialize_list(value: str | list) -> list[Any]:
+        """
+        String formatındaki veriyi tekrar listeye dönüştür
+        """
+        if isinstance(value, list):
+            return value
+        if not value or not isinstance(value, str):
+            return []
+        try:
+            result = json.loads(value)
+            return result if isinstance(result, list) else []
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    @staticmethod
+    def _clean_metadata_for_chromadb(metadata: dict[str, Any]) -> dict[str, Any]:
+        """
+        ChromaDB için metadata'yı temizle (sadece scalar değerler)
+        """
+        clean_metadata = {}
+        for key, value in metadata.items():
+            if value is None:
+                continue
+            elif isinstance(value, (str, int, float, bool)):
+                clean_metadata[key] = value
+            elif isinstance(value, list):
+                # Liste zaten serialize edilmiş olmalı, ama emin olalım
+                clean_metadata[key] = VectorStore._serialize_list(value)
+            else:
+                # Diğer tipleri string'e dönüştür
+                clean_metadata[key] = str(value)
+        return clean_metadata
 
     def create_collection(self) -> bool:
         """Koleksiyon oluştur veya mevcut olanı getir"""
@@ -238,6 +282,146 @@ class VectorStore:
         except Exception as e:
             logger.error(f"❌ Koleksiyon temizleme hatası: {str(e)}", exc_info=True)
             return False
+
+    def get_job_metadata(self, job_dict: dict[str, Any]) -> dict[str, Any] | None:
+        """
+        Bir ilanın mevcut metadata'sını getir (AI reranking bilgileri dahil)
+        """
+        collection = self.get_collection()
+        if not collection:
+            return None
+
+        job_id = self._stable_job_id(job_dict)
+        try:
+            result = collection.get(ids=[job_id], include=["metadatas"])
+            if result["ids"]:
+                metadata = result["metadatas"][0]
+                # Type safety: ensure metadata is a dict
+                if not isinstance(metadata, dict):
+                    return None
+                # Liste değerlerini deserialize et
+                if "ai_matching_keywords" in metadata:
+                    metadata["ai_matching_keywords"] = VectorStore._deserialize_list(metadata["ai_matching_keywords"])
+                if "ai_missing_keywords" in metadata:
+                    metadata["ai_missing_keywords"] = VectorStore._deserialize_list(metadata["ai_missing_keywords"])
+                return metadata
+            return None
+        except Exception as e:
+            logger.debug(f"Metadata getirme hatası: {e}")
+            return None
+
+    def upsert_job_with_ai_data(
+        self, job_dict: dict[str, Any], embedding: list[float], ai_data: dict[str, Any]
+    ) -> bool:
+        """
+        Bir ilanı AI reranking verileriyle birlikte ekle/güncelle
+        """
+        collection = self.get_collection()
+        if not collection:
+            return False
+
+        try:
+            job_id = self._stable_job_id(job_dict)
+
+            # Metadata'yı zenginleştir
+            metadata = job_dict.copy()
+            metadata.update(
+                {
+                    "ai_reranked": True,
+                    "ai_fit_score": ai_data.get("fit_score", 0),
+                    "ai_reasoning": ai_data.get("reasoning", ""),
+                    "ai_matching_keywords": VectorStore._serialize_list(ai_data.get("matching_keywords", [])),
+                    "ai_missing_keywords": VectorStore._serialize_list(ai_data.get("missing_keywords", [])),
+                    "last_analyzed": datetime.now().isoformat(),
+                }
+            )
+
+            # ChromaDB için metadata'yı temizle
+            metadata = VectorStore._clean_metadata_for_chromadb(metadata)
+
+            # Upsert (ekle veya güncelle)
+            collection.upsert(
+                ids=[job_id],
+                embeddings=[embedding],
+                documents=[f"{job_dict.get('title', '')} {job_dict.get('description', '')}"],
+                metadatas=[metadata],
+            )
+
+            logger.debug(f"AI verileri ile güncellendi: {job_dict.get('title', 'N/A')}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Upsert hatası: {e}")
+            return False
+
+    def update_job_ai_metadata(self, job_id: str, ai_metadata: dict[str, Any]) -> bool:
+        """
+        Sadece bir işin AI metadata'sını güncelle (daha basit versiyon)
+        """
+        collection = self.get_collection()
+        if not collection:
+            return False
+
+        try:
+            # Mevcut veriyi al
+            existing_data = collection.get(ids=[job_id], include=["metadatas", "embeddings", "documents"])
+
+            if not existing_data["ids"]:
+                logger.warning(f"Job not found for AI metadata update: {job_id}")
+                return False
+
+            # Mevcut metadata'yı güncelle
+            current_metadata = existing_data["metadatas"][0]
+
+            # AI metadata'yı temizle ve serialize et
+            clean_ai_metadata = {}
+            for key, value in ai_metadata.items():
+                if isinstance(value, list):
+                    clean_ai_metadata[key] = VectorStore._serialize_list(value)
+                else:
+                    clean_ai_metadata[key] = value
+
+            current_metadata.update({"ai_reranked": True, **clean_ai_metadata})
+
+            # Upsert ile güncelle
+            collection.upsert(
+                ids=[job_id],
+                embeddings=existing_data["embeddings"],
+                documents=existing_data["documents"],
+                metadatas=[current_metadata],
+            )
+
+            logger.debug(f"AI metadata updated for job: {job_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"AI metadata update error: {e}")
+            return False
+
+    def get_analyzed_jobs(self) -> list[str]:
+        """
+        AI analizi yapılmış iş ilanlarının ID'lerini getir
+        """
+        collection = self.get_collection()
+        if not collection:
+            return []
+
+        try:
+            # ChromaDB'deki tüm verileri getir
+            result = collection.get(include=["metadatas"])
+
+            # AI analizi yapılmış olanların ID'lerini topla
+            analyzed_job_ids = []
+            if result.get("ids") and result.get("metadatas"):
+                for job_id, metadata in zip(result["ids"], result["metadatas"], strict=False):
+                    if metadata.get("ai_reranked", False):
+                        analyzed_job_ids.append(job_id)
+
+            return analyzed_job_ids
+
+        except Exception as e:
+            logger.error(f"Analyzed jobs getirme hatası: {e}")
+            return []
 
 
 # Yardımcı fonksiyonlar

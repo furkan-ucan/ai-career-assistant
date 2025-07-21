@@ -1,3 +1,4 @@
+# src/intelligent_scoring.py
 """Intelligent scoring system for job filtering."""
 
 from __future__ import annotations

@@ -104,6 +104,18 @@ ai_reranking_settings:
   llm_model: "gemini-2.5-flash"
   llm_temperature: 0.1
 
+# Akıllı Reranking Cache ayarları
+reranking_cache:
+  enabled: true
+  max_age_days: 30 # 30 günü aşan ilanı "yeni" say
+  only_rerank_new: true # Sadece yeni ilanları rerank et
+  store_fields: # metadatalara yazılacaklar
+    - ai_fit_score
+    - ai_reasoning
+    - ai_matching_keywords
+    - ai_missing_keywords
+    - last_analyzed
+
 # Persona Builder ayarları
 persona_builder_settings:
   role_results:

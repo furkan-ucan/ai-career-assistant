@@ -1,3 +1,7 @@
+# src/exceptions.py
+"""Custom exceptions for Akilli Kariyer Asistani."""
+
+
 class ConfigError(Exception):
     """Raised when configuration loading fails."""
 

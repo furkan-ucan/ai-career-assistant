@@ -82,6 +82,7 @@ ignore = [
     "E501", # Line too long (black handles this)
     "B008", # Do not perform function calls in argument defaults
     "B904", # Allow bare except
+    "UP038", # Use tuple syntax for isinstance (causes issues)
 ]
 exclude = [
     ".git",

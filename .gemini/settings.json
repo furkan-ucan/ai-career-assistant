@@ -1,0 +1,202 @@
+{
+  // ==========================================================
+  // GEMINI CLI PROJE YAPILANDIRMASI (settings.json)
+  // Proje: Akıllı Kariyer Asistanı (AI Career Assistant)
+  // Mimar: Dr. Alistair Finch (Operational Systems Architect)
+  // Felsefe: Varsayılan Olarak Güvenli, Bilinçli Olarak Güçlü
+  // ==========================================================
+
+  // JSON şema desteği kaldırıldı - gemini-cli'ın mevcut sürümünde geçerli şema yok
+  // "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/schema.json",
+
+  // ----------------------------------------
+  // I. ÇEKİRDEK MODEL VE API AYARLARI
+  // ----------------------------------------
+  // Modelin yaratıcılık seviyesi. Düşük değerler daha deterministik ve tutarlı sonuçlar üretir.
+  // Kod üretimi ve analizi için 0.2 - 0.4 aralığı idealdir.
+  // KREATİF ÇALIŞMALAR İÇİN: 0.7-0.9 aralığını deneyebilirsiniz.
+  "temperature": 0.3,
+
+  // ----------------------------------------
+  // II. ARAÇLAR (TOOLS) VE GÜVENLİK (SANDBOX)
+  // ----------------------------------------
+
+  // Gemini'ye verilecek temel süper güçler.
+  // Bu ayar, geliştiricinin ihtiyaç duyacağı en yaygın araç setini aktive eder.
+  "tools": [
+    "shell",      // Terminal komutları çalıştırma
+    "web",        // Web'den bilgi çekme
+    "fs"          // Dosya sistemi işlemleri
+  ],
+
+  // Güvenlik katmanı. `shell` gibi potansiyel olarak tehlikeli araçlar için zorunludur.
+  // "docker" en yaygın ve güvenilir sanal ortamı sağlar.
+  // EN YÜKSEK GÜVENLİK İÇİN: Bu değeri "true" olarak ayarlayabilirsiniz.
+  // GELİŞTİRME ORTAMI İÇİN: "false" yaparak hız kazanabilirsiniz (DİKKATLİ OLUN!).
+  "sandbox": "false",
+
+  // 'autoAccept' false olduğunda, 'write_file', 'shell' gibi komutlar için onay istenir.
+  // Bu, Güçlü Kullanıcı profili için en iyi dengedir: yeteneği ver, ama onayı iste.
+  // DENEYSEL ÇALIŞMALAR İÇİN: Tam otomasyon için bunu "true" yapabilirsiniz (RİSKLİ!).
+  "autoAccept": false,
+
+  // ----------------------------------------
+  // III. PROJE ENTEGRASYONU VE DOSYA YOLLARI
+  // ----------------------------------------
+
+  // Bu proje için context file'ı GEMINI.md olarak ayarlanmıştır.
+  // FARKLي BİR İSİM İÇİN: "AGENTS.md" veya özel dosya adınızı belirtebilirsiniz.
+  "contextFileName": "GEMINI.md",
+
+  // Geçmiş dosyalarının nerede tutulacağı. Proje kökünde olması önerilir.
+  // GİZLİLİK İÇİN: Bu klasörü .gitignore'a eklemeyi unutmayın.
+  "history_dir": "history",
+
+  // ----------------------------------------
+  // IV. KULLANICI DENEYİMİ (UI) VE GÖRSEL AYARLAR
+  // ----------------------------------------
+
+  // Geliştirici tercihine bağlı olarak CLI'ın görsel teması. "GitHub" temiz ve okunaklıdır.
+  // KARANLIKA TEMA İÇİN: "Dracula" veya "One Dark Pro" deneyebilirsiniz.
+  "theme": "Shades Of Purple",
+
+  // Geliştirici araca alıştıkça ipuçlarını kapatmak isteyebilir.
+  // DENEYİMLİ KULLANICILAR İÇİN: true yaparak terminal'i daha temiz tutabilirsiniz.
+  "hideTips": false,
+
+  // Başlangıç banner'ını gizleme seçeneği.
+  // MİNİMALİST YAKLAŞIM İÇİN: true yapabilirsiniz.
+  "hideBanner": false,
+
+  // ----------------------------------------
+  // V. GELİŞMİŞ VE GÜÇLÜ KULLANICI AYARLARI
+  // ----------------------------------------
+
+  // Değişiklik yapmadan önce projenin ve konuşmanın bir yedeğini alma.
+  // Kritik 'replace' ve 'write_file' işlemleri için şiddetle tavsiye edilir.
+  // DISK ALANI TASARRUFU İÇİN: false yapabilirsiniz, ancak önerilmez.
+  "checkpointing": {
+    "enabled": true
+  },
+
+  // Telemetri ayarları. Varsayılan olarak kapalıdır, bu en gizlilik dostu yaklaşımdır.
+  // EKİP METRİKLERİ İÇİN: enabled'ı true yaparak kullanım analizi yapabilirsiniz.
+  "telemetry": {
+    "enabled": false,
+    "target": "local",
+    "otlpEndpoint": "http://localhost:4317",
+    "logPrompts": false  // Gizlilik için prompt'ları loglama
+  },
+
+  // Kullanım istatistiklerinin toplanmasını kontrol eder.
+  // GİZLİLİK ODAKLI YAKLAŞIM: false (varsayılan olarak kapalı).
+  "usageStatisticsEnabled": false,
+
+  // Dosya filtreleme ayarları - Git farkındalığı
+  // GÜVENLİK STRATEJİSİ: .env dosyalarını koruyarak güvenli analiz
+  // YAKINLAŞIM: .env.example, config.yaml gibi şablonları okuyarak yapıyı anla
+  "fileFiltering": {
+    "respectGitIgnore": true,           // .env dosyalarını otomatik korur (GÜVENLİK)
+    "enableRecursiveFileSearch": true   // Alt klasörlerde arama yap
+  },
+
+  // Maksimum session turn sayısı. Uzun konuşmalarda performans koruması.
+  // KISA OTURUMLAR İÇİN: 5-10 aralığında ayarlayabilirsiniz.
+  // UZUN ÇALIŞMALAR İÇİN: -1 (sınırsız) veya 50+ değer.
+  "maxSessionTurns": 25,
+
+  // Araç çıktılarının özetlenmesi. Büyük çıktıları yönetilebilir hale getirir.
+  "summarizeToolOutput": {
+    "run_shell_command": {
+      "tokenBudget": 1000  // Shell komut çıktıları için token limiti
+    }
+  },
+
+  // ----------------------------------------
+  // VI. PROJE SPESİFİK MCP SUNUCULARI VE ENTEGRASYONLAR
+  // ----------------------------------------
+
+  // Model Context Protocol sunucuları - Özel araçlar için
+  // AI Kariyer Asistanı projesi için özelleştirilmiş araçlar burada tanımlanabilir.
+  "mcpServers": {
+  "developerMemory": {
+    // Sunucuyu neyin çalıştıracağı: node.js runtime
+    "command": "node",
+
+    // Çalıştırılacak script'in tam yolu. Çift ters taksim \\ kullanımı önemlidir.
+    "args": [
+      "C:\\Users\\furka\\mcp\\memory-bank-mcp\\build\\index.js"
+    ],
+
+    // Komutun hangi klasörde çalıştırılacağı. Bu, sunucunun kendi dosyalarına erişmesi için kritik.
+    "cwd": "C:\\Users\\furka\\mcp\\memory-bank-mcp",
+
+    "transport": "stdio",
+
+    // Gemini'nin sunucudan bir cevap için ne kadar bekleyeceği (milisaniye).
+    "timeout": 15000,
+
+    // Her araç çağrısında onay isteyip istemediği. Geliştirme için 'false' iyidir.
+    "trust": false
+  }
+},
+
+  // ----------------------------------------
+  // VII. GÜVENLİK VE ERİŞİM KONTROL AYARLARI (GÜNCELLENDİ)
+  // Sistem Teşhis Raporu: Belirsiz Araç Yetkilendirmesi Sorunu Çözüldü
+  // ----------------------------------------
+
+  // Hangi core araçların kullanılacağını belirler (whitelist yaklaşımı)
+  // GÜVENLİK ODAKLI: Sadece gerekli araçları listeleyin
+  "coreTools": [
+    // Standart tek dosya okuma ve yazma
+    "ReadFileTool",
+    "WriteFileTool",
+
+    // '@' komutu gibi, birden fazla dosyayı okuyan kritik araç
+    // Bu, "@ tool not found" hatasını çözen en önemli eklemedir
+    "ReadManyFilesTool",
+
+    // Dosya arama ve içerik analizi araçları
+    "GlobTool",          // findFiles için gerekli
+    "SearchText",        // search_file_content için gerekli
+
+    // Liste directory işlemleri
+    "ReadFolder",        // list_directory komutu için
+
+    // Güvenli shell komutları (prefix-based filtering)
+    "run_shell_command(git)",      // Sadece git komutlarına izin ver
+    "run_shell_command(npm)",      // Sadece npm komutlarına izin ver
+    "run_shell_command(python)",   // Sadece python komutlarına izin ver
+    "run_shell_command(pip)"       // Sadece pip komutlarına izin ver
+  ],
+
+  // Yasaklı araçlar (blacklist yaklaşımı) - güvenlik için kritik
+  // SİSTEM GÜVENLİĞİ İÇİN: Tehlikeli komutları engelleyin
+  "excludeTools": [
+    "run_shell_command(rm)",       // Dosya silme komutlarını engelle
+    "run_shell_command(sudo)",     // Yönetici yetkileri gerektiren komutları engelle
+    "run_shell_command(curl)",     // Dış bağlantıları engelle (opsiyonel)
+    "run_shell_command(wget)"      // Dosya indirme komutlarını engelle (opsiyonel)
+  ],
+
+  // ----------------------------------------
+  // VIII. PERFORMANS VE OPTİMİZASYON AYARLARI
+  // ----------------------------------------
+
+  // Tercih edilen editör VS Code olarak ayarlanmıştır
+  // FARKLI EDİTÖR İÇİN: "vim", "emacs", "sublime" gibi alternatifleri kullanabilirsiniz
+  "preferredEditor": "vscode"
+
+  // ----------------------------------------
+  // KULLANIM ÖRNEKLERİ:
+  // ----------------------------------------
+  // 1. Kod analizi: gemini -p "explain_code" @src/main.py
+  // 2. Güvenli shell: gemini -p "run safe git status"
+  // 3. Dosya oluşturma: gemini -p "create unit test for @src/utils.py"
+  // 4. Proje analizi: gemini -p "analyze_architecture" @.
+  // 5. Refactoring: gemini -p "refactor_code" @src/legacy_code.py
+  //
+  // Bu settings.json dosyası, AI Kariyer Asistanı projesi için
+  // güvenlik, performans ve kullanılabilirlik dengesini optimize eder.
+}

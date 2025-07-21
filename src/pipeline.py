@@ -1,3 +1,4 @@
+# src/pipeline.py
 """Core processing pipeline for job matching."""
 
 from __future__ import annotations
@@ -18,13 +19,12 @@ from .config import get_config
 from .constants import PROMPTS_DIR
 from .cv_analyzer import TOKEN_LIMIT, CVAnalyzer
 from .cv_processor import CVProcessor
-from .data_collector import collect_job_data
 from .embedding_service import EmbeddingService
 from .exceptions import CVNotFoundError
 from .filter import score_jobs
 from .intelligent_scoring import IntelligentScoringSystem
 from .models.pipeline_context import PipelineContext
-from .persona_builder import build_dynamic_personas
+from .persona_builder import build_dynamic_personas_from_metadata
 from .reporting import display_results, log_summary_statistics
 from .utils.file_helpers import save_dataframe_csv
 from .utils.json_helpers import extract_json_from_response
@@ -48,6 +48,7 @@ DEFAULT_RESULTS_PER_PERSONA_SITE = job_settings["default_results_per_site"]
 persona_search_config = config["persona_search_configs"]
 
 rerank_settings = config.get("ai_reranking_settings", {})
+cache_settings = config.get("reranking_cache", {})
 
 
 class JobAnalysisPipeline:
@@ -111,32 +112,67 @@ class JobAnalysisPipeline:
 
 
 def _collect_jobs_for_persona(persona_name: str, persona_cfg: dict, context: PipelineContext) -> pd.DataFrame | None:
-    """Collect jobs for a single persona."""
-    logger.info("\n--- Persona '%s' için JobSpy Gelişmiş Arama ---", persona_name)
-    logger.info("🎯 Optimize edilmiş terim: '%s'", persona_cfg["term"])
-    logger.info("⏰ Tarih filtresi: Son %s saat", persona_cfg["hours_old"])
+    """
+    Collect jobs for a single persona using the refactored collection system.
+
+    Utilizes TieredJobCollector for improved maintainability and performance.
+    """
+    logger.info("\n--- Persona '%s' Collection Strategy ---", persona_name)
 
     try:
         max_results = context.cli_args.results if context.cli_args.results is not None else persona_cfg["results"]
-        jobs_df_for_persona = collect_job_data(
-            search_term=persona_cfg["term"],
-            site_names=TARGET_SITES,
-            location="Turkey",
-            max_results_per_site=max_results,
-            hours_old=persona_cfg["hours_old"],
-        )
+
+        # Import the refactored collector
+        from .data_collector import TieredJobCollector
+
+        # Initialize collector with search parameters
+        search_params = {
+            "location": "Turkey",
+            "results_per_site": max_results,
+            "hours_old": persona_cfg["hours_old"],
+        }
+
+        collector = TieredJobCollector(search_params)
+
+        # Use new system if platform_queries available
+        if "platform_queries" in persona_cfg:
+            platform_queries = persona_cfg["platform_queries"]
+            logger.info("🎯 Using Dr. Finch strategic tiered search")
+
+            jobs_df_for_persona = collector.collect_with_platform_queries(
+                platform_queries=platform_queries, persona_name=persona_name, site_names=TARGET_SITES
+            )
+        else:
+            # Legacy fallback for older persona configurations
+            logger.warning("⚠️ Legacy mode: Using basic search for persona '%s'", persona_name)
+            from .data_collector import collect_job_data
+
+            jobs_df_for_persona = collect_job_data(
+                search_term=persona_cfg["term"],
+                site_names=TARGET_SITES,
+                location="Turkey",
+                max_results_per_site=max_results,
+                hours_old=persona_cfg["hours_old"],
+            )
+
         if jobs_df_for_persona is not None and not jobs_df_for_persona.empty:
-            jobs_df_for_persona["persona_source"] = persona_name
-            jobs_df_for_persona["search_term_used"] = persona_cfg["term"]
-            logger.info("✨ Persona '%s' için %s ilan bulundu.", persona_name, len(jobs_df_for_persona))
+            # Ensure consistent metadata
+            if "persona_source" not in jobs_df_for_persona.columns:
+                jobs_df_for_persona["persona_source"] = persona_name
+            if "search_term_used" not in jobs_df_for_persona.columns:
+                jobs_df_for_persona["search_term_used"] = persona_cfg.get("term", "strategic_multi_tier")
+
+            logger.info("✨ Persona '%s': %s jobs collected", persona_name, len(jobs_df_for_persona))
             return jobs_df_for_persona
-        logger.info("ℹ️ Persona '%s' için hiçbir siteden ilan bulunamadı.", persona_name)
+
+        logger.info("ℹ️ Persona '%s': No jobs found", persona_name)
         return None
+
     except (ValueError, TypeError, KeyError) as e:
-        logger.error("❌ Persona '%s' için hata: %s", persona_name, e, exc_info=True)
+        logger.error("❌ Persona '%s' configuration error: %s", persona_name, e, exc_info=True)
         return None
     except ConnectionError as e:
-        logger.error("❌ Persona '%s' için bağlantı hatası: %s", persona_name, e)
+        logger.error("❌ Persona '%s' network error: %s", persona_name, e)
         return None
     except Exception:
         logger.exception("❌ Unexpected error for persona '%s'", persona_name)
@@ -213,15 +249,11 @@ def _setup_ai_metadata_and_personas(context: PipelineContext) -> None:
         logger.error("CV işleme hatası: %s", e)
         raise
 
-    personas_cfg = persona_search_config
-    if ai_metadata and ai_metadata.get("target_job_titles"):
-        target_titles = ai_metadata["target_job_titles"]
-        if isinstance(target_titles, list) and all(isinstance(title, str) for title in target_titles):
-            personas_cfg = build_dynamic_personas(target_titles)
-        else:
-            logger.warning("AI metadata target_job_titles geçersiz format - static personas kullanılıyor")
+    if ai_metadata:
+        personas_cfg = build_dynamic_personas_from_metadata(ai_metadata)
     else:
         logger.warning("AI metadata missing - using static personas")
+        personas_cfg = persona_search_config
 
     context.ai_metadata = ai_metadata
     context.personas_config = personas_cfg
@@ -238,32 +270,12 @@ def _validate_skill_metadata(key_skills: object, skill_importance: object) -> bo
     )
 
 
-def _apply_skill_weights(cfg: dict, skill: str, importance: float, base_weight: int, min_imp: float) -> dict:
-    """Return updated config with dynamic skill weights applied."""
-    new_cfg = copy.deepcopy(cfg)
-    if importance >= min_imp:
-        weight = int(round(base_weight * importance))
-        new_cfg["scoring_system"]["description_weights"]["positive"][skill] = weight
-        logger.debug(
-            "  ⭐ Skill: %s (importance: %.2f) → weight: %s",
-            skill,
-            importance,
-            weight,
-        )
-    else:
-        logger.debug(
-            "  ⏭️  Skill %s below importance threshold %.2f (score %.2f)",
-            skill,
-            min_imp,
-            importance,
-        )
-    return new_cfg
-
-
 def _configure_scoring_system(config_data: dict, ai_metadata: dict) -> IntelligentScoringSystem | None:
     """Return a scoring system configured with AI metadata."""
     try:
+        # Tek bir deep copy yap - başta!
         cfg = copy.deepcopy(config_data)
+
         if not (ai_metadata.get("key_skills") and ai_metadata.get("skill_importance")):
             logger.info("No AI skill data available - using static scoring")
             return IntelligentScoringSystem(cfg)
@@ -282,12 +294,19 @@ def _configure_scoring_system(config_data: dict, ai_metadata: dict) -> Intellige
         if len(skill_importance) != len(key_skills):
             skill_importance = [1.0] * len(key_skills)
 
-        temp_cfg = cfg
+        # ✅ PERFORMANCE FIX: Tüm skill'leri tek seferde ekle
+        added_skills = 0
         for skill, importance in zip(key_skills, skill_importance, strict=False):
-            temp_cfg = _apply_skill_weights(temp_cfg, skill, float(importance), base_weight, min_imp)
+            if importance >= min_imp:
+                weight = int(round(base_weight * importance))
+                cfg["scoring_system"]["description_weights"]["positive"][skill] = weight
+                added_skills += 1
+                logger.debug("  ⭐ Skill: %s (importance: %.2f) → weight: %s", skill, importance, weight)
+            else:
+                logger.debug("  ⏭️  Skill: %s (importance: %.2f) skipped - below threshold", skill, importance)
 
-        logger.info("✅ Enhanced AI-driven scoring system configured")
-        return IntelligentScoringSystem(temp_cfg)
+        logger.info("✅ Enhanced AI-driven scoring system configured with %d dynamic skills", added_skills)
+        return IntelligentScoringSystem(cfg)
     except (ValueError, TypeError, KeyError) as e:
         logger.error("❌ Scoring system configuration failed: %s", e)
         return None
@@ -400,15 +419,78 @@ def _search_and_score_jobs(
         logger.error("Search results metadata and distances length mismatch")
         return []
 
-    similar_jobs = [
-        dict(metadata, similarity_score=(1 - dist) * 100) for metadata, dist in zip(metadatas, distances, strict=True)
-    ]
+    similar_jobs = []
+    for metadata, dist in zip(metadatas, distances, strict=True):
+        # dist might be a list or a scalar - handle both cases
+        distance_value = dist[0] if isinstance(dist, list) and len(dist) > 0 else dist
+        similarity_score = (1 - distance_value) * 100 if isinstance(distance_value, int | float) else 0
+        similar_jobs.append(dict(metadata, similarity_score=similarity_score))
     if not similar_jobs:
         return []
 
     logger.info("🔍 Sonuçlar akıllı puanlama ile değerlendiriliyor...")
     scored_jobs = score_jobs(similar_jobs, scoring_sys, debug=False)
     return [job for job in scored_jobs if job["similarity_score"] >= threshold]
+
+
+def _process_single_job_for_separation(
+    job: dict, vector_store: VectorStore, analyzed_job_ids: set[str]
+) -> tuple[dict | None, dict | None]:
+    """Process a single job to determine if it's new or cached."""
+    try:
+        job_id = vector_store._stable_job_id(job)
+        if job_id not in analyzed_job_ids:
+            return job, None  # New job
+
+        cached_metadata = vector_store.get_job_metadata(job)
+        if cached_metadata and cached_metadata.get("ai_reranked", False):
+            job.update(
+                {
+                    "fit_score": cached_metadata.get("ai_fit_score"),
+                    "is_recommended": cached_metadata.get("ai_fit_score", 0) >= 70,
+                    "reasoning": cached_metadata.get("ai_reasoning", ""),
+                    "matching_keywords": cached_metadata.get("ai_matching_keywords", []),
+                    "missing_keywords": cached_metadata.get("ai_missing_keywords", []),
+                }
+            )
+            logger.debug(f"✅ Loaded cached AI analysis for job: {job.get('title', 'Unknown')}")
+            return None, job  # Cached job
+        return job, None  # Metadata not found or not properly analyzed, treat as new
+    except Exception as e:
+        logger.warning(f"⚠️ Error processing job for separation '{job.get('title', 'Unknown')}': {e}")
+        return job, None  # Treat as new on error
+
+
+def _separate_jobs_by_rerank_status(
+    similar_jobs: list[dict], vector_store: VectorStore
+) -> tuple[list[dict], list[dict]]:
+    """
+    Separate jobs into new (need reranking) and cached (already analyzed) jobs.
+
+    Returns:
+        (new_jobs, cached_jobs): Two lists containing jobs that need/don't need reranking
+    """
+    if not cache_settings.get("enabled", False):
+        return similar_jobs, []
+
+    try:
+        analyzed_job_ids = set(vector_store.get_analyzed_jobs())
+        logger.info(f"🔍 Found {len(analyzed_job_ids)} previously analyzed jobs in cache")
+
+        new_jobs, cached_jobs = [], []
+        for job in similar_jobs:
+            new_job, cached_job = _process_single_job_for_separation(job, vector_store, analyzed_job_ids)
+            if new_job:
+                new_jobs.append(new_job)
+            if cached_job:
+                cached_jobs.append(cached_job)
+
+        logger.info(f"📊 Job separation: {len(new_jobs)} new jobs, {len(cached_jobs)} cached jobs")
+        return new_jobs, cached_jobs
+
+    except Exception as e:
+        logger.error(f"❌ Error separating jobs by rerank status: {e}")
+        return similar_jobs, []
 
 
 def _analyse_single_job(
@@ -424,8 +506,26 @@ def _analyse_single_job(
         description=description_to_use,
     )
     try:
-        response = model.generate_content(prompt, generation_config={"temperature": temperature})
-        text = response.text if hasattr(response, "text") else str(response)
+        # Retry mechanism for network issues
+        import time
+
+        max_retries = 3
+        retry_delay = 5  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                response = model.generate_content(prompt, generation_config={"temperature": temperature})
+                text = response.text if hasattr(response, "text") else str(response)
+                break  # Success, exit retry loop
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logger.warning(
+                        f"AI analysis attempt {attempt + 1} failed for job '{job.get('title', 'Unknown')}': {str(e)[:100]}... Retrying in {retry_delay}s"
+                    )
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    raise e  # Last attempt failed, re-raise the exception
 
         if not text or text.strip() == "":
             logger.warning("AI returned empty response for job %s, keeping original scores", job.get("title"))
@@ -448,6 +548,10 @@ def _analyse_single_job(
                 "missing_keywords": data.get("missing_keywords", []),
             }
         )
+    except (google_exceptions.ServiceUnavailable, google_exceptions.RetryError) as exc:
+        logger.warning(f"Network/API connectivity issue for job '{job.get('title')}': {str(exc)[:100]}...")
+        logger.info(f"Keeping original scores for job '{job.get('title')}' due to network issues")
+        return job
     except google_exceptions.ResourceExhausted as exc:
         logger.warning(
             f"API rate limit or quota exhausted for job '{job.get('title')}'. Skipping AI analysis. Details: {exc}"
@@ -460,9 +564,12 @@ def _analyse_single_job(
 
 
 def _rerank_with_ai_analysis(
-    jobs_to_rerank: list[dict], cv_summary: str, key_skills_list: list[str]
+    jobs_to_rerank: list[dict],
+    cv_summary: str,
+    key_skills_list: list[str],
+    vector_store: VectorStore | None = None,
 ) -> list[dict]:  # pragma: no cover
-    """Deep analysis with Gemini to rerank jobs."""
+    """Deep analysis with Gemini to rerank jobs and cache results."""
     if not jobs_to_rerank:
         return []
 
@@ -471,6 +578,8 @@ def _rerank_with_ai_analysis(
     workers = rerank_settings.get("max_workers", 4)
     model = genai.GenerativeModel(model_name)
 
+    logger.info(f"🤖 AI reranking {len(jobs_to_rerank)} new jobs with {model_name}")
+
     with ThreadPoolExecutor(max_workers=workers) as executor:
         analysed = list(
             executor.map(
@@ -478,10 +587,52 @@ def _rerank_with_ai_analysis(
             )
         )
 
+    # Cache AI analysis results to VectorStore (only if provided)
+    if vector_store and cache_settings.get("enabled", False):
+        _cache_ai_analysis_results(analysed, vector_store)
+
     analysed.sort(
         key=lambda j: (not j.get("is_recommended", False), -j.get("fit_score", 0), -j.get("similarity_score", 0))
     )
     return analysed
+
+
+def _cache_ai_analysis_results(jobs_with_ai_data: list[dict], vector_store: VectorStore) -> None:
+    """Cache AI analysis results to VectorStore for future use."""
+    try:
+        stored_count = 0
+        for job in jobs_with_ai_data:
+            # Use VectorStore's ID generation method for consistency
+            try:
+                job_id = vector_store._stable_job_id(job)  # Use VectorStore's ID method
+
+                # Prepare AI metadata for caching
+                ai_metadata = {
+                    "ai_fit_score": job.get("fit_score"),
+                    "ai_reasoning": job.get("reasoning", ""),
+                    "ai_matching_keywords": job.get("matching_keywords", []),
+                    "ai_missing_keywords": job.get("missing_keywords", []),
+                    "last_analyzed": pd.Timestamp.now().isoformat(),
+                }
+
+                # Filter out None values and empty strings/lists
+                ai_metadata = {k: v for k, v in ai_metadata.items() if v is not None and v != "" and v != []}
+
+                if ai_metadata:
+                    success = vector_store.update_job_ai_metadata(job_id, ai_metadata)
+                    if success:
+                        stored_count += 1
+                        logger.debug(f"✅ Cached AI analysis for job: {job.get('title', 'Unknown')}")
+                    else:
+                        logger.warning(f"⚠️ Failed to cache AI analysis for job: {job.get('title', 'Unknown')}")
+
+            except Exception as e:
+                logger.warning(f"⚠️ Error processing job for caching: {job.get('title', 'Unknown')} - {e}")
+
+        logger.info(f"💾 Successfully cached AI analysis for {stored_count}/{len(jobs_with_ai_data)} jobs")
+
+    except Exception as e:
+        logger.error(f"❌ Error caching AI analysis results: {e}")
 
 
 def _process_and_load_jobs(
@@ -525,7 +676,7 @@ def _score_and_rank_jobs(
     vector_store: VectorStore,
     context: PipelineContext,
 ) -> list[dict]:
-    """Search, score and optionally rerank jobs."""
+    """Search, score and optionally rerank jobs using incremental AI analysis."""
     if context.scoring_system is None:
         logger.error("Scoring system is not configured. Cannot score jobs.")
         return []
@@ -538,21 +689,51 @@ def _score_and_rank_jobs(
         context,
     )
 
+    # Apply AI reranking if enabled and conditions are met
     if (
         rerank_settings.get("enabled", False)
         and context.ai_metadata.get("cv_summary")
         and context.rerank_flag
         and similar_jobs
     ):
+        logger.info("\n🧠 AI Reranking: Akıllı Kademeli Analiz Başlatılıyor...")
+
+        # Apply pool size limit to all jobs
         pool_size = rerank_settings.get("rerank_pool_size", len(similar_jobs))
         if pool_size <= 0:
             pool_size = len(similar_jobs)
-        jobs_to_rerank = similar_jobs[:pool_size]
-        similar_jobs = _rerank_with_ai_analysis(
-            jobs_to_rerank,
-            cv_summary=str(context.ai_metadata.get("cv_summary", "")),
-            key_skills_list=context.ai_metadata.get("key_skills", []),
+        jobs_in_pool = similar_jobs[:pool_size]
+        jobs_outside_pool = similar_jobs[pool_size:]
+
+        # Separate new jobs from cached jobs in the rerank pool
+        new_jobs, cached_jobs = _separate_jobs_by_rerank_status(jobs_in_pool, vector_store)
+
+        # Only run AI analysis on new jobs
+        if new_jobs:
+            logger.info(f"🔄 Running AI analysis on {len(new_jobs)} new jobs...")
+            analyzed_new_jobs = _rerank_with_ai_analysis(
+                new_jobs,
+                cv_summary=str(context.ai_metadata.get("cv_summary", "")),
+                key_skills_list=context.ai_metadata.get("key_skills", []),
+                vector_store=vector_store,
+            )
+        else:
+            analyzed_new_jobs = []
+
+        # Combine analyzed new jobs with cached jobs
+        all_analyzed_jobs = analyzed_new_jobs + cached_jobs
+
+        # Sort combined results by AI criteria
+        all_analyzed_jobs.sort(
+            key=lambda j: (not j.get("is_recommended", False), -j.get("fit_score", 0), -j.get("similarity_score", 0))
         )
+
+        # Combine with jobs outside the rerank pool
+        final_results = all_analyzed_jobs + jobs_outside_pool
+
+        logger.info(f"✅ AI Reranking tamamlandı: {len(new_jobs)} yeni analiz, {len(cached_jobs)} cache'den")
+        return final_results
+
     return similar_jobs
 
 

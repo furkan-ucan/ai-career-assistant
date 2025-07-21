@@ -1,3 +1,10 @@
+# src/config.py
+"""Configuration management for Akilli Kariyer Asistani.
+This module handles loading configuration from a YAML file, applying environment variable overrides,
+and caching the configuration for efficient access.
+It also provides utility functions for accessing specific configuration settings.
+"""
+
 from __future__ import annotations
 
 import logging

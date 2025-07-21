@@ -1,3 +1,4 @@
+# src/cv_processor.py
 """
 CV İşleme Modülü
 Kullanıcının CV'sini okur ve embedding oluşturur.

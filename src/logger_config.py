@@ -1,3 +1,9 @@
+# src/logger_config.py
+"""Logger Configuration for Akilli Kariyer Asistani.
+This module sets up logging for the application, including file and console handlers.
+It handles errors gracefully, ensuring that logging is still functional even if file handlers cannot be created.
+"""
+
 from __future__ import annotations
 
 import logging

@@ -111,6 +111,7 @@ EXCLUDE_DIRS = {
     "temp",
     ".tmp",
     ".temp",
+    ".venv",  # Python sanal ortamı
 }
 
 # Görmezden gelinecek dosya uzantıları

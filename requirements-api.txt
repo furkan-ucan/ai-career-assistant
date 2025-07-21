@@ -1,0 +1,15 @@
+# API Sunucusu ve Telegram Bot Entegrasyonu için Ek Bağımlılıklar
+# Bu dosya sadece API sunucusu çalıştırılacaksa yüklenmelidir.
+
+# Web API Framework
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# HTTP İstekleri (Test scripti için)
+requests>=2.31.0
+
+# Güvenlik ve Kimlik Doğrulama
+python-dotenv>=1.0.1  # Environment değişkenleri için
+
+# Gelişmiş Logging (İsteğe bağlı)
+# structlog>=23.0.0  # Yapılandırılmış logging için

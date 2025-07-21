@@ -1,3 +1,11 @@
+# src/cv_analyzer.py
+"""CV Analyzer for Akilli Kariyer Asistani.
+This module provides functionality to analyze CV text using Gemini AI,
+extract key metadata, and cache results for efficient reuse.
+It includes methods for normalizing skills, cleaning job titles,
+and categorizing skills by importance.
+"""
+
 from __future__ import annotations
 
 # Standard Library
@@ -64,6 +72,12 @@ Respond with a JSON object containing:
 - "skill_importance": A list of floats (0.0 to 1.0) corresponding to the importance of each skill in "key_skills".
 - "cv_summary": A 2-3 sentence summary of the candidate's profile.
 """
+
+
+# Persona count validation
+MAX_RETRIES = 3
+MIN_PERSONAS = 12
+MAX_PERSONAS = 16
 
 
 class CVAnalyzer:
@@ -184,22 +198,37 @@ class CVAnalyzer:
             prompt = PROMPT_TEMPLATE.format(cv_text=truncated)
             logger.debug(f"Sending prompt to Gemini: {prompt[:200]}...")
 
-            response = self.model.generate_content(prompt)
-            content = response.text if hasattr(response, "text") else str(response)
+            # Try multiple times to get the correct persona count
+            for attempt in range(1, MAX_RETRIES + 1):
+                response = self.model.generate_content(prompt)
+                content = response.text if hasattr(response, "text") else str(response)
 
-            logger.debug(f"Gemini response: {content[:200]}...")
+                logger.debug(f"Gemini response (attempt {attempt}): {content[:200]}...")
 
-            if not content or content.strip() == "":
-                logger.warning("Gemini returned empty response")
-                return None
+                if not content or content.strip() == "":
+                    logger.warning(f"Gemini returned empty response (attempt {attempt})")
+                    continue
 
-            # Use the new consolidated cleaning/extraction function
-            parsed_data = extract_json_from_response(content)
-            if parsed_data is None:
-                logger.error("Could not extract JSON from Gemini response: %s", content[:500])
-                return None
+                # Use the new consolidated cleaning/extraction function
+                parsed_data = extract_json_from_response(content)
+                if parsed_data is None:
+                    logger.warning(f"Could not extract JSON from Gemini response (attempt {attempt}): {content[:500]}")
+                    continue
 
-            return cast(dict, parsed_data)
+                # 🔍 yeni kural: persona sayısı 12‑16 olmalı
+                personas = parsed_data.get("search_personas", [])
+                if MIN_PERSONAS <= len(personas) <= MAX_PERSONAS:
+                    logger.info(f"✅ Received {len(personas)} personas (target: {MIN_PERSONAS}-{MAX_PERSONAS})")
+                    return cast(dict, parsed_data)
+
+                logger.warning(
+                    f"Gemini returned {len(personas)} personas (need {MIN_PERSONAS}-{MAX_PERSONAS}). Retrying {attempt}/{MAX_RETRIES}"
+                )
+
+            # Return last attempt even if persona count is not ideal
+            logger.warning(f"After {MAX_RETRIES} attempts, using response with {len(personas)} personas")
+            return cast(dict, parsed_data) if parsed_data else None
+
         except google_exceptions.ResourceExhausted as e:
             logger.exception(f"Gemini API Quota Exceeded: {e}")
             return None
@@ -212,26 +241,47 @@ class CVAnalyzer:
 
     def _validate_and_normalize_metadata(self, metadata: dict[str, object]) -> dict[str, object] | None:
         """Validate and normalize metadata extracted from the CV."""
-        required_keys = ["key_skills", "target_job_titles", "skill_importance", "cv_summary"]
+        # We can be flexible with missing keys, but log it
+        required_keys = ["key_skills", "skill_importance", "cv_summary"]
+        optional_keys = ["target_job_titles", "search_personas"]
+
         if not all(key in metadata for key in required_keys):
-            logger.error(f"AI response is missing one of a required key. Found: {list(metadata.keys())}")
+            logger.warning(f"AI response is missing one of a required key. Found: {list(metadata.keys())}")
+
+        # At least one of these should exist for persona generation
+        has_personas = any(key in metadata for key in optional_keys)
+        if not has_personas:
+            logger.error("AI response missing both target_job_titles and search_personas")
             return None
 
-        # Normalize skills
+        # ---------- SKILLS ----------
         skills = self._normalize_skills(cast(list[str], metadata.get("key_skills", [])))
-        metadata["key_skills"] = skills
+        importance = cast(list[float], metadata.get("skill_importance", []))
 
         # Ensure skill_importance matches skills length
-        importance = cast(list[float], metadata.get("skill_importance", []))
         if len(importance) != len(skills):
             logger.warning(
                 f"skill_importance length ({len(importance)}) doesn't match skills ({len(skills)}), padding with 0.8"
             )
             importance = importance[: len(skills)] + [0.8] * (len(skills) - len(importance))
-        metadata["skill_importance"] = importance
 
-        cv_summary = cast(str, metadata.get("cv_summary", ""))
-        metadata["cv_summary"] = cv_summary.strip()
+        metadata["skill_importance"] = importance
+        metadata["key_skills"] = skills
+
+        # ---------- SEARCH PERSONAS ----------
+        personas = cast(list[dict[str, object]], metadata.get("search_personas", []))
+        if not isinstance(personas, list):
+            logger.error("search_personas is not a list")
+            return None
+
+        # quick sanity filter: keep only items with mandatory keys
+        cleaned_personas: list[dict[str, object]] = []
+        for p in personas:
+            if not isinstance(p, dict):
+                continue
+            if {"primary_title_en", "primary_title_tr", "search_keywords"} <= p.keys():
+                cleaned_personas.append(p)
+        metadata["search_personas"] = cleaned_personas
 
         return metadata
 
