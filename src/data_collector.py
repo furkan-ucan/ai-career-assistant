@@ -99,8 +99,7 @@ class TieredJobCollector:
 
         # Combine tiers for this site
         site_df = safe_dataframe_concat(tier_results, dedup_columns=DEDUP_COLUMNS)
-        logger.info(f"� {site} total: {len(site_df)} unique jobs")
-
+        logger.info(f"📊 {site} total: {len(site_df)} unique jobs")
         return site_df
 
     def _should_run_tier(self, tier_num: int, previous_results: list[pd.DataFrame]) -> bool:

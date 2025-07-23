@@ -109,33 +109,68 @@ def handle_scraping_error(
         return False
 
 
-def validate_persona_config(persona_cfg: dict[str, Any]) -> bool:
+def _validate_required_fields(persona_cfg: dict[str, Any], logger: logging.Logger) -> bool:
+    """
+    Validate that all required fields are present in persona configuration.
+
+    Args:
+        persona_cfg: Persona configuration dictionary
+        logger: Logger instance for warnings
+
+    Returns:
+        True if all required fields present, False otherwise
+    """
+    required_fields = ["hours_old", "results"]
+
+    for field in required_fields:
+        if field not in persona_cfg:
+            logger.warning(f"⚠️ Missing required field in persona config: {field}")
+            return False
+
+    return True
+
+
+def _validate_query_terms(persona_cfg: dict[str, Any], logger: logging.Logger) -> bool:
+    """
+    Validate that persona configuration has either platform_queries or legacy term.
+
+    Args:
+        persona_cfg: Persona configuration dictionary
+        logger: Logger instance for warnings
+
+    Returns:
+        True if valid query terms present, False otherwise
+    """
+    has_platform_queries = "platform_queries" in persona_cfg
+    has_legacy_term = "term" in persona_cfg
+
+    if not (has_platform_queries or has_legacy_term):
+        logger.warning("⚠️ Persona config missing both 'platform_queries' and 'term'")
+        return False
+
+    return True
+
+
+def validate_persona_config(persona_cfg: dict[str, Any], logger: logging.Logger | None = None) -> bool:
     """
     Validate persona configuration structure.
 
     Args:
         persona_cfg: Persona configuration dictionary
+        logger: Optional logger instance (falls back to module logger)
 
     Returns:
         True if valid, False otherwise
     """
-    required_fields = ["hours_old", "results"]
+    if logger is None:
+        logger = logging.getLogger(__name__)
 
-    # Check for required fields
-    for field in required_fields:
-        if field not in persona_cfg:
-            logging.warning(f"⚠️ Missing required field in persona config: {field}")
-            return False
-
-    # Validate platform_queries or legacy term
-    has_platform_queries = "platform_queries" in persona_cfg
-    has_legacy_term = "term" in persona_cfg
-
-    if not (has_platform_queries or has_legacy_term):
-        logging.warning("⚠️ Persona config missing both 'platform_queries' and 'term'")
+    # Validate required fields
+    if not _validate_required_fields(persona_cfg, logger):
         return False
 
-    return True
+    # Return query term validation sonucu direkt
+    return _validate_query_terms(persona_cfg, logger)
 
 
 def clean_search_term(term: str) -> str:

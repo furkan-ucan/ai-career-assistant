@@ -24,16 +24,17 @@
   // Gemini'ye verilecek temel süper güçler.
   // Bu ayar, geliştiricinin ihtiyaç duyacağı en yaygın araç setini aktive eder.
   "tools": [
-    "shell",      // Terminal komutları çalıştırma
-    "web",        // Web'den bilgi çekme
-    "fs"          // Dosya sistemi işlemleri
+    "shell", // Terminal komutları çalıştırma
+    "web", // Web'den bilgi çekme
+    "fs" // Dosya sistemi işlemleri
   ],
 
   // Güvenlik katmanı. `shell` gibi potansiyel olarak tehlikeli araçlar için zorunludur.
   // "docker" en yaygın ve güvenilir sanal ortamı sağlar.
   // EN YÜKSEK GÜVENLİK İÇİN: Bu değeri "true" olarak ayarlayabilirsiniz.
   // GELİŞTİRME ORTAMI İÇİN: "false" yaparak hız kazanabilirsiniz (DİKKATLİ OLUN!).
-  "sandbox": "docker",
+  // "sandbox": "docker",
+  // "sandboxImage": "gemini-cli-sandbox:custom",
 
   // 'autoAccept' false olduğunda, 'write_file', 'shell' gibi komutlar için onay istenir.
   // Bu, Güçlü Kullanıcı profili için en iyi dengedir: yeteneği ver, ama onayı iste.
@@ -85,7 +86,7 @@
     "enabled": false,
     "target": "local",
     "otlpEndpoint": "http://localhost:4317",
-    "logPrompts": false  // Gizlilik için prompt'ları loglama
+    "logPrompts": false // Gizlilik için prompt'ları loglama
   },
 
   // Kullanım istatistiklerinin toplanmasını kontrol eder.
@@ -96,8 +97,8 @@
   // GÜVENLİK STRATEJİSİ: .env dosyalarını koruyarak güvenli analiz
   // YAKINLAŞIM: .env.example, config.yaml gibi şablonları okuyarak yapıyı anla
   "fileFiltering": {
-    "respectGitIgnore": true,           // .env dosyalarını otomatik korur (GÜVENLİK)
-    "enableRecursiveFileSearch": true   // Alt klasörlerde arama yap
+    "respectGitIgnore": true, // .env dosyalarını otomatik korur (GÜVENLİK)
+    "enableRecursiveFileSearch": true // Alt klasörlerde arama yap
   },
 
   // Maksimum session turn sayısı. Uzun konuşmalarda performans koruması.
@@ -108,7 +109,7 @@
   // Araç çıktılarının özetlenmesi. Büyük çıktıları yönetilebilir hale getirir.
   "summarizeToolOutput": {
     "run_shell_command": {
-      "tokenBudget": 1000  // Shell komut çıktıları için token limiti
+      "tokenBudget": 1000 // Shell komut çıktıları için token limiti
     }
   },
 
@@ -119,25 +120,29 @@
   // Model Context Protocol sunucuları - Özel araçlar için
   // AI Kariyer Asistanı projesi için özelleştirilmiş araçlar burada tanımlanabilir.
   "mcpServers": {
-  "developerMemory": {
-    // Sunucuyu neyin çalıştıracağı: node.js runtime
-    "command": "node",
+    "developerMemory": {
+      // Sunucuyu neyin çalıştıracağı: node.js runtime
+      "command": "node",
 
-    // Çalıştırılacak script'in tam yolu. Çift ters taksim \\ kullanımı önemlidir.
-    "args": [
-      "C:\\Users\\furka\\mcp\\memory-bank-mcp\\build\\index.js"
-    ],
+      // Çalıştırılacak script'in tam yolu. Çift ters taksim \\ kullanımı önemlidir.
+      "args": ["C:\\Users\\furka\\mcp\\memory-bank-mcp\\build\\index.js"],
 
-    // Komutun hangi klasörde çalıştırılacağı. Bu, sunucunun kendi dosyalarına erişmesi için kritik.
-    "cwd": "C:\\Users\\furka\\mcp\\memory-bank-mcp",
+      // Komutun hangi klasörde çalıştırılacağı. Bu, sunucunun kendi dosyalarına erişmesi için kritik.
+      "cwd": "C:\\Users\\furka\\mcp\\memory-bank-mcp",
 
-    // Gemini'nin sunucudan bir cevap için ne kadar bekleyeceği (milisaniye).
-    "timeout": 15000,
+      // Gemini'nin sunucudan bir cevap için ne kadar bekleyeceği (milisaniye).
+      "timeout": 15000,
 
-    // Her araç çağrısında onay isteyip istemediği. Geliştirme için 'false' iyidir.
-    "trust": false
-  }
-},
+      // Her araç çağrısında onay isteyip istemediği. Geliştirme için 'false' iyidir.
+      "trust": false
+    },
+
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+
+  },
 
   // ----------------------------------------
   // VII. GÜVENLİK VE ERİŞİM KONTROL AYARLARI (GÜNCELLENDİ)
@@ -156,26 +161,26 @@
     "ReadManyFilesTool",
 
     // Dosya arama ve içerik analizi araçları
-    "GlobTool",          // findFiles için gerekli
-    "SearchText",        // search_file_content için gerekli
+    "GlobTool", // findFiles için gerekli
+    "SearchText", // search_file_content için gerekli
 
     // Liste directory işlemleri
-    "ReadFolder",        // list_directory komutu için
+    "ReadFolder", // list_directory komutu için
 
     // Güvenli shell komutları (prefix-based filtering)
-    "run_shell_command(git)",      // Sadece git komutlarına izin ver
-    "run_shell_command(npm)",      // Sadece npm komutlarına izin ver
-    "run_shell_command(python)",   // Sadece python komutlarına izin ver
-    "run_shell_command(pip)"       // Sadece pip komutlarına izin ver
+    "run_shell_command(git)", // Sadece git komutlarına izin ver
+    "run_shell_command(npm)", // Sadece npm komutlarına izin ver
+    "run_shell_command(python)", // Sadece python komutlarına izin ver
+    "run_shell_command(pip)" // Sadece pip komutlarına izin ver
   ],
 
   // Yasaklı araçlar (blacklist yaklaşımı) - güvenlik için kritik
   // SİSTEM GÜVENLİĞİ İÇİN: Tehlikeli komutları engelleyin
   "excludeTools": [
-    "run_shell_command(rm)",       // Dosya silme komutlarını engelle
-    "run_shell_command(sudo)",     // Yönetici yetkileri gerektiren komutları engelle
-    "run_shell_command(curl)",     // Dış bağlantıları engelle (opsiyonel)
-    "run_shell_command(wget)"      // Dosya indirme komutlarını engelle (opsiyonel)
+    "run_shell_command(rm)", // Dosya silme komutlarını engelle
+    "run_shell_command(sudo)", // Yönetici yetkileri gerektiren komutları engelle
+    "run_shell_command(curl)", // Dış bağlantıları engelle (opsiyonel)
+    "run_shell_command(wget)" // Dosya indirme komutlarını engelle (opsiyonel)
   ],
 
   // ----------------------------------------

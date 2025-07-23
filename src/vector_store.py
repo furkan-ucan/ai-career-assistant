@@ -69,6 +69,8 @@ class VectorStore:
         """
         Liste tipindeki veriyi ChromaDB için string formatına dönüştür
         """
+        if not isinstance(lst, list):
+            raise TypeError(f"Expected list, got {type(lst).__name__}")
         if not lst:
             return ""
         return json.dumps(lst, ensure_ascii=False)
@@ -294,7 +296,7 @@ class VectorStore:
         job_id = self._stable_job_id(job_dict)
         try:
             result = collection.get(ids=[job_id], include=["metadatas"])
-            if result["ids"]:
+            if result["ids"] and result.get("metadatas"):
                 metadata = result["metadatas"][0]
                 # Type safety: ensure metadata is a dict
                 if not isinstance(metadata, dict):
@@ -351,7 +353,7 @@ class VectorStore:
             return True
 
         except Exception as e:
-            logger.error(f"Upsert hatası: {e}")
+            logger.exception(f"Upsert hatası: {e}")
             return False
 
     def update_job_ai_metadata(self, job_id: str, ai_metadata: dict[str, Any]) -> bool:
@@ -370,10 +372,12 @@ class VectorStore:
                 logger.warning(f"Job not found for AI metadata update: {job_id}")
                 return False
 
-            # Mevcut metadata'yı güncelle
-            current_metadata = existing_data["metadatas"][0]
+            if not existing_data.get("metadatas"):
+                logger.warning(f"No metadata found for job: {job_id}")
+                return False
 
-            # AI metadata'yı temizle ve serialize et
+            # Mevcut metadata'yı güncelle
+            current_metadata = existing_data["metadatas"][0]  # AI metadata'yı temizle ve serialize et
             clean_ai_metadata = {}
             for key, value in ai_metadata.items():
                 if isinstance(value, list):
@@ -390,12 +394,9 @@ class VectorStore:
                 documents=existing_data["documents"],
                 metadatas=[current_metadata],
             )
-
-            logger.debug(f"AI metadata updated for job: {job_id}")
             return True
-
         except Exception as e:
-            logger.error(f"AI metadata update error: {e}")
+            logger.exception(f"AI metadata update error: {e}")
             return False
 
     def get_analyzed_jobs(self) -> list[str]:
@@ -433,4 +434,7 @@ def create_vector_store(
         return VectorStore(persist_directory=persist_directory, collection_name=collection_name)
     except Exception as e:
         logger.error(f"VectorStore oluşturma hatası: {str(e)}")
+        return None
+        return None
+        return None
         return None

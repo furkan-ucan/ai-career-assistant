@@ -4,6 +4,8 @@ Centralized constants to eliminate magic strings and numbers throughout the code
 Following the principle of configuration over hard-coding.
 """
 
+from pathlib import Path
+
 # === PLATFORM CONSTANTS ===
 SITE_INDEED = "indeed"
 SITE_LINKEDIN = "linkedin"
@@ -56,10 +58,12 @@ LOG_CONFIG = {
 }
 
 # === FILE PATH CONSTANTS ===
-DATA_DIR = "data"
-LOGS_DIR = "logs"
-CONFIG_DIR = "config"
-PROMPTS_DIR = "prompts"
+# Repository root (where this file's parent.parent.parent is located)
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+DATA_DIR = _REPO_ROOT / "data"
+LOGS_DIR = _REPO_ROOT / "logs"
+CONFIG_DIR = _REPO_ROOT / "config"
+PROMPTS_DIR = _REPO_ROOT / "prompts"
 
 # === QUERY BUILDING CONSTANTS ===
 NEGATIVE_FILTERS = ["-Senior", "-Kıdemli", "-Lead", "-Principal", "-Direktör"]

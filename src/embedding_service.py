@@ -21,10 +21,23 @@ logger = logging.getLogger(__name__)
 class EmbeddingService:
     def __init__(self, batch_size: int = 10, retry_count: int = 3, rate_limit_delay: float = 0.1):
         """Gemini API'yi başlat ve konfigürasyon ayarlarını sakla"""
-        config = get_config()
-        api_key = config.get("GEMINI_API_KEY") if config else None
+        try:
+            config = get_config()
+        except Exception as exc:
+            logger.error(f"Config yüklenirken hata oluştu: {exc}")
+            raise ValueError(
+                "Gemini API yapılandırması alınamadı. Lütfen config dosyanızı ve ortam değişkenlerinizi kontrol edin."
+            )
+
+        if not isinstance(config, dict):
+            logger.error(f"Config nesnesi beklenen tipte değil: {type(config)}")
+            raise ValueError("Gemini API yapılandırması alınamadı. Config tipi dict olmalı.")
+
+        api_key = config.get("GEMINI_API_KEY")
         if not api_key or api_key == "your_gemini_api_key_here":
-            raise ValueError("Gemini API key geçerli değil! .env dosyasını kontrol edin.")
+            raise ValueError(
+                "Gemini API key geçerli değil! Lütfen config dosyanızda veya ortam değişkenlerinizde doğru anahtarı tanımlayın."
+            )
         genai.configure(api_key=api_key)
         self.model = "models/text-embedding-004"
         self.batch_size = batch_size

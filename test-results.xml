@@ -1,4 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="26.145" timestamp="2025-07-21T08:47:52.669010+03:00" hostname="Furkan"><testcase classname="" name="tests.test_data_collector_single_site" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\furka\kariyer-asistani\tests\test_data_collector_single_site.py'.
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="5" failures="0" skipped="0" tests="5" time="11.879" timestamp="2025-07-23T13:37:10.105402+03:00" hostname="Furkan"><testcase classname="" name="tests.test_cv_analyzer" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\furka\kariyer-asistani\tests\test_cv_analyzer.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+..\AppData\Local\Programs\Python\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_cv_analyzer.py:3: in &lt;module&gt;
+    from src.cv_analyzer import CVAnalyzer
+src\cv_analyzer.py:36: in &lt;module&gt;
+    from .constants import PROMPTS_DIR
+E   ImportError: cannot import name 'PROMPTS_DIR' from 'src.constants' (c:\Users\furka\kariyer-asistani\src\constants.py)</error></testcase><testcase classname="" name="tests.test_data_collector_single_site" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\furka\kariyer-asistani\tests\test_data_collector_single_site.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 ..\AppData\Local\Programs\Python\Python312\Lib\importlib\__init__.py:90: in import_module
@@ -6,4 +16,34 @@ Traceback:
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 tests\test_data_collector_single_site.py:8: in &lt;module&gt;
     from src.data_collector import _scrape_single_site
-E   ImportError: cannot import name '_scrape_single_site' from 'src.data_collector' (c:\Users\furka\kariyer-asistani\src\data_collector.py)</error></testcase></testsuite></testsuites>
+E   ImportError: cannot import name '_scrape_single_site' from 'src.data_collector' (c:\Users\furka\kariyer-asistani\src\data_collector.py)</error></testcase><testcase classname="" name="tests.test_pipeline" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\furka\kariyer-asistani\tests\test_pipeline.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+..\AppData\Local\Programs\Python\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_pipeline.py:4: in &lt;module&gt;
+    from src.pipeline import run_end_to_end_pipeline
+src\pipeline.py:19: in &lt;module&gt;
+    from .constants import PROMPTS_DIR
+E   ImportError: cannot import name 'PROMPTS_DIR' from 'src.constants' (c:\Users\furka\kariyer-asistani\src\constants.py)</error></testcase><testcase classname="" name="tests.test_pipeline_coverage" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\furka\kariyer-asistani\tests\test_pipeline_coverage.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+..\AppData\Local\Programs\Python\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_pipeline_coverage.py:4: in &lt;module&gt;
+    from src.pipeline import analyze_and_find_best_jobs
+src\pipeline.py:19: in &lt;module&gt;
+    from .constants import PROMPTS_DIR
+E   ImportError: cannot import name 'PROMPTS_DIR' from 'src.constants' (c:\Users\furka\kariyer-asistani\src\constants.py)</error></testcase><testcase classname="" name="tests.test_pipeline_private" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\furka\kariyer-asistani\tests\test_pipeline_private.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+..\AppData\Local\Programs\Python\Python312\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_pipeline_private.py:7: in &lt;module&gt;
+    from src import pipeline
+src\pipeline.py:19: in &lt;module&gt;
+    from .constants import PROMPTS_DIR
+E   ImportError: cannot import name 'PROMPTS_DIR' from 'src.constants' (c:\Users\furka\kariyer-asistani\src\constants.py)</error></testcase></testsuite></testsuites>

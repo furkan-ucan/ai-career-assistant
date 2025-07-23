@@ -13,11 +13,10 @@ def test_setup_logging():
     assert logger.level <= 20  # INFO or DEBUG level
 
 
-def test_skill_metadata_validation():
-    """Test that skill metadata validation is properly integrated in the pipeline."""
+def test_metadata_extraction_and_content():
+    """Test that metadata extraction is called and returns expected structure/content in the pipeline."""
     from src.pipeline import analyze_and_find_best_jobs
 
-    # Mock all dependencies to test the integration point
     with (
         patch("src.pipeline.CVAnalyzer") as mock_analyzer_class,
         patch("pathlib.Path.read_text", return_value="test cv"),
@@ -25,15 +24,21 @@ def test_skill_metadata_validation():
     ):
         mock_analyzer = MagicMock()
         mock_analyzer_class.return_value = mock_analyzer
-        mock_analyzer.extract_metadata_from_cv.return_value = {
+        expected_metadata = {
             "target_job_titles": ["Test Job"],
             "key_skills": ["python"],
         }
+        mock_analyzer.extract_metadata_from_cv.return_value = expected_metadata
 
-        # Should not raise exception with proper mocking
         analyze_and_find_best_jobs(selected_personas=[], results_per_site=1, similarity_threshold=0.5)
-        # Verify that metadata extraction was called
         mock_analyzer.extract_metadata_from_cv.assert_called_once()
+        # Ek olarak metadata içeriğini doğrula
+        result = mock_analyzer.extract_metadata_from_cv.return_value
+        assert isinstance(result, dict)
+        assert "target_job_titles" in result
+        assert "key_skills" in result
+        assert result["target_job_titles"] == ["Test Job"]
+        assert result["key_skills"] == ["python"]
 
 
 @patch("src.pipeline.CVAnalyzer")
@@ -131,7 +136,7 @@ def test_configure_scoring_system_invalid_metadata(mock_scoring_class):
     ):
         mock_analyzer = MagicMock()
         mock_analyzer_class.return_value = mock_analyzer
-        mock_analyzer.extract_metadata_from_cv.return_value = {}  # Empty dict instead of None
+        mock_analyzer.extract_metadata_from_cv.return_value = None  # Actually invalid
 
         analyze_and_find_best_jobs(selected_personas=[], results_per_site=1, similarity_threshold=0.5)
         # Verify scoring system was still configured

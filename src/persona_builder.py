@@ -38,6 +38,10 @@ class PersonaConfigBuilder:
         Returns:
             Dictionary of persona configurations
         """
+        if ai_metadata is None:
+            logger.error("ai_metadata is None")
+            return {}
+
         search_personas = ai_metadata.get("search_personas", [])
 
         if search_personas:

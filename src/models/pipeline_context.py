@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -19,7 +20,7 @@ class PipelineContext:
     threshold: float = 60.0
     rerank_flag: bool = True
     raw_jobs_df: pd.DataFrame | None = None
-    vector_store_path: str | None = None
+    vector_store_path: Path | None = None
     initial_matches: list[dict[str, Any]] = field(default_factory=list)
     scored_jobs: list[dict[str, Any]] = field(default_factory=list)
     final_results: list[dict[str, Any]] = field(default_factory=list)

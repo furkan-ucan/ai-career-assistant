@@ -43,7 +43,10 @@ class LinkedInStrategy(SearchStrategy):
     """LinkedIn-specific search strategy following Dr. Finch's LinkedIn Doctrine."""
 
     def __init__(self):
-        self.max_or_operators = PLATFORM_CONFIGS[SITE_LINKEDIN]["max_or_operators"]
+        try:
+            self.max_or_operators = PLATFORM_CONFIGS[SITE_LINKEDIN]["max_or_operators"]
+        except KeyError as e:
+            raise ValueError(f"Missing configuration for LinkedIn platform: {e}")
         self.negative_filters = " ".join(NEGATIVE_FILTERS)
 
     def build_tier1_query(self, persona_data: dict) -> str | None:
@@ -98,7 +101,10 @@ class IndeedStrategy(SearchStrategy):
     """Indeed-specific search strategy following Dr. Finch's Indeed Doctrine."""
 
     def __init__(self):
-        self.max_or_operators = PLATFORM_CONFIGS[SITE_INDEED]["max_or_operators"]
+        try:
+            self.max_or_operators = PLATFORM_CONFIGS[SITE_INDEED]["max_or_operators"]
+        except KeyError as e:
+            raise ValueError(f"Missing configuration for Indeed platform: {e}")
         self.negative_filters = " ".join(NEGATIVE_FILTERS)
 
     def build_tier1_query(self, persona_data: dict) -> str | None:

@@ -17,15 +17,23 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 
-import google.generativeai as genai
+try:
+    import google.generativeai as genai
+    from google.api_core import exceptions as google_exceptions
+
+    HAS_GEMINI = True
+except ImportError:
+    HAS_GEMINI = False
+    genai = None
+    google_exceptions = None
+
 from dotenv import load_dotenv
-from google.api_core import exceptions as google_exceptions
 
 # Third Party
 from tenacity import retry, stop_after_attempt, wait_fixed
 
 from .config import get_config
-from .constants import PROMPTS_DIR
+from .core.constants import PROMPTS_DIR
 from .utils.json_helpers import extract_json_from_response
 from .utils.prompt_loader import load_prompt
 
@@ -33,9 +41,8 @@ logger = logging.getLogger(__name__)
 
 try:
     load_dotenv(dotenv_path=PROMPTS_DIR.parent / ".env")
-except OSError as e:
-    logger.warning(f"Failed to load .env file: {e}")
-
+except OSError:
+    logger.exception("Failed to load .env file")
 config = get_config()
 
 # Prompt versioning for cache invalidation
@@ -57,11 +64,19 @@ SKILL_BLACKLIST = {
 }
 NORMALIZED_BLACKLIST = {s.replace(" ", "").replace("-", "") for s in SKILL_BLACKLIST}
 
-try:
-    PROMPT_TEMPLATE = load_prompt(PROMPTS_DIR / "cv_analysis_prompt.md")
-except OSError as e:
-    logger.error(f"Failed to load prompt template: {e}")
-    PROMPT_TEMPLATE = """Analyze the provided CV text and extract key metadata in JSON format.
+# Lazy loading için prompt template'i module level'da yükleme
+_PROMPT_TEMPLATE: str | None = None
+
+
+def _get_prompt_template() -> str:
+    """Lazy load prompt template to avoid module-level I/O operations."""
+    global _PROMPT_TEMPLATE
+    if _PROMPT_TEMPLATE is None:
+        try:
+            _PROMPT_TEMPLATE = load_prompt(PROMPTS_DIR / "cv_analysis_prompt.md")
+        except OSError as e:
+            logger.error(f"Failed to load prompt template: {e}")
+            _PROMPT_TEMPLATE = """Analyze the provided CV text and extract key metadata in JSON format.
 
 CV Text:
 {cv_text}
@@ -72,6 +87,7 @@ Respond with a JSON object containing:
 - "skill_importance": A list of floats (0.0 to 1.0) corresponding to the importance of each skill in "key_skills".
 - "cv_summary": A 2-3 sentence summary of the candidate's profile.
 """
+    return _PROMPT_TEMPLATE
 
 
 # Persona count validation
@@ -85,12 +101,18 @@ class CVAnalyzer:
 
     def __init__(self, model=None, cache_dir: Path | None = None) -> None:
         if model is None:
+            if not HAS_GEMINI:
+                raise ImportError(
+                    "google.generativeai is not available. Please install it with: pip install google-generativeai"
+                )
+
             config = get_config()
             api_key = config.get("GEMINI_API_KEY")
             if not api_key:
                 raise ValueError("GEMINI_API_KEY environment variable is required")
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash-latest")
+
+            genai.configure(api_key=api_key)  # type: ignore
+            model = genai.GenerativeModel("gemini-1.5-flash-latest")  # type: ignore
 
         self.model = model
         self.cache_dir = cache_dir or Path("data")
@@ -192,50 +214,71 @@ class CVAnalyzer:
         return categorized
 
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=False)
-    def _call_gemini_api(self, cv_text: str) -> dict | None:
-        try:
-            truncated = cv_text[:TOKEN_LIMIT]
-            prompt = PROMPT_TEMPLATE.format(cv_text=truncated)
-            logger.debug(f"Sending prompt to Gemini: {prompt[:200]}...")
+    def _make_gemini_request(self, prompt: str) -> str:
+        """Handle single API call to Gemini."""
+        response = self.model.generate_content(prompt)
+        return response.text if hasattr(response, "text") else str(response)
 
-            # Try multiple times to get the correct persona count
-            for attempt in range(1, MAX_RETRIES + 1):
-                response = self.model.generate_content(prompt)
-                content = response.text if hasattr(response, "text") else str(response)
+    def _validate_persona_count(self, data: dict) -> bool:
+        """Validate persona count is within acceptable range."""
+        personas = data.get("search_personas", [])
+        return MIN_PERSONAS <= len(personas) <= MAX_PERSONAS
 
+    def _call_gemini_with_retry(self, cv_text: str) -> dict | None:
+        """Orchestrate retries for Gemini API calls with persona count validation."""
+        truncated = cv_text[:TOKEN_LIMIT]
+        prompt = _get_prompt_template().format(cv_text=truncated)
+        logger.debug(f"Sending prompt to Gemini: {prompt[:200]}...")
+
+        last_parsed_data = None
+
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                content = self._make_gemini_request(prompt)
                 logger.debug(f"Gemini response (attempt {attempt}): {content[:200]}...")
 
                 if not content or content.strip() == "":
                     logger.warning(f"Gemini returned empty response (attempt {attempt})")
                     continue
 
-                # Use the new consolidated cleaning/extraction function
                 parsed_data = extract_json_from_response(content)
                 if parsed_data is None:
                     logger.warning(f"Could not extract JSON from Gemini response (attempt {attempt}): {content[:500]}")
                     continue
 
-                # 🔍 yeni kural: persona sayısı 12‑16 olmalı
-                personas = parsed_data.get("search_personas", [])
-                if MIN_PERSONAS <= len(personas) <= MAX_PERSONAS:
+                last_parsed_data = parsed_data
+
+                if self._validate_persona_count(parsed_data):
+                    personas = parsed_data.get("search_personas", [])
                     logger.info(f"✅ Received {len(personas)} personas (target: {MIN_PERSONAS}-{MAX_PERSONAS})")
                     return cast(dict, parsed_data)
 
+                personas = parsed_data.get("search_personas", [])
                 logger.warning(
                     f"Gemini returned {len(personas)} personas (need {MIN_PERSONAS}-{MAX_PERSONAS}). Retrying {attempt}/{MAX_RETRIES}"
                 )
 
-            # Return last attempt even if persona count is not ideal
-            logger.warning(f"After {MAX_RETRIES} attempts, using response with {len(personas)} personas")
-            return cast(dict, parsed_data) if parsed_data else None
+            except Exception as e:
+                logger.warning(f"API call attempt {attempt} failed: {e}")
+                if attempt == MAX_RETRIES:
+                    raise
 
-        except google_exceptions.ResourceExhausted as e:
-            logger.exception(f"Gemini API Quota Exceeded: {e}")
-            return None
-        except (ValueError, TypeError, AttributeError) as e:
-            logger.exception(f"Unexpected error in Gemini API call: {e}")
-            return None
-        except Exception:
+        # Return last attempt even if persona count is not ideal
+        if last_parsed_data:
+            personas = last_parsed_data.get("search_personas", [])
+            logger.warning(f"After {MAX_RETRIES} attempts, using response with {len(personas)} personas")
+            return cast(dict, last_parsed_data)
+
+        return None
+
+    def _call_gemini_api(self, cv_text: str) -> dict | None:
+        """Main entry point for Gemini API calls with error handling."""
+        try:
+            return self._call_gemini_with_retry(cv_text)
+        except Exception as e:
+            if google_exceptions and isinstance(e, google_exceptions.ResourceExhausted):
+                logger.exception("Gemini API Quota Exceeded")
+                return None
             logger.exception("An unexpected Gemini API call failed")
             raise
 

@@ -22,6 +22,18 @@ CONFIG_PATH = Path("config.yaml")
 _config_cache: dict[str, Any] | None = None
 
 
+def _get_cached_config() -> dict[str, Any] | None:
+    """Get cached configuration if available."""
+    return _config_cache
+
+
+def _set_cached_config(config_data: dict[str, Any]) -> dict[str, Any]:
+    """Cache configuration data and return it."""
+    global _config_cache
+    _config_cache = config_data
+    return _config_cache
+
+
 def get_config() -> dict[str, Any]:
     """
     Loads configuration from config.yaml, overrides with environment variables,
@@ -34,28 +46,30 @@ def get_config() -> dict[str, Any]:
     Returns:
         Complete configuration dictionary with all settings merged
     """
-    global _config_cache
-    if _config_cache is not None:
-        return _config_cache
+    # Check cache first
+    cached_config = _get_cached_config()
+    if cached_config is not None:
+        return cached_config
 
+    # Load and process configuration
+    config_data = _load_yaml_config()
+    _apply_env_overrides(config_data)
+    _add_api_keys(config_data)
+
+    # Cache and return
+    return _set_cached_config(config_data)
+
+
+def _load_yaml_config() -> dict[str, Any]:
+    """Load configuration from YAML file."""
     try:
         with CONFIG_PATH.open(encoding="utf-8") as f:
             yaml_content = yaml.safe_load(f)
-            # Ensure we always have a dict, never None
-            config_data: dict[str, Any] = yaml_content if yaml_content is not None else {}
+            return yaml_content if yaml_content is not None else {}
     except FileNotFoundError as exc:
         raise ConfigError(f"Config file not found: {CONFIG_PATH}") from exc
     except yaml.YAMLError as exc:
         raise ConfigError(f"Failed to parse config file: {exc}") from exc
-
-    # Environment variable overrides with proper type conversion
-    _apply_env_overrides(config_data)
-
-    # Add API keys and sensitive data from environment
-    _add_api_keys(config_data)
-
-    _config_cache = config_data
-    return _config_cache
 
 
 def _apply_env_overrides(config_data: dict[str, Any]) -> None:

@@ -28,10 +28,10 @@ def _log_single_job_details(job: dict, index: int) -> None:
     if reasoning:
         logger.info("   💡 %s", reasoning)
     mk = job.get("matching_keywords")
-    if mk:
+    if mk and isinstance(mk, list):
         logger.info("   ✅ Eşleşen: %s", ", ".join(mk))
     miss = job.get("missing_keywords")
-    if miss:
+    if miss and isinstance(miss, list):
         logger.info("   ❌ Eksik: %s", ", ".join(miss))
     logger.info("   💼 Site: %s", job.get("source_site", job.get("site", "Site belirtilmemiş")))
     logger.info("   👤 Persona: %s", job.get("persona_source", job.get("persona", "Persona belirtilmemiş")))
@@ -109,14 +109,16 @@ def _log_site_distribution(all_jobs_df: pd.DataFrame) -> None:
             logger.info("\n🔹 Bulunan İlanların Site Dağılımı:")
             for site, count in all_jobs_df["source_site"].value_counts().items():
                 logger.info(SITE_COUNT_FORMAT, site, count)
-    except Exception as e:
-        logger.warning("Site distribution logging failed: %s", e)
+    except Exception:
+        logger.exception("Site distribution logging failed")
 
 
-def _log_top_skills(high_quality_jobs: list[dict], ai_metadata: dict | None = None) -> None:
-    """Log top skills based on AI metadata (priority) or matching keywords."""
-    # Priority 1: Use key skills from AI metadata (user's CV)
-    if ai_metadata and ai_metadata.get("key_skills"):
+def _log_cv_skills(ai_metadata: dict | None = None) -> bool:
+    """Log CV-based skills from AI metadata."""
+    try:
+        if not ai_metadata or not ai_metadata.get("key_skills"):
+            return False
+
         logger.info("\n🔹 En Önemli Yetenekleriniz (CV'nize Göre):")
         key_skills = ai_metadata.get("key_skills", [])
         skill_importance = ai_metadata.get("skill_importance")
@@ -126,20 +128,38 @@ def _log_top_skills(high_quality_jobs: list[dict], ai_metadata: dict | None = No
                 logger.info("   - %s (Önem: %.2f)", skill, skill_importance[i])
             else:
                 logger.info("   - %s", skill)
+        return True
+    except Exception:
+        logger.exception("CV skills logging failed")
+        return False
+
+
+def _log_keyword_skills(high_quality_jobs: list[dict]) -> None:
+    """Log keyword-based skills from job matching data."""
+    try:
+        keywords: list[str] = []
+        for job in high_quality_jobs:
+            kw = job.get("matching_keywords")
+            if isinstance(kw, list):
+                keywords.extend(kw)
+
+        if keywords:
+            counts = Counter(keywords)
+            logger.info("\n🔹 En Popüler 5 Skill:")
+            for skill, count in counts.most_common(5):
+                logger.info(SITE_COUNT_FORMAT, skill, count)
+    except Exception:
+        logger.exception("Keyword skills logging failed")
+
+
+def _log_top_skills(high_quality_jobs: list[dict], ai_metadata: dict | None = None) -> None:
+    """Log top skills based on AI metadata (priority) or matching keywords."""
+    # Priority 1: Use key skills from AI metadata (user's CV)
+    if _log_cv_skills(ai_metadata):
         return
 
     # Priority 2: Fallback to most common matching keywords from jobs
-    keywords: list[str] = []
-    for job in high_quality_jobs:
-        kw = job.get("matching_keywords")
-        if isinstance(kw, list):
-            keywords.extend(kw)
-
-    if keywords:
-        counts = Counter(keywords)
-        logger.info("\n🔹 En Popüler 5 Skill:")
-        for skill, count in counts.most_common(5):
-            logger.info(SITE_COUNT_FORMAT, skill, count)
+    _log_keyword_skills(high_quality_jobs)
 
 
 def _log_persona_success(high_quality_jobs: list[dict]) -> None:
@@ -153,6 +173,27 @@ def _log_persona_success(high_quality_jobs: list[dict]) -> None:
         logger.info("\n🔹 En Başarılı Personalar:")
         for persona, count in persona_counts.most_common():
             logger.info(SITE_COUNT_FORMAT, persona, count)
+
+
+def _get_job_score(job: dict) -> float:
+    """
+    Extract job score from job dictionary, checking multiple score keys in order.
+
+    Args:
+        job: Job dictionary that may contain various score fields
+
+    Returns:
+        Score value (default 0 if none found or on error)
+    """
+    try:
+        if not isinstance(job, dict):
+            return 0.0
+
+        # Check score keys in order of preference
+        score = job.get("fit_score", job.get("match_score", job.get("similarity_score", 0.0)))
+        return float(score) if score is not None else 0.0
+    except (TypeError, AttributeError, ValueError):
+        return 0.0
 
 
 def _deduplicate_jobs_by_url(jobs: list[dict]) -> list[dict]:
@@ -179,7 +220,7 @@ def _deduplicate_jobs_by_url(jobs: list[dict]) -> list[dict]:
             continue
 
         # Get the current best score for scoring comparison
-        current_score = job.get("fit_score", job.get("match_score", job.get("similarity_score", 0)))
+        current_score = _get_job_score(job)
 
         if url not in url_to_best_job:
             # First job with this URL
@@ -187,9 +228,7 @@ def _deduplicate_jobs_by_url(jobs: list[dict]) -> list[dict]:
         else:
             # Compare with existing job for this URL
             existing_job = url_to_best_job[url]
-            existing_score = existing_job.get(
-                "fit_score", existing_job.get("match_score", existing_job.get("similarity_score", 0))
-            )
+            existing_score = _get_job_score(existing_job)
 
             if current_score > existing_score:
                 # Current job has higher score, replace
@@ -197,9 +236,7 @@ def _deduplicate_jobs_by_url(jobs: list[dict]) -> list[dict]:
 
     # Return deduplicated jobs sorted by score descending
     deduplicated = list(url_to_best_job.values())
-    deduplicated.sort(
-        key=lambda x: x.get("fit_score", x.get("match_score", x.get("similarity_score", 0))), reverse=True
-    )
+    deduplicated.sort(key=_get_job_score, reverse=True)
 
     return deduplicated
 
