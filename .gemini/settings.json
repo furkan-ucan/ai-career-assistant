@@ -104,7 +104,7 @@
   // Maksimum session turn sayısı. Uzun konuşmalarda performans koruması.
   // KISA OTURUMLAR İÇİN: 5-10 aralığında ayarlayabilirsiniz.
   // UZUN ÇALIŞMALAR İÇİN: -1 (sınırsız) veya 50+ değer.
-  "maxSessionTurns": 25,
+  "maxSessionTurns": -1,
 
   // Araç çıktılarının özetlenmesi. Büyük çıktıları yönetilebilir hale getirir.
   "summarizeToolOutput": {
@@ -141,7 +141,6 @@
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
     }
-
   },
 
   // ----------------------------------------

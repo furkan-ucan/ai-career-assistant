@@ -1,10 +1,9 @@
 # src/cv_processor.py
 """
-CV İşleme Modülü
-Kullanıcının CV'sini okur ve embedding oluşturur.
+CV Processing Module - Reads and creates embeddings for the user's CV.
+Refactored to accept an EmbeddingService instance via dependency injection.
 """
 
-# Standard Library
 import logging
 from pathlib import Path
 
@@ -14,93 +13,66 @@ logger = logging.getLogger(__name__)
 
 
 class CVProcessor:
-    def __init__(self, cv_path: str | None = None, embedding_settings: dict | None = None):
-        """CV işleyici başlat"""
-        if embedding_settings:
-            self.embedding_service = EmbeddingService(**embedding_settings)
-        else:
-            self.embedding_service = EmbeddingService()
-        self.cv_path = Path(cv_path) if cv_path else Path("data") / "cv.txt"
+    """Handles loading the CV file and orchestrating embedding creation."""
+
+    def __init__(self, cv_path: str, embedding_service: EmbeddingService):
+        """
+        Initializes the CV processor.
+
+        Args:
+            cv_path: The file path to the user's CV.
+            embedding_service: An initialized instance of the EmbeddingService.
+        """
+        self.cv_path = Path(cv_path)
+        self.embedding_service = embedding_service
         self.cv_text: str | None = None
         self.cv_embedding: list[float] | None = None
 
     def load_cv(self) -> bool:
-        """CV dosyasını yükle"""
+        """Load the CV text from the specified file path."""
         try:
-            if not self.cv_path.exists():
-                logger.error(f"❌ CV dosyası bulunamadı: {self.cv_path}")
+            if not self.cv_path.is_file():
+                logger.error(f"❌ CV file not found: {self.cv_path}")
                 return False
 
-            with open(self.cv_path, encoding="utf-8") as file:
-                self.cv_text = file.read().strip()
+            self.cv_text = self.cv_path.read_text(encoding="utf-8").strip()
 
             if not self.cv_text:
-                logger.error(f"❌ CV dosyası boş: {self.cv_path}")
+                logger.error(f"❌ CV file is empty: {self.cv_path}")
                 return False
 
-            logger.info(f"✅ CV yüklendi ({len(self.cv_text)} karakter)")
+            logger.info(f"✅ CV loaded successfully ({len(self.cv_text)} characters).")
             return True
-
-        except FileNotFoundError:
-            logger.error(f"❌ CV dosyası bulunamadı: {self.cv_path}")
-            return False
-        except OSError as e:
-            logger.error(f"❌ CV dosyası okuma hatası: {e}", exc_info=True)
-            return False
-        except Exception as e:
-            logger.error(f"❌ CV yükleme hatası: {str(e)}", exc_info=True)
+        except (OSError, FileNotFoundError) as e:
+            logger.error(f"❌ Error reading CV file at {self.cv_path}: {e}", exc_info=True)
             return False
 
     def create_cv_embedding(self) -> bool:
-        """CV için embedding oluştur"""
-        if not self.cv_text and not self.load_cv():
-            return False
-
-        # None kontrolü ekle
+        """Create an embedding for the loaded CV text."""
         if self.cv_text is None:
-            logger.error("❌ CV metni None - embedding oluşturulamaz")
+            logger.error("Cannot create embedding: CV text is not loaded.")
             return False
 
-        logger.info("🔄 CV embedding'i oluşturuluyor...")
+        logger.info("🔄 Creating CV embedding...")
         self.cv_embedding = self.embedding_service.create_embedding(self.cv_text)
 
         if self.cv_embedding:
-            logger.info(f"✅ CV embedding oluşturuldu (boyut: {len(self.cv_embedding)})")
+            logger.info(f"✅ CV embedding created (dimensions: {len(self.cv_embedding)}).")
             return True
         else:
-            logger.error("❌ CV embedding oluşturulamadı")
+            logger.error("❌ Failed to create CV embedding.")
             return False
 
     def get_cv_embedding(self) -> list[float] | None:
-        """CV embedding'ini döndür"""
-        if not self.cv_embedding and not self.create_cv_embedding():
-            return None
-
+        """Return the CV embedding, creating it if it doesn't exist."""
+        if self.cv_embedding is None:
+            if self.cv_text is None:
+                self.load_cv()
+            self.create_cv_embedding()
         return self.cv_embedding
 
     def get_cv_text(self) -> str | None:
-        """CV metnini döndür"""
-        if not self.cv_text and not self.load_cv():
-            return None
-
-        return self.cv_text
-
-    def get_cv_summary(self) -> dict:
-        """CV özeti döndür"""
-        if not self.cv_text:
+        """Return the CV text, loading it if it hasn't been."""
+        if self.cv_text is None:
             self.load_cv()
-
-        return {
-            "character_count": len(self.cv_text) if self.cv_text else 0,
-            "word_count": len(self.cv_text.split()) if self.cv_text else 0,
-            "has_embedding": self.cv_embedding is not None,
-            "embedding_dimensions": len(self.cv_embedding) if self.cv_embedding else 0,
-        }
-
-
-if __name__ == "__main__":  # Test çalıştırması
-    processor = CVProcessor()
-    if processor.load_cv():
-        logger.info("CV özeti:" + str(processor.get_cv_summary()))
-        if processor.create_cv_embedding():
-            logger.info("CV embedding başarıyla oluşturuldu!")
+        return self.cv_text

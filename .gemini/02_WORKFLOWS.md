@@ -13,27 +13,25 @@ Bu katman, Arsenal'deki prompt'ları belirli bir sırayla kullanarak karmaşık 
 
 ## 🔄 MEVCUT İŞ AKIŞLARI
 
-### 🛠️ Geliştirme İş Akışları
-
-| Workflow                 | Açıklama                                  | Süre  | Çıktı                              |
-| ------------------------ | ----------------------------------------- | ----- | ---------------------------------- |
+### 🛠️ Geliştirme İş Akışları (Development)
+| Workflow | Açıklama | Süre | Çıktı |
+|---|---|---|---|
 | `full_refactor_and_test` | Kod refactor + birim test + commit mesajı | ~5 dk | Refactored code, tests, commit msg |
-| `new_feature_bootstrap`  | Yeni özellik iskelet + docs + tests       | ~3 dk | Feature template, documentation    |
-| `code_quality_audit`     | Code review + security + performance      | ~7 dk | Quality report, action items       |
+| `new_module_bootstrap` | Yeni özellik iskeleti + API + docs + tests | ~8 dk | Complete module boilerplate |
 
-### 📊 Analiz İş Akışları
+### 📊 Analiz İş Akışları (Analysis)
+| Workflow | Açıklama | Süre | Çıktı |
+|---|---|---|---|
+| `comprehensive_code_audit` | Kalite + performans + güvenlik denetimi | ~10 dk | Consolidated audit report |
+| `project_health_check` | Mimari analiz + teknik borç + roadmap | ~10 dk | Health report, improvement plan |
+| `performance_deep_dive` | Performans analizi + darboğaz tespiti | ~8 dk | Performance report, optimizations |
 
-| Workflow                | Açıklama                                   | Süre   | Çıktı                             |
-| ----------------------- | ------------------------------------------ | ------ | --------------------------------- |
-| `project_health_check`  | Mimari analiz + teknik borç + roadmap      | ~10 dk | Health report, improvement plan   |
-| `performance_deep_dive` | Performance analiz + bottleneck + optimize | ~8 dk  | Performance report, optimizations |
-
-### 🚀 Deployment İş Akışları
-
-| Workflow               | Açıklama                               | Süre  | Çıktı                        |
-| ---------------------- | -------------------------------------- | ----- | ---------------------------- |
-| `pre_deployment_check` | Test + lint + security + docs check    | ~4 dk | Go/No-go decision, checklist |
-| `release_preparation`  | Changelog + version bump + PR template | ~6 dk | Release artifacts            |
+### 🚀 DevOps ve Operasyon İş Akışları (DevOps & Operations)
+| Workflow | Açıklama | Süre | Çıktı |
+|---|---|---|---|
+| `devops_setup_kit` | CI/CD pipeline ve otomasyon script'leri | ~6 dk | CI/CD config files, scripts |
+| `pre_deployment_check` | Test + lint + güvenlik + doküman kontrolü | ~4 dk | Go/No-go decision, checklist |
+| `release_preparation` | Changelog + versiyon artırma + PR şablonu | ~6 dk | Release artifacts |
 
 ## 🎯 KULLANIM ÖRNEKLERİ
 
@@ -51,7 +49,7 @@ gemini -p "Proje genel durumunu analiz et" @.gemini/workflows/project_health_che
 
 ```bash
 # Yeni feature bootstrap
-gemini -p "user_authentication özelliği için iskelet oluştur" @.gemini/workflows/new_feature_bootstrap.workflow.md
+gemini -p "user_authentication özelliği için iskelet oluştur" @.gemini/workflows/new_module_bootstrap.workflow.md
 
 # Performance analizi
 gemini -p "API endpoint'lerini performance açısından analiz et" @.gemini/workflows/performance_deep_dive.workflow.md @src/api/
@@ -59,50 +57,32 @@ gemini -p "API endpoint'lerini performance açısından analiz et" @.gemini/work
 
 ## 📋 İŞ AKIŞI DETAYLARI
 
+(Burada her iş akışının detaylı adımları yer alır, özet olması için sadece birkaçı gösterilmiştir)
+
 ### 🔧 full_refactor_and_test
-
 **Amaç**: Eski kod parçasını modern standartlara uygun hale getir, testlerini yaz ve commit'e hazırla.
-
 **Adımlar**:
-
 1. **Code Analysis** → `explain_code.prompt.md`
 2. **Refactoring** → `refactor_code.prompt.md`
 3. **Unit Testing** → `create_unit_tests.prompt.md`
 4. **Commit Message** → `suggest_git_commit.prompt.md`
 5. **Final Review** → `review_code_quality.prompt.md`
 
-**Input**: Kod dosyası yolu
-**Output**: Refactored code, test dosyası, commit mesajı, kalite raporu
-
-### 🚀 new_feature_bootstrap
-
-**Amaç**: Yeni özellik için temel dosya yapısını ve dokümantasyonu oluştur.
-
+### 🚀 new_module_bootstrap
+**Amaç**: Yeni bir özellik modülü için klasör yapısı, API tasarımı, başlangıç kodu, testler ve dokümantasyon oluşturur.
 **Adımlar**:
-
-1. **Architecture Planning** → `analyze_architecture.prompt.md`
-2. **Code Template** → `refactor_code.prompt.md` (template mode)
-3. **Test Template** → `create_unit_tests.prompt.md` (template mode)
-4. **Documentation** → Custom documentation prompt
-5. **Integration Guide** → `create_pr_description.prompt.md`
-
-**Input**: Feature adı ve açıklaması
-**Output**: Feature klasörü, kod templates, test templates, docs
+1. **Feature Planning** → `plan_project.prompt.md`
+2. **Directory Scaffolding** → `setup_project_structure.prompt.md`
+3. **API Design** → `design_api.prompt.md`
+... (ve diğer adımlar)
 
 ### 📊 project_health_check
-
-**Amaç**: Projenin genel sağlığını analiz et, teknik borçları tespit et.
-
+**Amaç**: Projenin genel sağlığını analiz et, teknik borçları tespit et ve iyileştirme yol haritası çıkar.
 **Adımlar**:
-
 1. **Architecture Review** → `analyze_architecture.prompt.md`
 2. **Code Quality** → `review_code_quality.prompt.md`
-3. **Security Audit** → `security_audit.prompt.md`
-4. **Performance Check** → `optimize_performance.prompt.md`
-5. **Improvement Plan** → Custom planning prompt
-
-**Input**: Proje root directory
-**Output**: Sağlık raporu, aksiyonlar listesi, roadmap önerileri
+3. **Security Audit** → `audit_security.prompt.md`
+... (ve diğer adımlar)
 
 ## ⚙️ İŞ AKIŞI YAPISI (YAML Formatı)
 
@@ -134,19 +114,16 @@ outputs:
 ## 📊 İŞ AKIŞI PERFORMANS METRİKLERİ
 
 ### Başarı Oranları
-
-- `full_refactor_and_test`: %92 başarı (100 kullanımda 92 tamamen başarılı)
+- `full_refactor_and_test`: %92 başarı
 - `project_health_check`: %88 başarı
-- `new_feature_bootstrap`: %95 başarı
+- `new_module_bootstrap`: %95 başarı
 
-### Ortalama Sürelər
-
+### Ortalama Süreler
 - Basit workflow'lar: 2-5 dakika
 - Orta karmaşıklık: 5-10 dakika
 - Kapsamlı analizler: 10-15 dakika
 
 ### Kullanıcı Memnuniyeti
-
 - **Time Saving**: Ortalama %70 zaman tasarrufu
 - **Quality Improvement**: %85 daha yüksek kod kalitesi
 - **Consistency**: %90 standart uyum
@@ -154,54 +131,46 @@ outputs:
 ## 🔮 YENİ İŞ AKIŞI EKLEME KILAVUZU
 
 ### 1. İhtiyaç Analizi
-
 - Hangi tekrarlanan görev otomatize edilecek?
 - Kaç adımdan oluşuyor?
 - Input/output nedir?
 
 ### 2. Adım Tasarımı
-
 - Her adım için hangi prompt kullanılacak?
 - Adımlar arası veri akışı nasıl?
 - Error handling nasıl olacak?
 
 ### 3. Workflow Dosyası Oluşturma
-
 ```
 .gemini/workflows/[workflow_name].workflow.md
 ```
 
 ### 4. Test ve Optimizasyon
-
 - En az 5 farklı senaryoda test et
-- Performance ölç ve optimize et
+- Performans ölç ve optimize et
 - Kullanıcı feedback'i al
 
 ## 🎭 WORKFLOW KATEGORİLERİ
 
 ### 🛠️ Development Workflows
-
 - Code refactoring ve modernization
 - Test coverage improvement
 - Documentation generation
 - Feature development bootstrap
 
 ### 📊 Analysis Workflows
-
 - Project health assessment
 - Performance profiling
 - Security auditing
 - Technical debt analysis
 
 ### 🚀 Operations Workflows
-
 - Pre-deployment checks
 - Release preparation
 - Environment setup
 - Monitoring setup
 
 ### 🔄 Maintenance Workflows
-
 - Dependency updates
 - Code cleanup
 - Documentation updates
@@ -210,20 +179,17 @@ outputs:
 ## 🚀 GELECEK VİZYONU
 
 ### Akıllı Workflow'lar
-
 - Context-aware otomatik workflow seçimi
 - Adaptive step execution (başarısızlık durumunda alternatif yol)
 - Learning-based optimization
 
 ### Integration Capabilities
-
 - CI/CD pipeline integration
 - IDE plugin support
 - Slack/Teams notifications
 - Jira ticket auto-creation
 
 ### Community Workflows
-
 - Workflow marketplace
 - Community contributions
 - Best practices sharing
@@ -239,4 +205,4 @@ Her workflow, Arsenal'deki uzman prompt'ların senfonisidir. Her adım bir enstr
 
 ---
 
-_Fabrika Müdürü: LOGOS Automation Master | Son Güncelleme: 2025-07-21 | Aktif Workflow: 8_
+_Fabrika Müdürü: LOGOS Automation Master | Son Güncelleme: 2025-07-24 | Aktif Workflow: 8_

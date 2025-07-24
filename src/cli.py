@@ -1,14 +1,28 @@
-"""Command line interface for Akilli Kariyer Asistani.
-This module provides a command line interface for the Akilli Kariyer
-Asistani application, allowing users to specify personas, result limits,
-and similarity thresholds."""
+# src/cli.py
+"""Command line interface for Akilli Kariyer Asistani, hardened with input validation."""
 
-# Standard Library
 import argparse
 from pathlib import Path
 
-# Third Party
 import yaml
+
+
+def _positive_int_in_range(min_val: int, max_val: int):
+    """Factory for creating a range-checking type for argparse."""
+
+    def checker(value: str) -> int:
+        """Check if the value is a positive integer within a specified range."""
+        try:
+            ivalue = int(value)
+            if not (min_val <= ivalue <= max_val):
+                raise argparse.ArgumentTypeError(
+                    f"Value {ivalue} is out of range. Must be between {min_val} and {max_val}."
+                )
+            return ivalue
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"'{value}' is not a valid integer.")
+
+    return checker
 
 
 def load_persona_choices(config_path: Path = Path("config.yaml")) -> list[str]:
@@ -22,35 +36,33 @@ def load_persona_choices(config_path: Path = Path("config.yaml")) -> list[str]:
 
 
 def build_parser(personas: list[str]) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Akilli Kariyer Asistani komut satiri arayuzu")
+    """Build the argument parser with all arguments and their validations."""
+    parser = argparse.ArgumentParser(description="Akilli Kariyer Asistani Komut Satırı Arayüzü")
+
     parser.add_argument(
         "-p",
         "--persona",
         action="append",
         choices=personas,
-        help=("Sadece belirtilen persona(lar) icin arama yapar. Opsiyonel olarak birden fazla kullanilabilir."),
+        help="Sadece belirtilen persona(lar) için arama yapar. Birden fazla kullanılabilir.",
     )
     parser.add_argument(
         "-r",
         "--results",
-        type=int,
-        help="Her site icin cekilecek maksimum ilan sayisi",
+        type=_positive_int_in_range(1, 500),
+        help="Her site için çekilecek maksimum ilan sayısı (1-500).",
     )
     parser.add_argument(
-        "-t",
-        "--threshold",
-        type=int,
-        help="Benzerlik esigi (yuzde)",
+        "-t", "--threshold", type=_positive_int_in_range(0, 100), help="Benzerlik eşiği (yüzde olarak, 0-100)."
     )
     parser.add_argument(
-        "--no-rerank",
-        action="store_true",
-        help="AI derin analiz asamasini devre disi birakir",
+        "--no-rerank", action="store_true", help="AI derin analiz (reranking) aşamasını devre dışı bırakır."
     )
     return parser
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and return command line arguments."""
     personas = load_persona_choices()
     parser = build_parser(personas)
     return parser.parse_args()

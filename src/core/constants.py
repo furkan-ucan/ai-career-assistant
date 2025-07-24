@@ -11,12 +11,16 @@ SITE_INDEED = "indeed"
 SITE_LINKEDIN = "linkedin"
 SUPPORTED_SITES = [SITE_INDEED, SITE_LINKEDIN]
 
+# === VECTOR STORE CONSTANTS ===
+COSINE_METRIC = "cosine"
+DEFAULT_COLLECTION_NAME = "job_embeddings"
+
 # === DEFAULT SEARCH PARAMETERS ===
 DEFAULT_SEARCH_PARAMS = {
     "location": "Turkey",
     "hours_old": 72,
     "results_per_site": 50,
-    "max_workers": 2,  # For concurrent scraping
+    "max_workers": 4,  # For concurrent scraping
 }
 
 # === TIERED SEARCH CONFIGURATION ===
@@ -48,17 +52,8 @@ PERSONA_DEFAULTS = {
 
 # === DEDUPLICATION COLUMNS ===
 DEDUP_COLUMNS = ["title", "company", "location"]
-ENHANCED_DEDUP_COLUMNS = ["title", "company", "location", "description_short"]
-
-# === LOGGING CONFIGURATION ===
-LOG_CONFIG = {
-    "level": "INFO",
-    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    "date_format": "%Y-%m-%d %H:%M:%S",
-}
 
 # === FILE PATH CONSTANTS ===
-# Repository root (where this file's parent.parent.parent is located)
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = _REPO_ROOT / "data"
 LOGS_DIR = _REPO_ROOT / "logs"
@@ -67,13 +62,3 @@ PROMPTS_DIR = _REPO_ROOT / "prompts"
 
 # === QUERY BUILDING CONSTANTS ===
 NEGATIVE_FILTERS = ["-Senior", "-Kıdemli", "-Lead", "-Principal", "-Direktör"]
-
-# === ERROR HANDLING CONSTANTS ===
-RETRY_ATTEMPTS = 3
-TIMEOUT_SECONDS = 30
-CRITICAL_ERRORS = (SystemError, MemoryError, KeyboardInterrupt)
-
-# === PERFORMANCE THRESHOLDS ===
-MAX_FUNCTION_LENGTH = 30  # Lines - SRP guideline
-MAX_CONCAT_OPERATIONS = 1  # Per function - Performance guideline
-MAX_DATAFRAME_SIZE = 10000  # Rows - Memory management
