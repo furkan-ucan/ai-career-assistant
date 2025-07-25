@@ -14,7 +14,7 @@ import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from .core.constants import PROMPTS_DIR
+from .core.utils import get_app_directories
 from .utils.json_helpers import extract_json_from_response
 from .utils.prompt_loader import load_prompt
 
@@ -29,7 +29,8 @@ def _get_prompt_template() -> str:
     global _PROMPT_TEMPLATE
     if _PROMPT_TEMPLATE is None:
         try:
-            _PROMPT_TEMPLATE = load_prompt(PROMPTS_DIR / "cv_analysis_prompt.md")
+            prompts_dir = get_app_directories()["prompts_dir"]
+            _PROMPT_TEMPLATE = load_prompt(prompts_dir / "cv_analysis_prompt.md")
         except OSError as e:
             logger.error(f"Failed to load CV analysis prompt: {e}")
             # Fallback prompt in case of file error
@@ -67,7 +68,14 @@ class CVAnalyzer:
             raise ValueError("Could not configure or create the GenerativeModel.") from e
 
         self.cache_dir = cache_dir or Path("data")
-        self.cache_dir.mkdir(exist_ok=True)
+        try:
+            self.cache_dir.mkdir(exist_ok=True)
+        except PermissionError as e:
+            logger.error(f"Failed to create cache directory '{self.cache_dir}': Permission denied.")
+            raise RuntimeError(f"Permission denied while creating cache directory: {self.cache_dir}") from e
+        except Exception as e:
+            logger.error(f"Failed to create cache directory '{self.cache_dir}': {e}")
+            raise RuntimeError(f"Error while creating cache directory: {self.cache_dir}") from e
         self.prompt_version = prompt_version
         self.token_limit = 4000  # A safe limit for most models
 

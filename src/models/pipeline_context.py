@@ -10,10 +10,10 @@ import pandas as pd
 
 # Use forward-referencing with TYPE_CHECKING to avoid circular imports
 if TYPE_CHECKING:
-    from ..cv_analyzer import CVAnalyzer
-    from ..embedding_service import EmbeddingService
-    from ..scoring_system import ScoringSystem
-    from ..vector_store import VectorStore
+    from src.cv_analyzer import CVAnalyzer
+    from src.embedding_service import EmbeddingService
+    from src.scoring_system import ScoringSystem
+    from src.vector_store import VectorStore
 
 
 @dataclass

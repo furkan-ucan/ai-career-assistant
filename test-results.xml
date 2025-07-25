@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="6" failures="0" skipped="0" tests="6" time="20.925" timestamp="2025-07-24T16:13:51.040145+03:00" hostname="Furkan"><testcase classname="" name="tests.test_data_collector" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\furka\kariyer-asistani\tests\test_data_collector.py'.
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="6" failures="0" skipped="0" tests="6" time="11.406" timestamp="2025-07-25T15:53:28.070074+03:00" hostname="Furkan"><testcase classname="" name="tests.test_data_collector" time="0.000"><error message="collection failure">ImportError while importing test module 'c:\Users\furka\kariyer-asistani\tests\test_data_collector.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 ..\AppData\Local\Programs\Python\Python312\Lib\importlib\__init__.py:90: in import_module

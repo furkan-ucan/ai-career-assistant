@@ -4,6 +4,7 @@
 import hashlib
 import json
 import logging
+from pathlib import Path
 from typing import Any, cast
 
 import chromadb
@@ -24,13 +25,14 @@ class VectorStore:
     def __init__(
         self,
         embedding_service: EmbeddingService,
-        persist_directory: str | None = None,
+        persist_directory: str | Path | None = None,
         collection_name: str = DEFAULT_COLLECTION_NAME,
     ):
         self.embedding_service = embedding_service
         try:
             if persist_directory:
-                self.client = chromadb.PersistentClient(path=persist_directory)
+                persist_path = Path(persist_directory) if isinstance(persist_directory, str) else persist_directory
+                self.client = chromadb.PersistentClient(path=str(persist_path))
             else:
                 self.client = chromadb.Client()
 
@@ -40,7 +42,7 @@ class VectorStore:
             )
             logger.info(f"✅ Vector store collection '{collection_name}' is ready.")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize VectorStore: {e}", exc_info=True)
+            logger.exception(f"❌ Failed to initialize VectorStore: {e}")
             raise
 
     def _clean_metadata_for_chromadb(self, metadata: dict[str, Any]) -> ChromaMetadata:
@@ -52,56 +54,94 @@ class VectorStore:
         return clean_meta
 
     def add_jobs(self, jobs_df: pd.DataFrame):
+        """Add new jobs to the vector store with proper error handling."""
         if jobs_df.empty:
             return
 
+        try:
+            # Filter out existing jobs
+            new_jobs_df = self._filter_existing_jobs(jobs_df)
+            if new_jobs_df.empty:
+                logger.info("ℹ️ No new jobs to add to the vector store (all found jobs already exist).")
+                return
+
+            # Prepare job data with embeddings
+            prepared_data = self._prepare_job_data_with_embeddings(new_jobs_df)
+            if not prepared_data["valid_jobs"]:
+                logger.warning("⚠️ No valid jobs with embeddings to store.")
+                return
+
+            # Store jobs in vector database
+            self._store_jobs_in_vector_db(prepared_data)
+            logger.info(f"✅ Successfully added {len(prepared_data['valid_ids'])} new jobs to the vector store.")
+
+        except Exception as e:
+            logger.error(f"❌ Failed to add jobs to vector store: {e}", exc_info=True)
+            raise
+
+    def _filter_existing_jobs(self, jobs_df: pd.DataFrame) -> pd.DataFrame:
+        """Filter out jobs that already exist in the vector store."""
         records = jobs_df.to_dict("records")
         # CRITICAL FIX: Ensure IDs sent to ChromaDB for checking are unique.
         ids_to_check = {self._stable_job_id(job) for job in records}
         ids_list = list(ids_to_check)
 
         if not ids_list:
-            return
+            return pd.DataFrame()
 
-        existing_ids = set(self.collection.get(ids=ids_list)["ids"])
-        new_jobs_df = jobs_df[~jobs_df.apply(lambda row: self._stable_job_id(row.to_dict()) in existing_ids, axis=1)]
+        try:
+            existing_ids = set(self.collection.get(ids=ids_list)["ids"])
+            return jobs_df[~jobs_df.apply(lambda row: self._stable_job_id(row.to_dict()) in existing_ids, axis=1)]
+        except Exception as e:
+            logger.error(f"❌ Failed to check existing jobs: {e}")
+            raise
 
-        if new_jobs_df.empty:
-            logger.info("ℹ️ No new jobs to add to the vector store (all found jobs already exist).")
-            return
-
-        new_records = new_jobs_df.to_dict("records")
+    def _prepare_job_data_with_embeddings(self, jobs_df: pd.DataFrame) -> dict[str, list]:
+        """Prepare job data with embeddings for storage."""
+        new_records = jobs_df.to_dict("records")
         descriptions = [str(job.get("description", "")) for job in new_records]
         embeddings_list = self.embedding_service.create_embeddings_batch(texts=descriptions)
 
         valid_jobs, valid_embeddings, valid_ids = [], [], []
-        for job, embedding in zip(new_records, embeddings_list, strict=False):
+        for job, embedding in zip(new_records, embeddings_list, strict=True):
             if embedding is not None:
                 valid_jobs.append(job)
                 valid_embeddings.append(embedding)
                 valid_ids.append(self._stable_job_id(job))
 
-        if not valid_jobs:
-            return
+        return {"valid_jobs": valid_jobs, "valid_embeddings": valid_embeddings, "valid_ids": valid_ids}
+
+    def _store_jobs_in_vector_db(self, prepared_data: dict[str, list]) -> None:
+        """Store prepared job data in the vector database."""
+        valid_jobs = prepared_data["valid_jobs"]
+        valid_embeddings = prepared_data["valid_embeddings"]
+        valid_ids = prepared_data["valid_ids"]
 
         clean_metadatas = [self._clean_metadata_for_chromadb(cast(dict[str, Any], job)) for job in valid_jobs]
 
-        self.collection.add(
-            embeddings=np.array(valid_embeddings),
-            documents=[str(job.get("description", "")) for job in valid_jobs],
-            metadatas=cast(Any, clean_metadatas),
-            ids=valid_ids,
-        )
-        logger.info(f"✅ Successfully added {len(valid_ids)} new jobs to the vector store.")
+        try:
+            self.collection.add(
+                embeddings=np.array(valid_embeddings),
+                documents=[str(job.get("description", "")) for job in valid_jobs],
+                metadatas=cast(Any, clean_metadatas),
+                ids=valid_ids,
+            )
+        except Exception as e:
+            logger.error(f"❌ Failed to store jobs in ChromaDB: {e}")
+            raise
 
     def search_jobs(self, query_embedding: list[float], n_results: int = 10) -> list[dict[str, Any]]:
         if not query_embedding:
             return []
 
-        results = self.collection.query(
-            query_embeddings=np.array([query_embedding]),
-            n_results=n_results,
-        )
+        try:
+            results = self.collection.query(
+                query_embeddings=np.array([query_embedding]),
+                n_results=n_results,
+            )
+        except Exception as e:
+            logger.exception(f"❌ Failed to query ChromaDB: {e}")
+            return []
 
         if not results or not results.get("metadatas"):
             return []

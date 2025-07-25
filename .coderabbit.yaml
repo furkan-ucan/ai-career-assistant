@@ -1,91 +1,102 @@
-# .coderabbit.yaml - Akıllı Kariyer Asistanı için Gelişmiş ve Optimize Edilmiş Yapılandırma
-# Coderabbit Best Practices v2.3'e göre hazırlanmış ve şema ile doğrulanmıştır.
-
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 
-# İncelemelerin dilini İngilizce olarak ayarla.
 language: "en"
 
-# İnceleme süreci için genel ayarlar
 reviews:
-  # 'chill' profili, sadece en önemli mimari ve mantıksal konulara odaklanmasını sağlar.
   profile: "chill"
-
-  # AI'ın PR'ları bloke etmesini istemiyoruz, sadece yorum yapsın.
   request_changes_workflow: false
-
-  # Her PR'ın başına, yapılan değişiklikleri özetleyen bir AI yorumu ekle.
   high_level_summary: true
 
-  # Pull Request açıldığında otomatik olarak incelemeyi başlat.
   auto_review:
     enabled: true
-
-    # Hedef dal ne olursa olsun TÜM PR'ları incele.
-    # ÖNEMLİ: Bu ayarın çalışması için Coderabbit GitHub App ayarlarında
-    # repozitör erişiminin doğru yapılandırıldığından emin ol.
-    # Boş bırakmak yerine, en yaygın dalları belirtmek daha güvenli bir başlangıç olabilir.
     base_branches:
       - "main"
       - "master"
       - "develop"
       - "feature/*"
       - "bugfix/*"
-      # Yeni feature dallarının hedeflediği ana dallar buraya eklenebilir.
+      - "hotfix/*"
+      - "release/*"
 
-    # ⭐ DÜZELTME: Doğru anahtar adı 'ignore_title_keywords' olmalıdır.
     ignore_title_keywords:
       - "WIP"
       - "[skip-review]"
       - "docs:"
       - "chore:"
+      - "style:"
+      - "refactor(docs):"
+      - "chore(deps):"
+      - "build(deps):"
 
-    # Taslak (Draft) PR'ları da incele, erken geri bildirim için harika.
     drafts: true
 
-  # ÖNCE neyin dahil edileceğini, SONRA neyin hariç tutulacağını belirt.
   path_filters:
-    # 1. Adım: Önce incelemek istediğimiz ana yolları dahil et.
     - "src/**/*.py"
     - "tests/**/*.py"
     - "main.py"
     - "cli.py"
-
-    # 2. Adım: Şimdi bu dahil edilen yollardan istenmeyenleri hariç tut.
+    - "pyproject.toml"
     - "!**/*.md"
     - "!docs/**"
     - "!data/**"
     - "!logs/**"
+    - "!notebooks/**"
     - "!config.yaml"
-    - "!pyproject.toml"
     - "!Makefile"
-    - "!quality-check.ps1"
     - "!.gitignore"
+    - "!.env*"
     - "!.pre-commit-config.yaml"
     - "!tests/fixtures/**"
+    - "!tests/data/**"
 
-  # Dosya yoluna göre AI'a özel talimatlar ver.
   path_instructions:
     - path: "src/**/*.py"
       instructions: |
-        **Role:** Senior Python Architect. Your focus is on SOLID principles, clean code, and robustness.
-        - **Single Responsibility Principle (SRP):** Is this module or function doing more than one job?
-        - **Error Handling:** Is the code resilient against `None` values? Is `logger.exception` used correctly?
-        - **Project Standards:** Are file paths handled using `pathlib`? Is the forbidden `print()` function used?
+        **Role:** Senior Python Architect. Focus on SOLID, clean code, and robustness.
+        - **Principles:** Is this module/function violating SRP or DRY? Is it overly complex?
+        - **Resilience:** How does it handle `None` values or empty collections? Is `logger.exception` used in `except` blocks?
+        - **Project Standards:** Are file paths handled via `pathlib`? Is the forbidden `print()` function used for debugging?
+
+    - path: "src/ai/**/*.py"
+      instructions: |
+        **Role:** Principal AI/ML Engineer. Focus on model interaction, performance, and data integrity.
+        - **API Resilience:** How are external API calls handled? Is there proper timeout, retry logic, and error handling?
+        - **Data Contracts:** Are the data structures sent to/received from AI models validated (e.g., with Pydantic)?
+        - **Efficiency:** Are embeddings cached? Are batch operations used?
+
+    - path: "src/data_collector/**/*.py"
+      instructions: |
+        **Role:** Senior Data Engineer. Focus on scraping robustness and data quality.
+        - **Resilience:** How does the scraper handle network errors, timeouts, or HTML structure changes?
+        - **Data Validation:** Is scraped data cleaned and validated before storage?
+        - **Ethics & Performance:** Is there a respectful delay between requests? Are async patterns used correctly?
 
     - path: "tests/**/*.py"
       instructions: |
-        **Role:** Senior QA Engineer. Your focus is on test quality and readability.
-        - **Pytest Best Practices:** Do the tests follow best practices (fixtures, `parametrize`)?
-        - **Clarity:** Is the test function's name clear and descriptive?
-        - **Isolation:** Are mocks used correctly to isolate unit tests?
+        **Role:** Senior QA Engineer. Focus on test quality, coverage, and best practices.
+        - **Pytest Best Practices:** Are fixtures used effectively? Is `@pytest.mark.parametrize` used for multiple scenarios?
+        - **Assertion Clarity:** Are assertion messages clear? Does the test cover both happy paths and edge cases?
+        - **Mocking:** Are mocks correctly scoped to ensure true unit test isolation?
 
-    - path: "main.py"
+    - path: "pyproject.toml"
       instructions: |
-        **Role:** System Architect. Ensure this file remains a simple orchestrator.
-        - Has new business logic been added here? If so, recommend moving it to a module in `src/`.
+        **Role:** DevOps & Dependency Manager.
+        - **Dependency Sanity:** Are there conflicting or insecure dependencies? Are version pins too loose (`*`)?
+        - **Tooling:** Are new tools (`[tool.*]`) added without team consensus?
 
-# Coderabbit'in kendi dahili linter'larını kapalı tutuyoruz.
+# ⭐ DÜZELTME v3.2: 'code_generation' ve 'docstrings' şema ile tam uyumlu hale getirildi.
+# Docstring üretimi, genel bir talimatla etkinleştirilir.
+code_generation:
+  docstrings:
+    path_instructions:
+      - path: "src/**/*.py"
+        instructions: |
+          **Role:** Python Documentation Specialist.
+          - Generate comprehensive Google-style docstrings for all public classes and functions.
+          - The docstring should accurately describe the function's purpose, arguments, and return values.
+          - Do not generate docstrings for private methods (e.g., `_my_private_method`).
+
+# Projenin kendi linter'ları olduğu için dahili araçları kapalı tut.
 tools:
   ruff:
     enabled: false

@@ -6,16 +6,19 @@ from typing import Any, cast
 logger = logging.getLogger(__name__)
 
 
-def extract_json_from_response(text: str) -> dict[str, Any] | None:
-    if text is None:
-        logger.warning("Input text is None")
-        return None
+def extract_json_from_response(text: str | None) -> dict[str, Any] | None:
     """Extracts a JSON object from a string, prioritizing markdown code blocks.
 
     This function attempts to find a JSON object within a markdown code block first.
     If not found, it then searches for a JSON object by looking for the first and last
     curly braces. It handles JSON decoding errors gracefully.
     """
+    if text is None:
+        logger.warning("Input text is None")
+        return None
+    if isinstance(text, str) and text.strip() == "":
+        logger.warning("Input text is empty or whitespace only")
+        return None
     # 1. Try to find JSON within a markdown code block first
     match = re.search(r"```(?:json)?\n(.*?)\n```", text, re.DOTALL)
     if match:

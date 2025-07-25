@@ -5,50 +5,84 @@ Following DRY principle and centralizing common operations.
 """
 
 import logging
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 
-def safe_dataframe_concat(
-    dataframes: list[pd.DataFrame], ignore_index: bool = True, dedup_columns: list[str] | None = None
-) -> pd.DataFrame:
+def get_app_directories() -> dict[str, Path]:
     """
-    Performant and safe DataFrame concatenation with optional deduplication.
+    Get application directories, supporting both development and installed package environments.
 
-    Eliminates the anti-pattern of multiple pd.concat calls.
+    Returns:
+        Dictionary with keys: data_dir, logs_dir, config_dir, prompts_dir
+    """
+    # Check if we're in a development environment (presence of pyproject.toml)
+    # Try to find project root by looking for pyproject.toml
+    current_path = Path(__file__).resolve()
+    for parent in [current_path] + list(current_path.parents):
+        if (parent / "pyproject.toml").exists():
+            # Development environment - use project structure
+            return {
+                "data_dir": parent / "data",
+                "logs_dir": parent / "logs",
+                "config_dir": parent / "config",
+                "prompts_dir": parent / "prompts",
+            }
+
+    # Installed package environment - use user directories or environment variables
+    base_dir = Path(os.getenv("KARIYER_ASISTANI_HOME", Path.home() / ".kariyer-asistani"))
+    return {
+        "data_dir": Path(os.getenv("KARIYER_ASISTANI_DATA_DIR", base_dir / "data")),
+        "logs_dir": Path(os.getenv("KARIYER_ASISTANI_LOGS_DIR", base_dir / "logs")),
+        "config_dir": Path(os.getenv("KARIYER_ASISTANI_CONFIG_DIR", base_dir / "config")),
+        "prompts_dir": Path(os.getenv("KARIYER_ASISTANI_PROMPTS_DIR", base_dir / "prompts")),
+    }
+
+
+def safe_dataframe_concat(dataframes: list[pd.DataFrame], ignore_index: bool = True) -> pd.DataFrame:
+    """
+    Performant and safe DataFrame concatenation.
 
     Args:
         dataframes: List of DataFrames to concatenate
         ignore_index: Whether to ignore index during concatenation
-        dedup_columns: Columns to use for deduplication
 
     Returns:
-        Concatenated and optionally deduplicated DataFrame
+        Concatenated DataFrame
     """
     if not dataframes:
         return pd.DataFrame()
 
-    # Filter out None and empty DataFrames
     valid_dfs = [df for df in dataframes if df is not None and not df.empty]
-
     if not valid_dfs:
         return pd.DataFrame()
 
-    # Single operation with ternary operator for performance
-    result: pd.DataFrame = (
-        valid_dfs[0].copy() if len(valid_dfs) == 1 else pd.concat(valid_dfs, ignore_index=ignore_index)
-    )
+    return valid_dfs[0].copy() if len(valid_dfs) == 1 else pd.concat(valid_dfs, ignore_index=ignore_index)
 
-    # Optional deduplication
-    if dedup_columns and not result.empty:
-        initial_count = len(result)
-        result.drop_duplicates(subset=dedup_columns, inplace=True, keep="first")
-        removed_count = initial_count - len(result)
-        if removed_count > 0:
-            logging.info(f"🗑️ Deduplication: {removed_count} duplicate rows removed")
 
+def deduplicate_dataframe(df: pd.DataFrame, dedup_columns: list[str], logger: Any) -> pd.DataFrame:
+    """
+    Deduplicate a DataFrame based on specified columns and log the result.
+
+    Args:
+        df: DataFrame to deduplicate
+        dedup_columns: Columns to use for deduplication
+        logger: Logger instance for info messages
+
+    Returns:
+        Deduplicated DataFrame
+    """
+    if df.empty or not dedup_columns:
+        return df
+    initial_count = len(df)
+    result = df.drop_duplicates(subset=dedup_columns, inplace=False, keep="first")
+    removed_count = initial_count - len(result)
+    if removed_count > 0:
+        logger.info(f"🗑️ Deduplication: {removed_count} duplicate rows removed")
     return result
 
 
@@ -65,12 +99,18 @@ def setup_enhanced_logging(logger_name: str, level: str = "INFO") -> logging.Log
     """
     logger = logging.getLogger(logger_name)
 
+    valid_levels = {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"}
+    chosen_level = level.upper()
+    if chosen_level not in valid_levels:
+        logger.warning(f"Invalid log level '{level}' provided. Defaulting to INFO.")
+        chosen_level = "INFO"
+
     if not logger.handlers:  # Avoid duplicate handlers
         handler = logging.StreamHandler()
         formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-        logger.setLevel(getattr(logging, level.upper()))
+        logger.setLevel(getattr(logging, chosen_level))
 
     return logger
 
@@ -101,11 +141,8 @@ def handle_scraping_error(
     else:
         logger.error(f"{error_msg} (Critical error)", exc_info=True)
         if raise_on_critical:
-            try:
-                raise RuntimeError(error_msg)
-            except RuntimeError:
-                logger.exception("Critical error raised")
-                return False
+            logger.exception(error_msg)
+            return False
         return False
 
 

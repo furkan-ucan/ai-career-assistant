@@ -40,7 +40,7 @@ class EmbeddingService:
         try:
             genai.configure(api_key=api_key)
         except Exception as e:
-            logger.error(f"Failed to configure Gemini API: {e}")
+            logger.exception(f"Failed to configure Gemini API: {e}")
             raise ValueError("Failed to configure Gemini API with the provided key.") from e
 
         self.model = model
@@ -75,7 +75,7 @@ class EmbeddingService:
                 return [float(x) for x in embedding]
             return None
         except Exception:
-            logger.error(f"Failed to create embedding for text chunk: '{truncated_text[:50]}...'", exc_info=True)
+            logger.exception(f"Failed to create embedding for text chunk: '{truncated_text[:50]}...'")
             # The @retry decorator will handle re-raising the exception after attempts.
             raise
 

@@ -16,7 +16,7 @@ from .core.constants import (
     SUPPORTED_SITES,
     TIER_THRESHOLDS,
 )
-from .core.utils import add_metadata_to_dataframe, handle_scraping_error, safe_dataframe_concat
+from .core.utils import add_metadata_to_dataframe, deduplicate_dataframe, handle_scraping_error, safe_dataframe_concat
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,8 @@ class TieredJobCollector:
             logger.warning(f"❌ No results found for persona '{persona_name}' on any site.")
             return None
 
-        combined_df = safe_dataframe_concat(site_results, dedup_columns=DEDUP_COLUMNS)
+        combined_df = safe_dataframe_concat(site_results)
+        combined_df = deduplicate_dataframe(combined_df, DEDUP_COLUMNS, logger)
         combined_df = add_metadata_to_dataframe(combined_df, {"persona_source": persona_name})
         return combined_df
 
@@ -66,7 +67,12 @@ class TieredJobCollector:
             tier_df = self._execute_tier(site, tier_num, platform_queries)
             if tier_df is not None and not tier_df.empty:
                 tier_results.append(tier_df)
-        return safe_dataframe_concat(tier_results, dedup_columns=DEDUP_COLUMNS) if tier_results else None
+
+        if not tier_results:
+            return None
+
+        combined_df = safe_dataframe_concat(tier_results)
+        return deduplicate_dataframe(combined_df, DEDUP_COLUMNS, logger)
 
     def _should_run_tier(self, tier_num: int, previous_results: list[pd.DataFrame]) -> bool:
         if tier_num == 1:

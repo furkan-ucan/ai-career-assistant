@@ -44,7 +44,7 @@ class CVProcessor:
             logger.info(f"✅ CV loaded successfully ({len(self.cv_text)} characters).")
             return True
         except (OSError, FileNotFoundError) as e:
-            logger.error(f"❌ Error reading CV file at {self.cv_path}: {e}", exc_info=True)
+            logger.exception(f"❌ Error reading CV file at {self.cv_path}: {e}")
             return False
 
     def create_cv_embedding(self) -> bool:
@@ -54,7 +54,11 @@ class CVProcessor:
             return False
 
         logger.info("🔄 Creating CV embedding...")
-        self.cv_embedding = self.embedding_service.create_embedding(self.cv_text)
+        try:
+            self.cv_embedding = self.embedding_service.create_embedding(self.cv_text)
+        except Exception as exc:
+            logger.error(f"❌ Exception during CV embedding creation: {exc}", exc_info=True)
+            return False
 
         if self.cv_embedding:
             logger.info(f"✅ CV embedding created (dimensions: {len(self.cv_embedding)}).")
@@ -67,12 +71,21 @@ class CVProcessor:
         """Return the CV embedding, creating it if it doesn't exist."""
         if self.cv_embedding is None:
             if self.cv_text is None:
-                self.load_cv()
-            self.create_cv_embedding()
+                loaded = self.load_cv()
+                if not loaded:
+                    logger.error("❌ CV could not be loaded. Aborting embedding.")
+                    return None
+            created = self.create_cv_embedding()
+            if not created:
+                logger.error("❌ CV embedding could not be created.")
+                return None
         return self.cv_embedding
 
     def get_cv_text(self) -> str | None:
         """Return the CV text, loading it if it hasn't been."""
         if self.cv_text is None:
-            self.load_cv()
+            loaded = self.load_cv()
+            if not loaded:
+                logger.error("❌ CV could not be loaded. Returning None.")
+                return None
         return self.cv_text

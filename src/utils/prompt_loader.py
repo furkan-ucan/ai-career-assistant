@@ -11,9 +11,6 @@ def load_prompt(file_path: str | Path) -> str:
     path = Path(file_path)
     try:
         return path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        logger.exception("Prompt file not found: %s", path)
-        raise
-    except (PermissionError, IsADirectoryError):
+    except (FileNotFoundError, PermissionError, IsADirectoryError, UnicodeDecodeError):
         logger.exception("Error reading prompt file: %s", path)
         raise

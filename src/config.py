@@ -127,6 +127,12 @@ def _add_api_keys(config_data: dict[str, Any]) -> None:
     config_data["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY")
     config_data["GITHUB_TOKEN"] = os.getenv("GITHUB_TOKEN")
 
+    # Fail fast if required keys are missing
+    if config_data["GEMINI_API_KEY"] is None:
+        raise ConfigError("Missing required environment variable: GEMINI_API_KEY")
+    if config_data["GITHUB_TOKEN"] is None:
+        raise ConfigError("Missing required environment variable: GITHUB_TOKEN")
+
     # AI settings from environment
     config_data["GEMINI_MODEL"] = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     config_data["EMBEDDING_MODEL"] = os.getenv("EMBEDDING_MODEL", "text-embedding-004")

@@ -151,12 +151,6 @@ class JobAnalysisPipeline:
             context.final_results = []
             return
 
-        # Type guards to ensure non-None values
-        if context.vector_store is None or context.cv_embedding is None or context.scoring_system is None:
-            logger.error("Arama ve sıralama için gerekli bileşenler None.")
-            context.final_results = []
-            return
-
         logger.info("\n🔄 4/5: Vektör veritabanında CV'nize en uygun ilanlar aranıyor...")
         search_results = context.vector_store.search_jobs(context.cv_embedding)
         logger.info(f"🔍 {len(search_results)} adet potansiyel eşleşme bulundu. Akıllı puanlama uygulanıyor...")

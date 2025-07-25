@@ -4,12 +4,10 @@ Centralized constants to eliminate magic strings and numbers throughout the code
 Following the principle of configuration over hard-coding.
 """
 
-from pathlib import Path
-
 # === PLATFORM CONSTANTS ===
 SITE_INDEED = "indeed"
 SITE_LINKEDIN = "linkedin"
-SUPPORTED_SITES = [SITE_INDEED, SITE_LINKEDIN]
+SUPPORTED_SITES = (SITE_INDEED, SITE_LINKEDIN)
 
 # === VECTOR STORE CONSTANTS ===
 COSINE_METRIC = "cosine"
@@ -54,11 +52,8 @@ PERSONA_DEFAULTS = {
 DEDUP_COLUMNS = ["title", "company", "location"]
 
 # === FILE PATH CONSTANTS ===
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = _REPO_ROOT / "data"
-LOGS_DIR = _REPO_ROOT / "logs"
-CONFIG_DIR = _REPO_ROOT / "config"
-PROMPTS_DIR = _REPO_ROOT / "prompts"
+# Note: Directory paths are now constructed at runtime to support installed packages
+# These will be built lazily when needed, avoiding hardcoded repository assumptions
 
 # === QUERY BUILDING CONSTANTS ===
-NEGATIVE_FILTERS = ["-Senior", "-Kıdemli", "-Lead", "-Principal", "-Direktör"]
+NEGATIVE_FILTERS = ("-Senior", "-Kıdemli", "-Lead", "-Principal", "-Direktör")
