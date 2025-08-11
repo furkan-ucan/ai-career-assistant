@@ -1,8 +1,7 @@
 # src/config.py
-"""Configuration management for Akilli Kariyer Asistani.
+"""Modern configuration management with Pydantic validation for Akilli Kariyer Asistani.
 This module handles loading configuration from a YAML file, applying environment variable overrides,
-and caching the configuration for efficient access.
-It also provides utility functions for accessing specific configuration settings.
+validates all settings using Pydantic models, and caches the configuration for efficient access.
 """
 
 from __future__ import annotations
@@ -14,50 +13,56 @@ from typing import Any
 
 import yaml
 
+from .config_models import AppConfig
 from .exceptions import ConfigError
 
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = Path("config.yaml")
-_config_cache: dict[str, Any] | None = None
+_config_cache: AppConfig | None = None
 
 
-def _get_cached_config() -> dict[str, Any] | None:
-    """Get cached configuration if available."""
+def _get_cached_config() -> AppConfig | None:
+    """Get cached validated configuration if available."""
     return _config_cache
 
 
-def _set_cached_config(config_data: dict[str, Any]) -> dict[str, Any]:
-    """Cache configuration data and return it."""
+def _set_cached_config(config_data: AppConfig) -> AppConfig:
+    """Cache validated configuration data and return it."""
     global _config_cache
     _config_cache = config_data
     return _config_cache
 
 
-def get_config() -> dict[str, Any]:
+def get_config() -> AppConfig:
     """
-    Loads configuration from config.yaml, overrides with environment variables,
-    and caches the result. This is the central function for all configuration access.
-
-    Override Priority (highest to lowest):
-    1. Environment variables (.env file)
-    2. config.yaml defaults
+    Loads configuration from config.yaml, validates with Pydantic models,
+    applies environment overrides, and caches the result.
 
     Returns:
-        Complete configuration dictionary with all settings merged
+        Validated AppConfig instance with all settings properly typed
+
+    Raises:
+        ConfigError: If configuration is invalid or required fields missing
     """
     # Check cache first
     cached_config = _get_cached_config()
     if cached_config is not None:
         return cached_config
 
-    # Load and process configuration
-    config_data = _load_yaml_config()
-    _apply_env_overrides(config_data)
-    _add_api_keys(config_data)
+    # Load, validate and process configuration
+    raw_config_data = _load_yaml_config()
+    _apply_env_overrides(raw_config_data)
+    _add_api_keys(raw_config_data)
+
+    # Validate with Pydantic
+    try:
+        validated_config = AppConfig(**raw_config_data)
+    except Exception as exc:
+        raise ConfigError(f"Configuration validation failed: {exc}") from exc
 
     # Cache and return
-    return _set_cached_config(config_data)
+    return _set_cached_config(validated_config)
 
 
 def _load_yaml_config() -> dict[str, Any]:
@@ -124,21 +129,21 @@ def _apply_float_setting(config_data: dict[str, Any], section: str, key: str, en
 
 def _add_api_keys(config_data: dict[str, Any]) -> None:
     """Add API keys and sensitive data from environment variables."""
-    config_data["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY")
-    config_data["GITHUB_TOKEN"] = os.getenv("GITHUB_TOKEN")
-
-    # Fail fast if required keys are missing
-    if config_data["GEMINI_API_KEY"] is None:
-        raise ConfigError("Missing required environment variable: GEMINI_API_KEY")
-    if config_data["GITHUB_TOKEN"] is None:
-        raise ConfigError("Missing required environment variable: GITHUB_TOKEN")
+    config_data["gemini_api_key"] = os.getenv("GEMINI_API_KEY")
+    config_data["github_token"] = os.getenv("GITHUB_TOKEN")
 
     # AI settings from environment
-    config_data["GEMINI_MODEL"] = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-    config_data["EMBEDDING_MODEL"] = os.getenv("EMBEDDING_MODEL", "text-embedding-004")
+    config_data["gemini_model"] = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    config_data["embedding_model"] = os.getenv("EMBEDDING_MODEL", "text-embedding-004")
+
+    # Validate required keys after Pydantic validation
+    if config_data["gemini_api_key"] is None:
+        raise ConfigError("Missing required environment variable: GEMINI_API_KEY")
+    if config_data["github_token"] is None:
+        raise ConfigError("Missing required environment variable: GITHUB_TOKEN")
 
 
-def load_settings() -> dict[str, Any]:
+def load_settings() -> AppConfig:
     """Legacy function, now a wrapper for get_config for backward compatibility."""
     return get_config()
 

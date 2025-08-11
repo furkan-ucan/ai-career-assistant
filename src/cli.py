@@ -2,9 +2,8 @@
 """Command line interface for Akilli Kariyer Asistani, hardened with input validation."""
 
 import argparse
-from pathlib import Path
 
-import yaml
+from .config import get_config
 
 
 def _positive_int_in_range(min_val: int, max_val: int):
@@ -25,12 +24,11 @@ def _positive_int_in_range(min_val: int, max_val: int):
     return checker
 
 
-def load_persona_choices(config_path: Path = Path("config.yaml")) -> list[str]:
-    """Return available persona names from the configuration."""
+def load_persona_choices() -> list[str]:
+    """Return available persona names from the validated configuration."""
     try:
-        with open(config_path, encoding="utf-8") as f:
-            cfg = yaml.safe_load(f)
-        return list(cfg.get("persona_search_configs", {}).keys())
+        config = get_config()
+        return list(config.persona_search_configs.keys())
     except Exception:
         return []
 

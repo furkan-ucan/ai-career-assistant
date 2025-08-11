@@ -129,3 +129,5 @@ Thumbs.db
 .github/workflows/*.yml
 
 bandit-report.json
+
+reports/

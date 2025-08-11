@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
+import argparse
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -16,9 +17,10 @@ logger = setup_logging()
 config = get_config()
 
 
-def load_config() -> dict:
-    """Backward compatibility wrapper for tests."""
-    return config
+def load_config() -> dict[str, Any]:
+    """Backward compatibility wrapper for tests with explicit dict typing."""
+    cfg_dict: dict[str, Any] = config.model_dump()
+    return cfg_dict
 
 
 def print_manual_validation_guide() -> None:
@@ -41,11 +43,12 @@ def main(selected_personas=None, results_per_site=None, similarity_threshold=Non
     # All validation is now handled by the pipeline
     logger.info("🎯 12 farklı JobSpy optimize edilmiş persona ile veri toplama başlatılıyor...\n")
 
-    cli_args = SimpleNamespace(
+    cli_args = argparse.Namespace(
         persona=selected_personas,
         results=results_per_site,
         threshold=similarity_threshold,
         no_rerank=not rerank,
+        hours_old=72,  # Default hours_old value
     )
     pipeline = JobAnalysisPipeline(config)
     pipeline.run(cli_args)

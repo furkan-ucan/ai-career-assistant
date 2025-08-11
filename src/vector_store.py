@@ -81,6 +81,17 @@ class VectorStore:
 
     def _filter_existing_jobs(self, jobs_df: pd.DataFrame) -> pd.DataFrame:
         """Filter out jobs that already exist in the vector store."""
+        if jobs_df.empty:
+            return pd.DataFrame()
+
+        # First, deduplicate within the input DataFrame itself using job_url column
+        # JobSpy uses 'job_url' as the column name for job URLs
+        if "job_url" in jobs_df.columns:
+            jobs_df = jobs_df.drop_duplicates(subset=["job_url"], keep="first")
+        elif "url" in jobs_df.columns:
+            jobs_df = jobs_df.drop_duplicates(subset=["url"], keep="first")
+        # If no URL column is found, still proceed (will rely on ID-based deduplication)
+
         records = jobs_df.to_dict("records")
         # CRITICAL FIX: Ensure IDs sent to ChromaDB for checking are unique.
         ids_to_check = {self._stable_job_id(job) for job in records}
@@ -103,11 +114,19 @@ class VectorStore:
         embeddings_list = self.embedding_service.create_embeddings_batch(texts=descriptions)
 
         valid_jobs, valid_embeddings, valid_ids = [], [], []
+        seen_ids = set()  # Track IDs to prevent duplicates
+
         for job, embedding in zip(new_records, embeddings_list, strict=True):
             if embedding is not None:
-                valid_jobs.append(job)
-                valid_embeddings.append(embedding)
-                valid_ids.append(self._stable_job_id(job))
+                job_id = self._stable_job_id(job)
+                # Skip if we've already seen this ID
+                if job_id not in seen_ids:
+                    valid_jobs.append(job)
+                    valid_embeddings.append(embedding)
+                    valid_ids.append(job_id)
+                    seen_ids.add(job_id)
+                else:
+                    logger.warning(f"⚠️ Skipping duplicate job ID: {job_id}")
 
         return {"valid_jobs": valid_jobs, "valid_embeddings": valid_embeddings, "valid_ids": valid_ids}
 

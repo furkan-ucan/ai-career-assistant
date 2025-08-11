@@ -12,7 +12,8 @@ import pandas as pd
 if TYPE_CHECKING:
     from src.cv_analyzer import CVAnalyzer
     from src.embedding_service import EmbeddingService
-    from src.scoring_system import ScoringSystem
+
+    # REMOVED: Manual scoring system for pure AI approach
     from src.vector_store import VectorStore
 
 
@@ -33,13 +34,13 @@ class PipelineContext:
     # --- Pipeline Stages Data ---
     raw_jobs_df: pd.DataFrame | None = None
     scored_jobs: list[dict[str, Any]] = field(default_factory=list)
-    final_results: list[dict[str, Any]] = field(default_factory=list)
+    final_results: list[dict[str, Any]] | None = None
 
     # --- Services (Injected) ---
     embedding_service: EmbeddingService | None = None
     cv_analyzer: CVAnalyzer | None = None
     vector_store: VectorStore | None = None
-    scoring_system: ScoringSystem | None = None
+    # REMOVED: scoring_system for pure AI approach
 
     # --- Control Flags & Parameters ---
     threshold: float = 60.0

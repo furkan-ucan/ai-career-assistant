@@ -6,7 +6,7 @@ job_search_settings:
   target_sites: ["linkedin", "indeed"] # Hangi sitelerde arama yapılacak
   default_hours_old: 72 # Varsayılan olarak son kaç saatteki ilanlar (JobSpy native)
   default_results_per_site: 25 # Her persona ve site için kaç sonuç çekilecek
-  min_similarity_threshold: 60 # Benzerlik eşiği (%) - JobSpy ile daha kaliteli veri
+  min_similarity_threshold: 40 # Benzerlik eşiği (%) - AI Reranking ile kaliteyi artırıyoruz
 
 # Persona bazlı arama konfigürasyonları
 # Indeed'e göre optimize edilmiş ve negatif filtreli arama terimleri
@@ -85,7 +85,7 @@ scoring_system:
     "4": -20
     "3": -10
   cv_skill_keywords: []
-  threshold: -20
+  threshold: 40
   cv_skill_boost_threshold: 0.8
   cv_skill_bonus_points: 10
   dynamic_skill_weight: 10
@@ -123,3 +123,9 @@ persona_builder_settings:
     analyst: 25
   default_results: 20
   default_hours_old: 72
+
+# Performance ve Cache ayarları
+performance:
+  cache_ttl_days: 30
+  max_cache_size_mb: 500
+  cleanup_interval_hours: 24
